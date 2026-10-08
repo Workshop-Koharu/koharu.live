@@ -48,7 +48,7 @@ apiRouter.get("/posts", async (req, res) => {
   }
 });
 
-// Alias for SeonA notice-bar compatibility
+// Alias for notice-bar compatibility
 apiRouter.get("/blog", async (req, res) => {
   try {
     const posts = await getPublishedBlogPosts();
@@ -208,7 +208,7 @@ apiRouter.post("/ai/chat", async (req, res) => {
     } else if (mode === "image" || query.includes("그려") || query.includes("디자인") || query.includes("일러스트")) {
       reply = `달빛 아래 몽환적인 파스텔 톤의 일러스트 컨셉을 생성했습니다 🌸\n\n✦ 컨셉: *Dreamy pastel twilight, magical glowing crescent moon, soft lavender sky*\n\n인스타그램 피드와 메인 페이지 아트 갤러리에서도 다양한 비주얼을 감상해보실 수 있어요!`;
     } else {
-      reply = `안녕하세요! 코하루 & 선아 포트폴리오의 Cloner AI입니다 🌸\n\n"${message}"에 대해 답변해 드릴게요.\n코하루는 유니티와 C# 게임 프로그래밍, 커스텀 엔진 및 웹 개발에 깊은 열정을 쏟고 있는 개발자예요!\n\n궁금한 점이 있다면 언제든 물어보세요. 코드 작성부터 게임 시스템 설계, 포트폴리오 안내까지 친절하게 도와드릴게요 ⁽⁽ (˶> ᎑ <˶) ⁾⁾!`;
+      reply = `안녕하세요! 코하루 포트폴리오의 AI 어시스턴트입니다 🌸\n\n"${message}"에 대해 답변해 드릴게요.\n코하루는 유니티와 C# 게임 프로그래밍, 커스텀 엔진 및 웹 개발에 깊은 열정을 쏟고 있는 개발자예요!\n\n궁금한 점이 있다면 언제든 물어보세요. 코드 작성부터 게임 시스템 설계, 포트폴리오 안내까지 친절하게 도와드릴게요 ⁽⁽ (˶> ᎑ <˶) ⁾⁾!`;
     }
 
     res.json({

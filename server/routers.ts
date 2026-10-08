@@ -261,14 +261,14 @@ export const appRouter = router({
 
         if (input.mode === "code" || query.includes("코드") || query.includes("파이썬") || query.includes("c#") || query.includes("유니티") || query.includes("unity")) {
           if (query.includes("파이썬") || query.includes("python")) {
-            reply = `안녕하세요! 파이썬 관련 요청이시군요.\n\n\`\`\`python\n# 코하루 AI 파이썬 예제\ndef main():\n    print("Hello from Koharu x SeonA!")\n\nif __name__ == "__main__":\n    main()\n\`\`\`\n\n더 필요하신 기능이 있다면 편하게 말씀해주세요! 🎮`;
+            reply = `안녕하세요! 파이썬 관련 요청이시군요.\n\n\`\`\`python\n# 코하루 AI 파이썬 예제\ndef main():\n    print("Hello from Koharu!")\n\nif __name__ == "__main__":\n    main()\n\`\`\`\n\n더 필요하신 기능이 있다면 편하게 말씀해주세요! 🎮`;
           } else {
             reply = `Unity C# 게임 개발 스크립트 예제입니다:\n\n\`\`\`csharp\nusing UnityEngine;\n\npublic class PlayerController : MonoBehaviour\n{\n    [SerializeField] private float speed = 5.0f;\n\n    void Update()\n    {\n        float h = Input.GetAxisRaw("Horizontal");\n        float v = Input.GetAxisRaw("Vertical");\n        Vector3 dir = new Vector3(h, 0, v).normalized;\n        transform.position += dir * speed * Time.deltaTime;\n    }\n}\n\`\`\`\n\n부드러운 조작감과 확장이 편리하도록 구성되어 있습니다! ✨`;
           }
         } else if (input.mode === "image" || query.includes("그려") || query.includes("디자인") || query.includes("일러스트")) {
-          reply = `달빛 아래 몽환적인 파스텔 톤의 일러스트 컨셉을 생성했습니다 🌸\n\n✦ 프롬프트: *Dreamy pastel twilight, glowing magical crescent moon, cute stars, soft lavender aesthetics*\n\n메인 페이지의 아트 갤러리와 인스타그램 피드에서도 멋진 비주얼을 확인하실 수 있어요!`;
+          reply = `달빛 아래 몽환적인 파스텔 톤의 일러스트 컨셉을 생성했습니다 🌸\n\n✦ 프롬프트: *Dreamy pastel twilight, glowing magical crescent moon, cute stars, soft lavender aesthetics*\n\n메인 페이지와 인스타그램 피드에서도 멋진 비주얼을 확인하실 수 있어요!`;
         } else {
-          reply = `안녕하세요! 코하루 & 선아 포트폴리오의 Cloner AI입니다 🌸\n\n"${input.message}"에 대해 답변해 드릴게요.\n코하루는 유니티와 C# 게임 프로그래밍, 커스텀 엔진 및 웹 개발에 깊은 열정을 쏟고 있는 개발자예요!\n\n궁금한 점이 있다면 언제든 물어보세요. 코드 작성부터 게임 시스템 설계, 포트폴리오 안내까지 친절하게 도와드릴게요 ⁽⁽ (˶> ᎑ <˶) ⁾⁾!`;
+          reply = `안녕하세요! 코하루 포트폴리오의 AI 어시스턴트입니다 🌸\n\n"${input.message}"에 대해 답변해 드릴게요.\n코하루는 유니티와 C# 게임 프로그래밍, 커스텀 엔진 및 웹 개발에 깊은 열정을 쏟고 있는 개발자예요!\n\n궁금한 점이 있다면 언제든 물어보세요. 코드 작성부터 게임 시스템 설계, 포트폴리오 안내까지 친절하게 도와드릴게요 ⁽⁽ (˶> ᎑ <˶) ⁾⁾!`;
         }
 
         return {

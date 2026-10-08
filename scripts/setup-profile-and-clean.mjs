@@ -17,11 +17,18 @@ async function run() {
       banner_url VARCHAR(1000) DEFAULT 'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1400&q=80',
       birthdate VARCHAR(64) DEFAULT '2004. 12. 04',
       github_url VARCHAR(500) DEFAULT 'https://github.com/Workshop-Koharu',
-      instagram_url VARCHAR(500) DEFAULT 'https://instagram.com/sx0n._a',
+      instagram_url VARCHAR(500) DEFAULT 'https://instagram.com/koharu.live',
       email VARCHAR(320) DEFAULT 'admin@koharu.live',
       website_url VARCHAR(500) DEFAULT 'https://koharu.live',
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+  `);
+
+  // Update existing row if present
+  await sql.query(`
+    UPDATE site_profile 
+    SET instagram_url = 'https://instagram.com/koharu.live' 
+    WHERE instagram_url LIKE '%sx0n%';
   `);
 
   // Ensure default profile row exists
@@ -37,7 +44,7 @@ async function run() {
         'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1400&q=80',
         '2004. 12. 04',
         'https://github.com/Workshop-Koharu',
-        'https://instagram.com/sx0n._a',
+        'https://instagram.com/koharu.live',
         'admin@koharu.live',
         'https://koharu.live'
       );

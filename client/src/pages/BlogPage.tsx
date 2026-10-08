@@ -71,7 +71,7 @@ const DEFAULT_PROFILE: ProfileData = {
   bannerUrl: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1400&q=80",
   birthdate: "2004. 12. 04",
   githubUrl: "https://github.com/Workshop-Koharu",
-  instagramUrl: "https://instagram.com/sx0n._a",
+  instagramUrl: "https://instagram.com/koharu.live",
   email: "admin@koharu.live",
   websiteUrl: "https://koharu.live",
 };

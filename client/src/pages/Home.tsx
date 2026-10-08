@@ -211,7 +211,7 @@ export default function Home() {
                 </div>
                 <div>
                   <div className="font-bold text-sm text-[#38314a]">파트너</div>
-                  <div className="text-xs text-[#7a6e8f]">팀 라이트 & 선아</div>
+                  <div className="text-xs text-[#7a6e8f]">팀 라이트 (Team Light)</div>
                 </div>
               </div>
               <ArrowUpRight className="w-4 h-4 text-purple-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />

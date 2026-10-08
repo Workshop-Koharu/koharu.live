@@ -98,7 +98,7 @@ export const siteProfile = pgTable("site_profile", {
   bannerUrl: varchar("banner_url", { length: 1000 }).default("https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1400&q=80").notNull(),
   birthdate: varchar("birthdate", { length: 64 }).default("2004. 12. 04").notNull(),
   githubUrl: varchar("github_url", { length: 500 }).default("https://github.com/Workshop-Koharu"),
-  instagramUrl: varchar("instagram_url", { length: 500 }).default("https://instagram.com/sx0n._a"),
+  instagramUrl: varchar("instagram_url", { length: 500 }).default("https://instagram.com/koharu.live"),
   email: varchar("email", { length: 320 }).default("admin@koharu.live"),
   websiteUrl: varchar("website_url", { length: 500 }).default("https://koharu.live"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

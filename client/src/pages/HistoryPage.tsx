@@ -5,10 +5,10 @@ import SiteNav from "@/components/SiteNav";
 const TIMELINE = [
   {
     year: "2026. 10",
-    title: "koharu.live v2.0 공식 릴리즈 & SeonA 디자인 통합",
+    title: "koharu.live v2.0 공식 릴리즈 & 새로운 비주얼 개편",
     category: "milestone",
-    desc: "선아(SeonA)의 감성적인 파스텔 디자인 및 기능(비밀 편지, Cloner AI, 방명록)을 코하루 포트폴리오와 완벽히 결합하고 인스타그램 스타일 블로그 시스템 및 Neon PostgreSQL 데이터베이스를 연동했습니다.",
-    tags: ["Release", "Instagram Blog", "Neon DB", "SeonA Collab"],
+    desc: "감성적인 파스텔 디자인과 인터랙티브 반응형 인터페이스를 결합하고, 인스타그램 스타일 피드 시스템 및 Neon PostgreSQL 데이터베이스를 연동했습니다.",
+    tags: ["Release", "Instagram Feed", "Neon DB", "Interactive"],
   },
   {
     year: "2026. 05",

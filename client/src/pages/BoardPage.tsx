@@ -121,7 +121,7 @@ export default function BoardPage() {
                 <textarea
                   rows={3}
                   required
-                  placeholder="코하루와 선아에게 전하고 싶은 말을 적어주세요 ⁽⁽ (˶> ᎑ <˶) ⁾⁾..."
+                  placeholder="코하루에게 전하고 싶은 말을 적어주세요 ⁽⁽ (˶> ᎑ <˶) ⁾⁾..."
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-pink-200 outline-none bg-white/70 focus:bg-white"

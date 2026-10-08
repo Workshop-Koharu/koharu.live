@@ -3,13 +3,6 @@ import SiteNav from "@/components/SiteNav";
 
 const PEOPLE = [
   {
-    name: "선아 (SeonA)",
-    role: "Aesthetic Collaborator & Friend",
-    status: "하루하루를 행복하게 살아가보는중 🌸",
-    avatar: "/images/seona-moon-logo.png",
-    handle: "@sx0n._a",
-  },
-  {
     name: "Team Light",
     role: "Full-Stack Dev Team",
     status: "더 나은 웹과 성능을 향해 코딩 중 ✨",

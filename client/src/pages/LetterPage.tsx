@@ -3,7 +3,7 @@ import { KeyRound, Lock, Mail, RefreshCw, Sparkles, Unlock } from "lucide-react"
 import { toast } from "sonner";
 import SiteNav from "@/components/SiteNav";
 
-const SECRET_CODE = "1204"; // Default Koharu secret passcode (hint provided)
+const SECRET_CODE = "0481"; // Default Koharu secret passcode (hint provided)
 
 export default function LetterPage() {
   const [pin, setPin] = useState("");
@@ -121,7 +121,7 @@ export default function LetterPage() {
                 </button>
                 {showHint && (
                   <p className="text-xs text-[#7a6e8f] mt-2 animate-fadeIn bg-pink-50 p-2.5 rounded-xl border border-pink-200">
-                    힌트: 코하루가 가장 좋아하는 숫자 코드 [<strong>1204</strong>] 입니다!
+                    힌트: 코하루가 가장 좋아하는 숫자 코드 [<strong>0481</strong>] 입니다!
                   </p>
                 )}
               </div>

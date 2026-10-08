@@ -13,7 +13,7 @@
   --radius: 1.25rem;
   --font-diary: 'EF Diary', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   
-  /* SeonA & Koharu Dreamy Palette */
+  /* Koharu Dreamy Palette */
   --ink: #38314a;
   --ink-soft: #7a6e8f;
   --paper: #fbf6fb;
@@ -149,7 +149,7 @@ body {
 }
 
 /* =========================================================================
-   Top Navigation Bar (SeonA Style with Animated Expanding Labels)
+   Top Navigation Bar (Animated Expanding Labels)
    ========================================================================= */
 .topbar-wrapper {
   position: sticky;

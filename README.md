@@ -1,21 +1,21 @@
 # ! Koharu (코하루) · Personal Portfolio v2.0 🌸
 
 > **코드로 세상을 플레이어블하게 만드는 중**  
-> 선아(SeonA)의 감성적인 파스텔 비주얼 & 인터랙티브 기능과 코하루의 게임 프로그래밍 포트폴리오를 결합하고, 인스타그램 스타일의 블로그 시스템과 Neon PostgreSQL을 연동한 프로젝트입니다.
+> 감성적인 파스텔 비주얼 & 인터랙티브 기능과 코하루의 게임 프로그래밍 포트폴리오를 결합하고, 인스타그램 스타일의 피드 시스템과 Neon PostgreSQL을 연동한 프로젝트입니다.
 
 ---
 
 ## ✨ 주요 기능 및 특징
 
-### 1. 🎨 선아(SeonA) x 코하루 감성 디자인 통합
+### 1. 🎨 감성적인 인터랙티브 비주얼 디자인
 - **Ambient Dreamy Background**: 은은하게 부유하는 빛의 궤도 오르브(Floating Orbs)와 반짝이는 별무리(Sparkles `✦`, `✧`, `·`)
-- **Site Navigation Topbar**: 부드럽게 펼쳐지는 호버 라벨 애니메이션 메뉴바 및 실시간 블로그 공지 티커(Notice Bar)
+- **Site Navigation Topbar**: 부드럽게 펼쳐지는 호버 라벨 애니메이션 메뉴바 및 실시간 인스타그램 공지 티커(Notice Bar)
 - **Visual Identity**: `EF Diary` 감성 폰트와 파스텔톤 글래스모피즘(Glassmorphism) 카드 UI
 - **Secret Letter (비밀 편지)**: 4자리 패스코드 키패드로 봉인을 해제하는 인터랙티브 편지 시스템
 - **History Timeline (히스토리)**: 2024 ~ 2026 개발 발자취와 마일스톤 타임라인
-- **Partners & People (파트너 & 지인)**: Team Light, 선아 등 소중한 인연과 협업 프로젝트 카드
+- **Partners & People (파트너 & 지인)**: Team Light 등 소중한 인연과 협업 프로젝트 카드
 - **Guestbook Board (방명록 게시판)**: 방문자가 직접 응원 메시지와 비밀글을 남길 수 있는 실시간 게시판
-- **Cloner AI Chat**: 선아의 Cloner AI와 코하루의 게임 지식이 결합된 대화형 AI 어시스턴트 (v1/v2 모델, 코딩/디자인 모드)
+- **AI Chat**: 코하루의 게임 개발 및 엔진 지식이 담긴 대화형 AI 어시스턴트 (v1/v2 모델, 코딩/디자인 모드)
 
 ### 2. 📸 인스타그램 스타일 블로그 시스템
 - **Instagram Profile Header**: 무지개빛 스토리 링 그라데이션 아바타, `koharu.live` 인증 배지, 팔로우/메시지 토글, 게시물/팔로워 통계 및 스토리 하이라이트

@@ -13,7 +13,7 @@ const SUGGESTIONS = [
   { mode: "code", label: "코딩", text: "유니티 C# 2D 플레이어 점프 및 이동 스크립트 작성해줘" },
   { mode: "code", label: "엔진", text: "파이썬으로 구현하는 간단한 타일맵 던전 생성 알고리즘 알려줘" },
   { mode: "image", label: "디자인", text: "달빛 아래 파스텔빛 풍경과 벚꽃 일러스트 컨셉 제안해줘" },
-  { mode: "chat", label: "소개", text: "코하루 포트폴리오와 선아의 콜라보 배경을 소개해줘" },
+  { mode: "chat", label: "소개", text: "코하루 포트폴리오의 주요 프로젝트와 기술을 소개해줘" },
 ];
 
 export default function AIPage() {
@@ -22,7 +22,7 @@ export default function AIPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "ai",
-      content: "안녕하세요! 코하루와 선아가 함께 만든 Cloner AI입니다 🌸\n게임 프로그래밍, 유니티 C# 코드 작성, 셰이더 아이디어, 또는 궁금한 점이 있다면 편하게 물어보세요 ⁽⁽ (˶> ᎑ <˶) ⁾⁾!",
+      content: "안녕하세요! 코하루 포트폴리오의 AI 어시스턴트입니다 🌸\n게임 프로그래밍, 유니티 C# 코드 작성, 셰이더 아이디어, 또는 궁금한 점이 있다면 편하게 물어보세요 ⁽⁽ (˶> ᎑ <˶) ⁾⁾!",
       timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -100,7 +100,7 @@ export default function AIPage() {
               <Sparkles className="w-7 h-7 text-pink-500" /> Cloner AI 어시스턴트
             </h1>
             <p className="text-sm text-[#7a6e8f] mt-1">
-              선아가 학습한 Cloner와 코하루의 게임 지식이 결합된 대화형 AI입니다.
+              코하루의 게임 개발 및 프로그래밍 지식이 담긴 대화형 AI 어시스턴트입니다.
             </p>
           </div>
 

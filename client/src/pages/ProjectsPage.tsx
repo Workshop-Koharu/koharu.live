@@ -57,7 +57,7 @@ const PROJECTS = [
   {
     title: "koharu.live v2.0 Portfolio",
     category: "Full-Stack Web",
-    desc: "선아(SeonA)의 감성 디자인과 결합된 인터랙티브 포트폴리오. 인스타그램 피드 및 Neon PostgreSQL 연동.",
+    desc: "감성적인 파스텔 비주얼과 인터랙티브 반응형 인터페이스를 갖춘 코하루의 포트폴리오. 인스타그램 피드 및 Neon PostgreSQL 연동.",
     tags: ["React 19", "Vite", "Neon Postgres", "Instagram"],
     image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80",
     demoUrl: "https://koharu.live",

@@ -3,20 +3,20 @@ import SiteNav from "@/components/SiteNav";
 
 const PARTNERS = [
   {
-    name: "선아 (SeonA)",
-    tag: "Aesthetic Collaborator & Designer",
-    desc: "포트폴리오의 몽환적인 파스텔 비주얼 아이덴티티와 비밀 편지 등 감성적인 인터랙션 디자인을 함께 설계하고 구현한 최고의 파트너입니다 🌸",
-    avatar: "/images/seona-moon-logo.png",
-    link: "https://instagram.com/sx0n._a",
-    badge: "Official Collab",
-  },
-  {
     name: "Team Light",
     tag: "Creative Development Team",
     desc: "기술적인 도전과 웹 최적화, 공동 프로젝트를 함께 연구하며 시너지를 만들어가는 소중한 개발 팀입니다 ✨",
     avatar: "/assets/team-light-logo.png",
     link: "https://teamlight.pe.kr",
     badge: "Development Partner",
+  },
+  {
+    name: "Workshop Koharu",
+    tag: "Creative Tech Lab",
+    desc: "인디 게임 프로그래밍, 커스텀 셰이더 및 다양한 차세대 인터랙티브 기술 연구를 함께하는 코하루의 기술 랩입니다 🌸",
+    avatar: "/assets/koharu-profile.png",
+    link: "https://github.com/Workshop-Koharu",
+    badge: "Official Lab",
   },
 ];
 
