@@ -1,0 +1,956 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@font-face {
+  font-family: 'EF Diary';
+  src: url('/fonts/EF_Diary.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --radius: 1.25rem;
+  --font-diary: 'EF Diary', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  /* SeonA & Koharu Dreamy Palette */
+  --ink: #38314a;
+  --ink-soft: #7a6e8f;
+  --paper: #fbf6fb;
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-border: rgba(255, 255, 255, 0.92);
+  
+  --pink-primary: #f2689c;
+  --pink-deep: #c93b77;
+  --pink-soft: #fde8f2;
+  
+  --lavender: #c2b5f5;
+  --lavender-soft: #ede8fc;
+  
+  --sky: #a5d4f5;
+  --sky-soft: #e3f2fd;
+  
+  --card-bg: rgba(255, 255, 255, 0.78);
+  --card-border: rgba(255, 255, 255, 0.92);
+  --card-shadow: 0 16px 44px rgba(186, 122, 169, 0.12);
+  
+  --content-width: 980px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  color: var(--ink);
+  background-color: #faf5fa;
+  font-family: var(--font-diary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ambient Dreamy Background with Floating Orbs & Twinkling Sparkles */
+.ambient-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 10% 12%, rgba(201, 182, 255, 0.42) 0%, transparent 40%),
+    radial-gradient(ellipse at 92% 10%, rgba(165, 212, 245, 0.42) 0%, transparent 40%),
+    radial-gradient(ellipse at 80% 88%, rgba(242, 104, 156, 0.28) 0%, transparent 45%),
+    radial-gradient(ellipse at 20% 85%, rgba(225, 204, 250, 0.35) 0%, transparent 40%),
+    linear-gradient(180deg, #fff6fa 0%, #faebf5 50%, #f4e9f7 100%);
+}
+
+.ambient-background::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.5) 0%, transparent 70%);
+  animation: atmosphere-flow 24s ease-in-out infinite alternate;
+}
+
+.ambient-orb {
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+}
+
+.ambient-orb-one {
+  width: 650px;
+  height: 380px;
+  border-radius: 50%;
+  top: 15%;
+  left: -180px;
+  transform: rotate(-25deg);
+  background: radial-gradient(circle, rgba(226, 209, 255, 0.22) 0%, transparent 70%);
+  animation: orbit-float 22s ease-in-out infinite alternate;
+}
+
+.ambient-orb-two {
+  width: 700px;
+  height: 420px;
+  border-radius: 50%;
+  top: 45%;
+  right: -200px;
+  transform: rotate(20deg);
+  background: radial-gradient(circle, rgba(165, 212, 245, 0.2) 0%, transparent 70%);
+  animation: orbit-turn 100s linear infinite;
+}
+
+.ambient-orb-three {
+  width: 480px;
+  height: 300px;
+  border-radius: 50%;
+  bottom: 5%;
+  left: 20%;
+  background: radial-gradient(circle, rgba(255, 184, 214, 0.2) 0%, transparent 70%);
+  animation: orbit-float 18s -5s ease-in-out infinite alternate;
+}
+
+.ambient-spark {
+  position: absolute;
+  color: #fff;
+  opacity: 0.85;
+  text-shadow: 0 0 16px rgba(255, 255, 255, 0.95), 0 0 30px rgba(242, 104, 156, 0.4);
+  font-size: 24px;
+  animation: star-breathe 7s ease-in-out infinite alternate;
+  user-select: none;
+}
+
+.spark-one { top: 18%; left: 14%; font-size: 28px; }
+.spark-two { top: 28%; right: 15%; font-size: 32px; animation-delay: -3s; }
+.spark-three { bottom: 25%; left: 22%; font-size: 20px; animation-delay: -5s; }
+
+@keyframes atmosphere-flow {
+  from { transform: translate3d(-2%, -2%, 0) scale(1); }
+  50% { transform: translate3d(2%, 3%, 0) scale(1.05); }
+  to { transform: translate3d(-1%, 3%, 0) scale(1.02); }
+}
+
+@keyframes orbit-float {
+  from { transform: translate3d(0, -20px, 0); }
+  to { transform: translate3d(25px, 35px, 0); }
+}
+
+@keyframes orbit-turn {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes star-breathe {
+  from { opacity: 0.3; transform: translateY(0) scale(0.9); }
+  to { opacity: 0.95; transform: translateY(-14px) scale(1.15); }
+}
+
+/* =========================================================================
+   Top Navigation Bar (SeonA Style with Animated Expanding Labels)
+   ========================================================================= */
+.topbar-wrapper {
+  position: sticky;
+  top: 14px;
+  z-index: 100;
+  width: min(96%, 1160px);
+  margin: 12px auto 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(186, 122, 169, 0.12);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--pink-deep);
+  flex-shrink: 0;
+}
+
+.brand-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 2px solid rgba(242, 104, 156, 0.4);
+  box-shadow: 0 4px 12px rgba(242, 104, 156, 0.2);
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.brand-name-ko {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--pink-deep);
+}
+
+.brand-name-en {
+  font-size: 11px;
+  color: var(--ink-soft);
+  letter-spacing: 0.08em;
+}
+
+.main-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 46px;
+}
+
+.nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 12px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 14px;
+  transition: all 0.25s var(--ease-out);
+  white-space: nowrap;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: var(--pink-deep);
+  background: rgba(242, 104, 156, 0.1);
+}
+
+.nav-link.active {
+  background: linear-gradient(135deg, rgba(242, 104, 156, 0.18), rgba(194, 181, 245, 0.2));
+  color: var(--pink-deep);
+  font-weight: 700;
+}
+
+.nav-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.nav-link:hover .nav-icon {
+  transform: scale(1.1);
+}
+
+.nav-label {
+  margin-left: 6px;
+  font-size: 13.5px;
+}
+
+/* Floating Notice Bar right beneath Topbar */
+.notice-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(94%, 1120px);
+  margin: 10px auto 0;
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(186, 122, 169, 0.06);
+  backdrop-filter: blur(12px);
+  text-decoration: none;
+  color: var(--ink);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.notice-bar:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(186, 122, 169, 0.12);
+}
+
+.notice-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--pink-primary), var(--lavender));
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+
+.notice-text {
+  flex: 1;
+  font-size: 14px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notice-more {
+  font-size: 12px;
+  color: var(--pink-deep);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Common Container */
+.page-container {
+  width: min(94%, var(--content-width));
+  margin: 36px auto 80px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Glass Card */
+.glass-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 24px;
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 32px;
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s ease;
+}
+
+.glass-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 50px rgba(186, 122, 169, 0.16);
+}
+
+/* =========================================================================
+   Instagram-Style Blog Feed & Grid Styles
+   ========================================================================= */
+.insta-profile-header {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 36px;
+  margin-bottom: 28px;
+}
+
+@media (min-width: 680px) {
+  .insta-profile-header {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 48px;
+  }
+}
+
+.insta-avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+  margin: 0 auto;
+}
+
+.insta-avatar-ring {
+  padding: 4px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  box-shadow: 0 8px 24px rgba(220, 39, 67, 0.25);
+  animation: ring-pulse 3s infinite ease-in-out;
+}
+
+@keyframes ring-pulse {
+  0%, 100% { box-shadow: 0 8px 24px rgba(220, 39, 67, 0.25); }
+  50% { box-shadow: 0 10px 32px rgba(188, 24, 136, 0.45); }
+}
+
+.insta-avatar-img {
+  display: block;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #fff;
+}
+
+.insta-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.insta-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.insta-username {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.insta-verified {
+  color: #0095f6;
+  width: 20px;
+  height: 20px;
+}
+
+.insta-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.insta-btn-primary {
+  background: linear-gradient(135deg, var(--pink-primary), #e0528e);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(242, 104, 156, 0.35);
+}
+
+.insta-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(242, 104, 156, 0.45);
+}
+
+.insta-btn-secondary {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  border: 1px solid rgba(200, 180, 210, 0.4);
+}
+
+.insta-btn-secondary:hover {
+  background: #fff;
+  border-color: var(--pink-primary);
+  color: var(--pink-deep);
+}
+
+.insta-stats {
+  display: flex;
+  gap: 28px;
+  font-size: 15px;
+}
+
+.insta-stat-item strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.insta-stat-item span {
+  color: var(--ink-soft);
+  margin-left: 4px;
+}
+
+.insta-bio {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--ink);
+}
+
+/* Instagram Story Highlights */
+.insta-highlights {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  padding: 6px 0 16px;
+  margin-bottom: 24px;
+  scrollbar-width: none;
+}
+
+.insta-highlights::-webkit-scrollbar {
+  display: none;
+}
+
+.insta-highlight-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.insta-highlight-ring {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  padding: 2.5px;
+  background: linear-gradient(135deg, #f2689c, #c2b5f5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s ease;
+}
+
+.insta-highlight-item:hover .insta-highlight-ring {
+  transform: scale(1.08);
+}
+
+.insta-highlight-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.insta-highlight-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Instagram View Navigation Tabs */
+.insta-tabs {
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid rgba(217, 74, 130, 0.15);
+  margin-bottom: 24px;
+  gap: 36px;
+}
+
+.insta-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: transparent;
+  border: none;
+  border-top: 2px solid transparent;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.insta-tab-btn.active {
+  color: var(--pink-deep);
+  border-top-color: var(--pink-deep);
+  font-weight: 700;
+}
+
+/* Instagram 3-Column Square Grid */
+.insta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .insta-grid {
+    gap: 6px;
+  }
+}
+
+.insta-grid-item {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #f0e6f2;
+}
+
+.insta-grid-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s var(--ease-out);
+}
+
+.insta-grid-item:hover .insta-grid-img {
+  transform: scale(1.05);
+}
+
+.insta-grid-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(40, 20, 35, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  backdrop-filter: blur(2px);
+}
+
+.insta-grid-item:hover .insta-grid-overlay {
+  opacity: 1;
+}
+
+.insta-overlay-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Instagram Feed Stream (Single Column Cards) */
+.insta-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.insta-post-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(14px);
+}
+
+.insta-post-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+}
+
+.insta-post-author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.insta-post-author-img {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--pink-primary);
+}
+
+.insta-post-author-name {
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.insta-post-time {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.insta-post-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #000;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.insta-post-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.insta-heart-burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  color: #fff;
+  font-size: 90px;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.4));
+  animation: heart-pop 0.8s ease forwards;
+}
+
+@keyframes heart-pop {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.95; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+
+.insta-post-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px 6px;
+}
+
+.insta-action-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.insta-icon-btn {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--ink);
+  transition: transform 0.15s ease, color 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.insta-icon-btn:hover {
+  transform: scale(1.15);
+}
+
+.insta-icon-btn.is-liked {
+  color: #ff3040;
+}
+
+.insta-post-body {
+  padding: 0 18px 18px;
+}
+
+.insta-likes-count {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.insta-caption {
+  font-size: 14.5px;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+.insta-caption strong {
+  margin-right: 6px;
+}
+
+.insta-hashtag {
+  color: #0095f6;
+  font-weight: 600;
+}
+
+.insta-comments-preview {
+  margin-top: 8px;
+}
+
+.insta-view-comments-btn {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+
+.insta-comment-item {
+  font-size: 13.5px;
+  margin-bottom: 4px;
+}
+
+.insta-comment-item strong {
+  margin-right: 6px;
+}
+
+.insta-add-comment-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(217, 74, 130, 0.1);
+}
+
+.insta-comment-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 13.5px;
+  color: var(--ink);
+  outline: none;
+  font-family: inherit;
+}
+
+.insta-comment-submit {
+  background: transparent;
+  border: none;
+  color: var(--pink-deep);
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.insta-comment-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Instagram Post Detail Modal */
+.insta-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(30, 15, 26, 0.65);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.insta-modal-content {
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  max-width: 960px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 768px) {
+  .insta-modal-content {
+    flex-direction: row;
+    height: 80vh;
+  }
+}
+
+.insta-modal-left {
+  flex: 1.2;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.insta-modal-left img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.insta-modal-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  overflow: hidden;
+}
+
+.insta-modal-comments-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* =========================================================================
+   Letter (Secret Letter), History, Partners & Board Styles
+   ========================================================================= */
+.letter-envelope {
+  position: relative;
+  max-width: 520px;
+  margin: 30px auto;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 2px dashed rgba(242, 104, 156, 0.4);
+  border-radius: 24px;
+  box-shadow: 0 16px 45px rgba(242, 104, 156, 0.15);
+  text-align: center;
+}
+
+.pin-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  max-width: 260px;
+  margin: 20px auto 0;
+}
+
+.pin-btn {
+  height: 54px;
+  font-size: 20px;
+  font-weight: 700;
+  border-radius: 16px;
+  border: 1px solid rgba(217, 74, 130, 0.2);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--pink-deep);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pin-btn:hover {
+  background: var(--pink-primary);
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.timeline-line {
+  position: relative;
+  padding-left: 32px;
+}
+
+.timeline-line::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--pink-primary), var(--lavender));
+}
+
+.timeline-node {
+  position: relative;
+  margin-bottom: 32px;
+}
+
+.timeline-node::before {
+  content: "";
+  position: absolute;
+  left: -28px;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--pink-primary);
+  border: 3px solid #fff;
+  box-shadow: 0 0 10px rgba(242, 104, 156, 0.5);
+}
