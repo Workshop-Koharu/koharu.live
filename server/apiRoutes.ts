@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import {
   createBlogPost,
   createGuestbookMessage,
@@ -16,7 +16,7 @@ import {
 export const apiRouter = Router();
 
 // Get profile settings
-apiRouter.get("/profile", async (req, res) => {
+apiRouter.get("/profile", async (req: Request, res: Response) => {
   try {
     const profile = await getSiteProfile();
     res.json({ profile });
@@ -27,7 +27,7 @@ apiRouter.get("/profile", async (req, res) => {
 });
 
 // Update profile settings
-apiRouter.post("/profile", async (req, res) => {
+apiRouter.post("/profile", async (req: Request, res: Response) => {
   try {
     const updated = await updateSiteProfile(req.body);
     res.json({ profile: updated });
@@ -38,7 +38,7 @@ apiRouter.post("/profile", async (req, res) => {
 });
 
 // List posts (Instagram Blog Feed)
-apiRouter.get("/posts", async (req, res) => {
+apiRouter.get("/posts", async (req: Request, res: Response) => {
   try {
     const posts = await getPublishedBlogPosts();
     res.json({ posts });
@@ -49,7 +49,7 @@ apiRouter.get("/posts", async (req, res) => {
 });
 
 // Alias for notice-bar compatibility
-apiRouter.get("/blog", async (req, res) => {
+apiRouter.get("/blog", async (req: Request, res: Response) => {
   try {
     const posts = await getPublishedBlogPosts();
     res.json({ posts });
@@ -59,7 +59,7 @@ apiRouter.get("/blog", async (req, res) => {
 });
 
 // Get single post by slug or ID
-apiRouter.get("/posts/:identifier", async (req, res) => {
+apiRouter.get("/posts/:identifier", async (req: Request, res: Response) => {
   try {
     const { identifier } = req.params;
     let post = null;
@@ -82,7 +82,7 @@ apiRouter.get("/posts/:identifier", async (req, res) => {
 });
 
 // Create new post
-apiRouter.post("/posts", async (req, res) => {
+apiRouter.post("/posts", async (req: Request, res: Response) => {
   try {
     const { slug, title, caption, coverUrl, category } = req.body;
     if (!caption || !coverUrl) {
@@ -110,7 +110,7 @@ apiRouter.post("/posts", async (req, res) => {
 });
 
 // Toggle post like
-apiRouter.post("/posts/:id/like", async (req, res) => {
+apiRouter.post("/posts/:id/like", async (req: Request, res: Response) => {
   try {
     const postId = parseInt(req.params.id, 10);
     const userIdentifier = req.body.userIdentifier || "visitor-anonymous";
@@ -124,7 +124,7 @@ apiRouter.post("/posts/:id/like", async (req, res) => {
 });
 
 // Get post comments
-apiRouter.get("/posts/:id/comments", async (req, res) => {
+apiRouter.get("/posts/:id/comments", async (req: Request, res: Response) => {
   try {
     const postId = parseInt(req.params.id, 10);
     const comments = await getPostComments(postId);
@@ -136,7 +136,7 @@ apiRouter.get("/posts/:id/comments", async (req, res) => {
 });
 
 // Add comment to post
-apiRouter.post("/posts/:id/comments", async (req, res) => {
+apiRouter.post("/posts/:id/comments", async (req: Request, res: Response) => {
   try {
     const postId = parseInt(req.params.id, 10);
     const { authorName, content } = req.body;
@@ -160,7 +160,7 @@ apiRouter.post("/posts/:id/comments", async (req, res) => {
 });
 
 // Get guestbook entries
-apiRouter.get("/guestbook", async (req, res) => {
+apiRouter.get("/guestbook", async (req: Request, res: Response) => {
   try {
     const messages = await getGuestbookMessages();
     res.json({ messages });
@@ -171,7 +171,7 @@ apiRouter.get("/guestbook", async (req, res) => {
 });
 
 // Add guestbook entry
-apiRouter.post("/guestbook", async (req, res) => {
+apiRouter.post("/guestbook", async (req: Request, res: Response) => {
   try {
     const { authorName, content, isSecret } = req.body;
     if (!content) {
@@ -193,7 +193,7 @@ apiRouter.post("/guestbook", async (req, res) => {
 });
 
 // Cloner AI Chat endpoint
-apiRouter.post("/ai/chat", async (req, res) => {
+apiRouter.post("/ai/chat", async (req: Request, res: Response) => {
   try {
     const { message, mode, model } = req.body;
     const query = (message || "").toLowerCase();

@@ -37,9 +37,11 @@ interface Comment {
 }
 
 export default function BlogPostPage() {
-  const [, params] = useRoute("/blog/:slug.html");
-  const [, cleanParams] = useRoute("/blog/:slug");
-  const slug = params?.slug || cleanParams?.slug;
+  const [, params] = useRoute<{ slug: string }>("/blog/:slug.html");
+  const [, cleanParams] = useRoute<{ slug: string }>("/blog/:slug");
+  const [, instaParams] = useRoute<{ slug: string }>("/instagram/:slug.html");
+  const [, instaCleanParams] = useRoute<{ slug: string }>("/instagram/:slug");
+  const slug = params?.slug || cleanParams?.slug || instaParams?.slug || instaCleanParams?.slug;
 
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);

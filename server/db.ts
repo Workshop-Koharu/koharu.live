@@ -218,29 +218,83 @@ export async function createGuestbookMessage(msg: InsertGuestbookMessage): Promi
   return result[0];
 }
 
-export async function getSiteProfile(): Promise<SiteProfile | undefined> {
-  const db = getDb();
-  if (!db) return undefined;
+export const DEFAULT_SITE_PROFILE = {
+  username: "koharu.live",
+  name: "! Koharu · 코하루",
+  bio: "🎮 게임 프로그래머 · 인디 게임 & 커스텀 엔진 제작\n🕹️ Unity / C# · HLSL Shader · TypeScript · Web\n🌸 플레이되는 아이디어를 코드로 실체화하는 중",
+  avatarUrl: "/assets/koharu-profile.png",
+  bannerUrl: "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1400&q=80",
+  birthdate: "2004. 12. 04",
+  githubUrl: "https://github.com/Workshop-Koharu",
+  instagramUrl: "https://instagram.com/koharu.live",
+  email: "admin@koharu.live",
+  websiteUrl: "https://koharu.live",
+};
 
-  const result = await db.select().from(siteProfile).limit(1);
-  return result[0];
+export async function getSiteProfile(): Promise<SiteProfile> {
+  const db = getDb();
+  if (!db) {
+    return {
+      id: 1,
+      ...DEFAULT_SITE_PROFILE,
+      updatedAt: new Date(),
+    };
+  }
+
+  try {
+    const result = await db.select().from(siteProfile).limit(1);
+    if (result && result.length > 0 && result[0]) {
+      return result[0];
+    }
+
+    const inserted = await db.insert(siteProfile).values(DEFAULT_SITE_PROFILE).returning();
+    return inserted[0] || { id: 1, ...DEFAULT_SITE_PROFILE, updatedAt: new Date() };
+  } catch (error) {
+    console.error("[Database] Error in getSiteProfile:", error);
+    return { id: 1, ...DEFAULT_SITE_PROFILE, updatedAt: new Date() };
+  }
 }
 
-export async function updateSiteProfile(data: Partial<InsertSiteProfile>): Promise<SiteProfile | undefined> {
+export async function updateSiteProfile(data: any): Promise<SiteProfile> {
   const db = getDb();
-  if (!db) return undefined;
+  if (!db) {
+    throw new Error("Database connection unavailable");
+  }
 
-  const existing = await getSiteProfile();
-  if (existing) {
-    const result = await db
-      .update(siteProfile)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(siteProfile.id, existing.id))
-      .returning();
-    return result[0];
-  } else {
-    const result = await db.insert(siteProfile).values(data as InsertSiteProfile).returning();
-    return result[0];
+  try {
+    const cleanData: any = {};
+    if (typeof data?.username === "string" && data.username.trim()) cleanData.username = data.username.trim();
+    if (typeof data?.name === "string" && data.name.trim()) cleanData.name = data.name.trim();
+    if (typeof data?.bio === "string") cleanData.bio = data.bio;
+    if (typeof data?.avatarUrl === "string" && data.avatarUrl.trim()) cleanData.avatarUrl = data.avatarUrl.trim();
+    if (typeof data?.bannerUrl === "string" && data.bannerUrl.trim()) cleanData.bannerUrl = data.bannerUrl.trim();
+    if (typeof data?.birthdate === "string" && data.birthdate.trim()) cleanData.birthdate = data.birthdate.trim();
+    if (typeof data?.githubUrl === "string") cleanData.githubUrl = data.githubUrl.trim();
+    if (typeof data?.instagramUrl === "string") cleanData.instagramUrl = data.instagramUrl.trim();
+    if (typeof data?.email === "string") cleanData.email = data.email.trim();
+    if (typeof data?.websiteUrl === "string") cleanData.websiteUrl = data.websiteUrl.trim();
+    cleanData.updatedAt = new Date();
+
+    const existingList = await db.select().from(siteProfile).limit(1);
+    const existing = existingList[0];
+
+    if (existing) {
+      const result = await db
+        .update(siteProfile)
+        .set(cleanData)
+        .where(eq(siteProfile.id, existing.id))
+        .returning();
+      return result[0] || { ...existing, ...cleanData };
+    } else {
+      const result = await db
+        .insert(siteProfile)
+        .values({ ...DEFAULT_SITE_PROFILE, ...cleanData })
+        .returning();
+      return result[0];
+    }
+  } catch (error) {
+    console.error("[Database] Error in updateSiteProfile:", error);
+    throw error;
   }
 }
 

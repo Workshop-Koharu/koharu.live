@@ -71,9 +71,19 @@ export default function BlogAdminPage() {
   const handleCover = async (file: File) => { try { setCoverUrl(await upload(file)); setCoverName(file.name); toast.success("대표 이미지를 업로드했어요."); } catch (error) { toast.error(error instanceof Error ? error.message : "이미지 업로드에 실패했습니다."); } };
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const input = { title, slug, excerpt, content, coverUrl: coverUrl || null, published: true };
+    const finalCaption = excerpt || content || title;
+    const finalCover = coverUrl || "/assets/koharu-profile.png";
+    const input = {
+      title,
+      slug,
+      caption: finalCaption,
+      excerpt: excerpt || title,
+      content,
+      coverUrl: finalCover,
+      published: true,
+    };
     if (editingId) updatePost.mutate({ id: editingId, ...input });
-    else createPost.mutate({ ...input, coverUrl: coverUrl || undefined });
+    else createPost.mutate(input);
   };
   const startEdit = (post: EditablePost) => { setEditingId(post.id); setTitle(post.title); setSlug(post.slug); setExcerpt(post.excerpt); setContent(post.content); setCoverUrl(post.coverUrl ?? ""); setCoverName(post.coverUrl ? "현재 대표 이미지" : ""); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const remove = (id: number) => { if (window.confirm("이 게시글을 삭제할까요? 삭제 후에는 되돌릴 수 없습니다.")) deletePost.mutate({ id }); };
