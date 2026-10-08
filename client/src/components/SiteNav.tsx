@@ -1,14 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
-  BookOpen,
   Calendar,
+  Camera,
   FolderGit2,
-  Heart,
   Home,
   Mail,
-  MessageSquare,
-  Sparkles,
   UserCheck,
   Users,
 } from "lucide-react";
@@ -34,9 +31,9 @@ export default function SiteNav({ active }: SiteNavProps) {
       .catch(() => {
         // Fallback default notice
         setLatestPost({
-          title: "✨ koharu.live v2.0 오픈! 인스타그램 스타일 블로그와 새로운 기능들을 만나보세요.",
-          slug: "koharu-live-v2-announcement",
-          category: "notice",
+          title: "✨ koharu.live 인스타그램 피드에 오신 것을 환영합니다! 🌸",
+          slug: "",
+          category: "instagram",
         });
       });
   }, []);
@@ -48,9 +45,7 @@ export default function SiteNav({ active }: SiteNavProps) {
     { href: "/letter.html", label: "편지", icon: Mail },
     { href: "/partners.html", label: "파트너", icon: Users },
     { href: "/person.html", label: "지인", icon: UserCheck },
-    { href: "/board.html", label: "게시판", icon: MessageSquare },
-    { href: "/ai.html", label: "AI", icon: Sparkles },
-    { href: "/blog.html", label: "블로그", icon: BookOpen },
+    { href: "/instagram.html", label: "인스타그램", icon: Camera },
   ];
 
   return (
@@ -81,9 +76,9 @@ export default function SiteNav({ active }: SiteNavProps) {
               const Icon = item.icon;
               const isActive =
                 currentPath === item.href ||
-                (item.href === "/profile.html" && (currentPath === "/" || currentPath === "/profile")) ||
+                (item.href === "/profile.html" && (currentPath === "/" || currentPath === "/profile" || currentPath === "/index.html")) ||
                 (item.href === "/projects.html" && currentPath.startsWith("/project")) ||
-                (item.href === "/blog.html" && currentPath.startsWith("/blog"));
+                (item.href === "/instagram.html" && (currentPath.startsWith("/instagram") || currentPath.startsWith("/blog") || currentPath.startsWith("/board")));
 
               return (
                 <Link
@@ -101,15 +96,15 @@ export default function SiteNav({ active }: SiteNavProps) {
 
         {/* Floating Notice Bar */}
         <Link
-          href={latestPost ? `/blog/${latestPost.slug}.html` : "/blog.html"}
+          href={latestPost && latestPost.slug ? `/instagram/${latestPost.slug}.html` : "/instagram.html"}
           className="notice-bar"
         >
-          <span className="notice-badge">블로그</span>
+          <span className="notice-badge">인스타그램</span>
           <span className="notice-text">
-            {latestPost ? latestPost.title : "새 소식을 불러오는 중… 🌸"}
+            {latestPost ? latestPost.title : "새 소식을 확인해보세요 🌸"}
           </span>
           <span className="notice-more">
-            전체 보기 →
+            피드 보기 →
           </span>
         </Link>
       </div>

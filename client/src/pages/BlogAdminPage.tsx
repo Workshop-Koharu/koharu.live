@@ -79,7 +79,7 @@ export default function BlogAdminPage() {
   const remove = (id: number) => { if (window.confirm("이 게시글을 삭제할까요? 삭제 후에는 되돌릴 수 없습니다.")) deletePost.mutate({ id }); };
 
   return (
-    <PageShell active="/blog.html" eyebrow="Private editor" title="블로그 작성" description="등록된 관리자 계정만 새 글을 공개할 수 있습니다.">
+    <PageShell active="/instagram.html" eyebrow="Private editor" title="인스타그램 피드 작성" description="등록된 관리자 계정만 새 글을 공개할 수 있습니다.">
       {loading && <p className="loading-state">로그인 상태를 확인하는 중이에요...</p>}
       {!loading && !isAuthenticated && <form className="detail-card section-card admin-form entrance delay-1" onSubmit={submitLogin}>
         <div className="section-kicker">owner only</div><h2>관리자 로그인</h2><p>관리자 이메일과 비밀번호는 서버에서만 검증되며, 평문으로 저장되지 않습니다.</p>

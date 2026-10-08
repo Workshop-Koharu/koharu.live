@@ -3,11 +3,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import AIPage from "./pages/AIPage";
 import BlogAdminPage from "./pages/BlogAdminPage";
 import BlogPage from "./pages/BlogPage";
 import BlogPostPage from "./pages/BlogPostPage";
-import BoardPage from "./pages/BoardPage";
 import ContactPage from "./pages/ContactPage";
 import HistoryPage from "./pages/HistoryPage";
 import Home from "./pages/Home";
@@ -57,20 +55,24 @@ function Router() {
       <Route path="/person" component={PeoplePage} />
       <Route path="/people" component={PeoplePage} />
 
-      {/* Guestbook Board */}
-      <Route path="/board.html" component={BoardPage} />
-      <Route path="/board" component={BoardPage} />
+      {/* Instagram (Feed & Gallery, replacing board & blog) */}
+      <Route path="/instagram.html" component={BlogPage} />
+      <Route path="/instagram" component={BlogPage} />
+      <Route path="/instagram/:slug.html" component={BlogPostPage} />
+      <Route path="/instagram/:slug" component={BlogPostPage} />
 
-      {/* Cloner AI */}
-      <Route path="/ai.html" component={AIPage} />
-      <Route path="/AI.html" component={AIPage} />
-      <Route path="/ai" component={AIPage} />
-
-      {/* Instagram Blog */}
+      {/* Aliases for Board & Blog */}
       <Route path="/blog.html" component={BlogPage} />
       <Route path="/blog" component={BlogPage} />
       <Route path="/blog/:slug.html" component={BlogPostPage} />
       <Route path="/blog/:slug" component={BlogPostPage} />
+      <Route path="/board.html" component={BlogPage} />
+      <Route path="/board" component={BlogPage} />
+
+      {/* AI Category Removed: Redirects to Home */}
+      <Route path="/ai.html" component={Home} />
+      <Route path="/AI.html" component={Home} />
+      <Route path="/ai" component={Home} />
 
       {/* Admin */}
       <Route path="/admin" component={BlogAdminPage} />

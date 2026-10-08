@@ -85,3 +85,24 @@ export const guestbookMessages = pgTable("guestbook_messages", {
 
 export type GuestbookMessage = typeof guestbookMessages.$inferSelect;
 export type InsertGuestbookMessage = typeof guestbookMessages.$inferInsert;
+
+/**
+ * Site Profile Settings for Instagram & Portfolio
+ */
+export const siteProfile = pgTable("site_profile", {
+  id: serial("id").primaryKey(),
+  username: varchar("username", { length: 64 }).default("koharu.live").notNull(),
+  name: varchar("name", { length: 100 }).default("! Koharu · 코하루").notNull(),
+  bio: text("bio").default("🎮 게임 프로그래머 · 인디 게임 & 커스텀 엔진 제작\n🕹️ Unity / C# · HLSL Shader · TypeScript · Web\n🌸 플레이되는 아이디어를 코드로 실체화하는 중").notNull(),
+  avatarUrl: varchar("avatar_url", { length: 1000 }).default("/assets/koharu-profile.png").notNull(),
+  bannerUrl: varchar("banner_url", { length: 1000 }).default("https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1400&q=80").notNull(),
+  birthdate: varchar("birthdate", { length: 64 }).default("2004. 12. 04").notNull(),
+  githubUrl: varchar("github_url", { length: 500 }).default("https://github.com/Workshop-Koharu"),
+  instagramUrl: varchar("instagram_url", { length: 500 }).default("https://instagram.com/sx0n._a"),
+  email: varchar("email", { length: 320 }).default("admin@koharu.live"),
+  websiteUrl: varchar("website_url", { length: 500 }).default("https://koharu.live"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type SiteProfile = typeof siteProfile.$inferSelect;
+export type InsertSiteProfile = typeof siteProfile.$inferInsert;

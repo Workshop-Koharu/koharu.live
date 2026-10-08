@@ -8,10 +8,34 @@ import {
   getPostComments,
   getPublishedBlogPostBySlug,
   getPublishedBlogPosts,
+  getSiteProfile,
   togglePostLike,
+  updateSiteProfile,
 } from "./db";
 
 export const apiRouter = Router();
+
+// Get profile settings
+apiRouter.get("/profile", async (req, res) => {
+  try {
+    const profile = await getSiteProfile();
+    res.json({ profile });
+  } catch (error) {
+    console.error("[API] Error fetching profile:", error);
+    res.status(500).json({ error: "Failed to fetch profile" });
+  }
+});
+
+// Update profile settings
+apiRouter.post("/profile", async (req, res) => {
+  try {
+    const updated = await updateSiteProfile(req.body);
+    res.json({ profile: updated });
+  } catch (error) {
+    console.error("[API] Error updating profile:", error);
+    res.status(500).json({ error: "Failed to update profile" });
+  }
+});
 
 // List posts (Instagram Blog Feed)
 apiRouter.get("/posts", async (req, res) => {

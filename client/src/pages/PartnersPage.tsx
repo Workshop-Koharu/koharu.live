@@ -5,7 +5,7 @@ const PARTNERS = [
   {
     name: "선아 (SeonA)",
     tag: "Aesthetic Collaborator & Designer",
-    desc: "포트폴리오의 몽환적인 파스텔 비주얼 아이덴티티와 Cloner AI, 비밀 편지 등 감성적인 인터랙션 디자인을 함께 설계하고 구현한 최고의 파트너입니다 🌸",
+    desc: "포트폴리오의 몽환적인 파스텔 비주얼 아이덴티티와 비밀 편지 등 감성적인 인터랙션 디자인을 함께 설계하고 구현한 최고의 파트너입니다 🌸",
     avatar: "/images/seona-moon-logo.png",
     link: "https://instagram.com/sx0n._a",
     badge: "Official Collab",
@@ -17,14 +17,6 @@ const PARTNERS = [
     avatar: "/assets/team-light-logo.png",
     link: "https://teamlight.pe.kr",
     badge: "Development Partner",
-  },
-  {
-    name: "Stellive Collaborators",
-    tag: "Virtual Creator Project",
-    desc: "팬 프로젝트 및 게임 개발 협업을 통해 인터랙티브 콘텐츠와 생동감 넘치는 연출을 함께 연구하고 있습니다 🎮",
-    avatar: "/assets/stellive-logo.png",
-    link: "https://stellive.me",
-    badge: "Media Collab",
   },
 ];
 

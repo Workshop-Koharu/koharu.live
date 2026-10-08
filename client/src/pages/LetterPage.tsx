@@ -151,7 +151,7 @@ export default function LetterPage() {
                   다시 손가락에 힘이 들어가곤 해.
                 </p>
                 <p>
-                  코하루 포트폴리오에는 선아와 함께 나눈 따뜻한 감성과 꿈들이 가득 담겨 있어.
+                  코하루 포트폴리오에는 너희들과 함께한 순간들이 담겨있어.
                   앞으로도 더 재미있고 사랑스러운 게임과 인터랙티브한 경험들을 만들어 나갈 테니까,
                   지켜봐 주면 정말 기쁠 것 같아!
                 </p>
@@ -160,7 +160,7 @@ export default function LetterPage() {
                 </p>
                 <div className="text-right pt-6">
                   <p className="font-bold text-pink-600">! Koharu 드림 🌸</p>
-                  <p className="text-xs text-[#7a6e8f]">From koharu.live with SeonA</p>
+                  <p className="text-xs text-[#7a6e8f]">From koharu.live</p>
                 </div>
               </div>
             </div>

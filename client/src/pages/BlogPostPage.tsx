@@ -142,17 +142,17 @@ export default function BlogPostPage() {
 
   return (
     <div className="min-h-screen">
-      <SiteNav active="/blog.html" />
+      <SiteNav active="/instagram.html" />
 
       <main className="page-container" id="main">
         <div className="max-w-2xl mx-auto">
           {/* Back button */}
           <div className="mb-6">
             <Link
-              href="/blog.html"
+              href="/instagram.html"
               className="inline-flex items-center gap-1.5 text-xs font-bold text-pink-600 hover:text-pink-700"
             >
-              <ArrowLeft className="w-4 h-4" /> 블로그 목록으로 돌아가기
+              <ArrowLeft className="w-4 h-4" /> 인스타그램 피드로 돌아가기
             </Link>
           </div>
 
@@ -164,8 +164,8 @@ export default function BlogPostPage() {
           ) : !post ? (
             <div className="glass-card text-center py-16">
               <h2 className="text-lg font-bold text-[#38314a] mb-2">게시물을 찾을 수 없습니다</h2>
-              <Link href="/blog.html" className="insta-action-btn insta-btn-primary mt-3">
-                블로그 홈으로 가기
+              <Link href="/instagram.html" className="insta-action-btn insta-btn-primary mt-3">
+                인스타그램 홈으로 가기
               </Link>
             </div>
           ) : (
