@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import {
   Bookmark,
   Cake,
@@ -8,7 +8,6 @@ import {
   Copy,
   Edit3,
   ExternalLink,
-  Eye,
   Globe,
   Grid,
   Heart,
@@ -16,15 +15,13 @@ import {
   Layers,
   Mail,
   MessageCircle,
-  MoreHorizontal,
   PlusCircle,
-  Search,
   Share2,
   Sparkles,
   Trash2,
   UploadCloud,
   User,
-  UserCheck,
+  UserMinus,
   UserPlus,
   X,
 } from "lucide-react";
@@ -76,8 +73,8 @@ interface ProfileData {
   websiteUrl: string;
 }
 
-// Koharu official profile (viewable via /@koharu.live or profile switcher)
-const KOHARU_OFFICIAL_PROFILE: ProfileData = {
+// ─── Koharu's canonical profile (editable via profile settings) ───────────────
+const KOHARU_PROFILE_DEFAULTS: ProfileData = {
   username: "koharu.live",
   name: "! Koharu · 코하루",
   bio: "🌸 개발과 창작을 좋아하는 코하루의 공간입니다.\n🎮 인디 게임 & 웹 프로젝트 제작\n✨ 비공식 스텔라이브 팬서버를 함께 운영하고 있어요!",
@@ -90,21 +87,12 @@ const KOHARU_OFFICIAL_PROFILE: ProfileData = {
   websiteUrl: "https://koharu.live",
 };
 
-// Default newly created visitor account profile (strictly blank avatar and empty bio)
-const BLANK_DEFAULT_PROFILE: ProfileData = {
-  username: "user",
-  name: "새 사용자",
-  bio: "",
-  avatarUrl: "",
-  bannerUrl: "",
-  birthdate: "",
-  githubUrl: "",
-  instagramUrl: "",
-  email: "",
-  websiteUrl: "",
-};
-
-const DEFAULT_PROFILE = BLANK_DEFAULT_PROFILE;
+const STORAGE_KEY_PROFILE = "koharu_profile_v2";
+const STORAGE_KEY_POSTS = "koharu_posts_cache";
+const STORAGE_KEY_MY_IDS = "koharu_my_uploaded_ids";
+const STORAGE_KEY_LIKED = "koharu_liked_posts";
+const STORAGE_KEY_BOOKMARKED = "koharu_bookmarked_posts";
+const STORAGE_KEY_FOLLOWING = "koharu_following_list"; // JSON array of {name, username, avatar}
 
 const DEFAULT_POSTS: Post[] = [
   {
@@ -167,9 +155,7 @@ const DEFAULT_POSTS: Post[] = [
   },
 ];
 
-/**
- * Client-side image helper: compresses and reads user-uploaded file as base64 DataURL
- */
+/** Compress and read an image file as base64 DataURL */
 function processImageFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith("image/")) {
@@ -205,8 +191,7 @@ function processImageFile(file: File): Promise<string> {
           return;
         }
         ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
-        resolve(dataUrl);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
       };
       img.src = reader.result as string;
     };
@@ -214,171 +199,172 @@ function processImageFile(file: File): Promise<string> {
   });
 }
 
+function ls<T>(key: string, fallback: T): T {
+  try {
+    const v = localStorage.getItem(key);
+    if (v) return JSON.parse(v) as T;
+  } catch {}
+  return fallback;
+}
+
+function lsSet(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
 export default function BlogPage() {
   const [, setLocation] = useLocation();
 
-  // Initialize posts from cache or fallback so posts are NEVER empty and links NEVER 404
-  const [posts, setPosts] = useState<Post[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem("koharu_posts_cache");
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
-          }
-        }
-      } catch {}
-    }
-    return DEFAULT_POSTS;
+  // ── Profile (single Koharu account, editable) ─────────────────────────────
+  const [profile, setProfile] = useState<ProfileData>(() => {
+    const stored = ls<ProfileData | null>(STORAGE_KEY_PROFILE, null);
+    if (stored && stored.username) return { ...KOHARU_PROFILE_DEFAULTS, ...stored };
+    return KOHARU_PROFILE_DEFAULTS;
   });
 
+  // ── Posts ─────────────────────────────────────────────────────────────────
+  const [posts, setPosts] = useState<Post[]>(() => {
+    const cached = ls<Post[]>(STORAGE_KEY_POSTS, []);
+    return cached.length > 0 ? cached : DEFAULT_POSTS;
+  });
   const [loading, setLoading] = useState(false);
+
+  // ── View ──────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<"grid" | "feed">("grid");
   const [activeTag, setActiveTag] = useState<string>("all");
 
-  // Profile states:
-  // 1. myAccount: The current visitor's own profile (initialized blank: no image, no bio)
-  const [myAccount, setMyAccount] = useState<ProfileData>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("koharu_my_profile");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed && typeof parsed === "object") {
-            return { ...BLANK_DEFAULT_PROFILE, ...parsed };
-          }
-        }
-      } catch {}
-    }
-    return BLANK_DEFAULT_PROFILE;
-  });
+  // ── Interactions ──────────────────────────────────────────────────────────
+  const [likedPosts, setLikedPosts] = useState<Record<number, boolean>>(() =>
+    ls(STORAGE_KEY_LIKED, {})
+  );
+  const [bookmarkedPosts, setBookmarkedPosts] = useState<Record<number, boolean>>(() =>
+    ls(STORAGE_KEY_BOOKMARKED, {})
+  );
+  const [heartBurst, setHeartBurst] = useState<number | null>(null);
+  const [comments, setComments] = useState<Record<number, Comment[]>>({});
 
-  // Whether user is viewing Koharu's official profile or their own profile
-  const [isViewingKoharu, setIsViewingKoharu] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const path = window.location.pathname.toLowerCase();
-        const search = window.location.search.toLowerCase();
-        if (
-          path.includes("@koharu") ||
-          path.includes("koharu.live") ||
-          search.includes("koharu.live") ||
-          search.includes("view=koharu")
-        ) {
-          return true;
-        }
-      } catch {}
-    }
-    return false;
-  });
+  // ── Following list (accounts this profile follows) ────────────────────────
+  // Each entry: { name, username, avatarUrl }
+  const [followingList, setFollowingList] = useState<
+    Array<{ name: string; username: string; avatarUrl: string }>
+  >(() => ls(STORAGE_KEY_FOLLOWING, []));
 
-  // Current active displayed profile
-  const profile = isViewingKoharu ? KOHARU_OFFICIAL_PROFILE : myAccount;
-  const isOwner = !isViewingKoharu; // You are the owner of your own profile
+  // Followers: people who follow Koharu (they hit "팔로우" from visitor state)
+  // Since this is a personal portfolio site, we simulate followers as external visitors
+  // The owner (Koharu) doesn't follow themselves
+  const [followers, setFollowers] = useState<
+    Array<{ name: string; username: string; avatarUrl: string }>
+  >(() => ls("koharu_followers_list", []));
 
+  // ── Modals ────────────────────────────────────────────────────────────────
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
-  const [editForm, setEditForm] = useState<ProfileData>(myAccount);
+  const [editForm, setEditForm] = useState<ProfileData>(profile);
   const [isProfileSaving, setIsProfileSaving] = useState(false);
 
-  // Persistent Follow state for Koharu:
-  const [isFollowing, setIsFollowing] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const val = localStorage.getItem("koharu_is_following");
-        return val === "1" || val === "true";
-      } catch {
-        return false;
-      }
-    }
-    return false;
-  });
-
-  // Profile share modal
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-
-  // Followers & Following Modals
   const [isFollowersModalOpen, setIsFollowersModalOpen] = useState(false);
   const [isFollowingModalOpen, setIsFollowingModalOpen] = useState(false);
 
-  // Active post for detail modal
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [comments, setComments] = useState<Record<number, Comment[]>>({});
-  const [likedPosts, setLikedPosts] = useState<Record<number, boolean>>({});
-  const [bookmarkedPosts, setBookmarkedPosts] = useState<Record<number, boolean>>({});
-  const [heartBurst, setHeartBurst] = useState<number | null>(null);
-
-  // New post modal state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  // New post fields
   const [newTitle, setNewTitle] = useState("");
   const [newCaption, setNewCaption] = useState("");
   const [newCoverUrl, setNewCoverUrl] = useState("");
   const [newTag, setNewTag] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Comment input per post
+  // Comment inputs
   const [commentInputs, setCommentInputs] = useState<Record<number, string>>({});
   const [modalCommentInput, setModalCommentInput] = useState("");
 
-  const handleFollow = () => {
-    if (!isViewingKoharu) {
-      toast.error("자신은 자신을 팔로우할 수 없습니다 🙅");
-      return;
-    }
-    setIsFollowing(true);
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("koharu_is_following", "1");
-      } catch {}
-    }
-    toast.success("코하루 님을 팔로우했습니다! 🌸");
-  };
+  // ── Derived ───────────────────────────────────────────────────────────────
+  const cleanHandle = (profile.username || "koharu.live").replace(/^@/, "").trim();
+  const profileShareUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/@${cleanHandle}`
+      : `/@${cleanHandle}`;
 
-  const handleUnfollow = () => {
-    setIsFollowing(false);
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("koharu_is_following", "0");
-        localStorage.removeItem("koharu_is_following");
-      } catch {}
-    }
-    toast.success("팔로우를 취소했습니다.");
-  };
+  const availableTags = Array.from(
+    new Set(posts.map((p) => (p.category || "").trim()).filter(Boolean))
+  );
 
-  const toggleFollow = () => {
-    if (!isViewingKoharu) {
-      toast.error("자신은 자신을 팔로우할 수 없습니다 🙅");
-      return;
-    }
-    if (isFollowing) {
-      handleUnfollow();
-    } else {
-      handleFollow();
-    }
-  };
+  const filteredPosts = posts.filter((p) => {
+    if (activeTag === "all") return true;
+    return p.category === activeTag;
+  });
 
+  // ── Init: fetch remote posts ──────────────────────────────────────────────
   useEffect(() => {
     fetchPosts();
   }, []);
 
+  // ── Auto-open post from URL ───────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const searchParams = new URLSearchParams(window.location.search);
+    const postQuery =
+      searchParams.get("post") ||
+      searchParams.get("p") ||
+      searchParams.get("slug") ||
+      searchParams.get("id");
+
+    const pathname = window.location.pathname;
+    const match = pathname.match(
+      /^\/(?:instagram|posts|post|share|p|blog|board)(?:\/post|\/p)?\/([^/?#]+)/i
+    );
+    const rawSlug = postQuery || (match ? match[1] : null);
+
+    if (rawSlug && !rawSlug.startsWith("@") && rawSlug !== "index.html") {
+      const cleanSlug = decodeURIComponent(rawSlug).replace(/\.html$/, "").trim();
+      const found = posts.find((p) => p.slug === cleanSlug || String(p.id) === cleanSlug);
+      if (found) {
+        setSelectedPost(found);
+        fetchCommentsForPost(found.id);
+      } else {
+        fetchPostBySlugOrId(cleanSlug).then((remote) => {
+          if (remote) {
+            setSelectedPost(remote);
+            fetchCommentsForPost(remote.id);
+            setPosts((prev) =>
+              prev.some((p) => p.id === remote.id) ? prev : [remote, ...prev]
+            );
+          }
+        });
+      }
+    }
+  }, [posts]);
+
+  // ── Persist liked/bookmarked ──────────────────────────────────────────────
+  useEffect(() => {
+    lsSet(STORAGE_KEY_LIKED, likedPosts);
+  }, [likedPosts]);
+
+  useEffect(() => {
+    lsSet(STORAGE_KEY_BOOKMARKED, bookmarkedPosts);
+  }, [bookmarkedPosts]);
+
+  useEffect(() => {
+    lsSet(STORAGE_KEY_FOLLOWING, followingList);
+  }, [followingList]);
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
   const fetchPosts = async () => {
     try {
       setLoading(true);
       const dbPosts = await fetchAllPosts();
       if (Array.isArray(dbPosts) && dbPosts.length > 0) {
         setPosts((prev) => {
-          // Merge with any locally created posts so newly created posts are never lost
           const serverIds = new Set(dbPosts.map((p) => p.id));
           const serverSlugs = new Set(dbPosts.map((p) => p.slug));
           const localOnly = prev.filter(
             (p) => !serverIds.has(p.id) && !serverSlugs.has(p.slug)
           );
           const merged = [...localOnly, ...dbPosts];
-          if (typeof window !== "undefined") {
-            try {
-              localStorage.setItem("koharu_posts_cache", JSON.stringify(merged));
-            } catch {}
-          }
+          lsSet(STORAGE_KEY_POSTS, merged);
           return merged;
         });
       }
@@ -398,17 +384,16 @@ export default function BlogPage() {
     } catch {}
   };
 
+  /** Is this post uploaded by Koharu (the owner)? */
   const isMyPost = (post: Post) => {
     try {
-      const myUploadedIds: number[] = JSON.parse(
-        localStorage.getItem("koharu_my_uploaded_ids") || "[]"
-      );
-      if (myUploadedIds.includes(post.id)) return true;
+      const myIds: number[] = ls(STORAGE_KEY_MY_IDS, []);
+      if (myIds.includes(post.id)) return true;
       if (
-        myAccount.name &&
-        post.authorName === myAccount.name &&
-        post.authorName !== "! Koharu" &&
-        post.authorName !== "코하루"
+        post.authorName === "! Koharu" ||
+        post.authorName === "코하루" ||
+        post.authorName === "! Koharu · 코하루" ||
+        post.authorName === profile.name
       ) {
         return true;
       }
@@ -416,18 +401,16 @@ export default function BlogPage() {
     return false;
   };
 
+  // ── Like ──────────────────────────────────────────────────────────────────
   const handleLike = async (post: Post, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
 
-    // Prevent liking own posts
     if (isMyPost(post)) {
       toast.error("자신의 게시물에는 좋아요를 누를 수 없습니다 🙅");
       return;
     }
 
     const isCurrentlyLiked = likedPosts[post.id];
-
-    // Optimistic UI update
     setLikedPosts((prev) => ({ ...prev, [post.id]: !isCurrentlyLiked }));
     setPosts((prev) =>
       prev.map((p) =>
@@ -441,7 +424,6 @@ export default function BlogPage() {
           : p
       )
     );
-
     if (selectedPost && selectedPost.id === post.id) {
       setSelectedPost((prev) =>
         prev
@@ -459,7 +441,7 @@ export default function BlogPage() {
       const res = await fetch(`/api/posts/${post.id}/like`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userIdentifier: myAccount.username || "guest-visitor", isOwner: false }),
+        body: JSON.stringify({ userIdentifier: profile.username || "koharu.live", isOwner: true }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -476,38 +458,30 @@ export default function BlogPage() {
       return;
     }
     setHeartBurst(post.id);
-    if (!likedPosts[post.id]) {
-      handleLike(post);
-    }
+    if (!likedPosts[post.id]) handleLike(post);
     window.setTimeout(() => setHeartBurst(null), 800);
   };
 
+  // ── Comment ───────────────────────────────────────────────────────────────
   const handleAddComment = async (postId: number, content: string) => {
     if (!content.trim()) return;
-    const author = myAccount.name || "방문자";
-    const authorAvatar = myAccount.avatarUrl || "";
+    const author = profile.name || "코하루";
+    const authorAvatar = profile.avatarUrl || "";
 
     try {
       const created = await addComment(postId, author, authorAvatar, content.trim());
-      if (created) {
-        setComments((prev) => ({
-          ...prev,
-          [postId]: [created, ...(prev[postId] || [])],
-        }));
-      } else {
-        const fallbackComment: Comment = {
-          id: Date.now(),
-          postId,
-          authorName: author,
-          authorAvatar: authorAvatar || null,
-          content: content.trim(),
-          createdAt: new Date().toISOString(),
-        };
-        setComments((prev) => ({
-          ...prev,
-          [postId]: [fallbackComment, ...(prev[postId] || [])],
-        }));
-      }
+      const fallback: Comment = {
+        id: Date.now(),
+        postId,
+        authorName: author,
+        authorAvatar: authorAvatar || null,
+        content: content.trim(),
+        createdAt: new Date().toISOString(),
+      };
+      setComments((prev) => ({
+        ...prev,
+        [postId]: [created || fallback, ...(prev[postId] || [])],
+      }));
       setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
       setModalCommentInput("");
       toast.success("댓글을 등록했습니다! 🌸");
@@ -516,48 +490,7 @@ export default function BlogPage() {
     }
   };
 
-  // File picker handler for New Post Cover
-  const handlePostFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const dataUrl = await processImageFile(file);
-      setNewCoverUrl(dataUrl);
-      toast.success("사진이 선택되었습니다! 📷");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "이미지를 처리하지 못했습니다.";
-      toast.error(msg);
-    }
-  };
-
-  // File picker handler for Profile Banner
-  const handleBannerFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const dataUrl = await processImageFile(file);
-      setEditForm((prev) => ({ ...prev, bannerUrl: dataUrl }));
-      toast.success("배너 사진이 선택되었습니다! 🖼️");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "이미지를 처리하지 못했습니다.";
-      toast.error(msg);
-    }
-  };
-
-  // File picker handler for Profile Avatar
-  const handleAvatarFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const dataUrl = await processImageFile(file);
-      setEditForm((prev) => ({ ...prev, avatarUrl: dataUrl }));
-      toast.success("프로필 사진이 선택되었습니다! 🌸");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "이미지를 처리하지 못했습니다.";
-      toast.error(msg);
-    }
-  };
-
+  // ── Create Post ───────────────────────────────────────────────────────────
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCaption.trim() || !newCoverUrl.trim()) {
@@ -569,10 +502,9 @@ export default function BlogPage() {
     const slug = "post-" + Date.now().toString(36);
     const title = newTitle.trim() || newCaption.slice(0, 40) + "...";
     const category = newTag.trim() || "일상";
-    const authorName = myAccount.name || "사용자";
-    const authorAvatar = myAccount.avatarUrl || "";
+    const authorName = profile.name || "! Koharu";
+    const authorAvatar = profile.avatarUrl || "/assets/koharu-profile.png";
 
-    // Optimistic local post creation: instant feed update with zero failure
     const tempId = Date.now();
     const optimisticPost: Post = {
       id: tempId,
@@ -591,18 +523,14 @@ export default function BlogPage() {
     };
 
     setPosts((prev) => {
-      const nextPosts = [optimisticPost, ...prev];
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem("koharu_posts_cache", JSON.stringify(nextPosts));
-          const myIds = JSON.parse(localStorage.getItem("koharu_my_uploaded_ids") || "[]");
-          localStorage.setItem("koharu_my_uploaded_ids", JSON.stringify([tempId, ...myIds]));
-        } catch {}
-      }
-      return nextPosts;
+      const next = [optimisticPost, ...prev];
+      lsSet(STORAGE_KEY_POSTS, next);
+      const myIds = ls<number[]>(STORAGE_KEY_MY_IDS, []);
+      lsSet(STORAGE_KEY_MY_IDS, [tempId, ...myIds]);
+      return next;
     });
 
-    toast.success("새 게시물이 인스타그램 피드에 등록되었습니다! ✨");
+    toast.success("새 게시물이 피드에 등록되었습니다! ✨");
     setIsCreateOpen(false);
     setNewTitle("");
     setNewCaption("");
@@ -622,39 +550,45 @@ export default function BlogPage() {
 
       if (created) {
         setPosts((prev) => prev.map((p) => (p.id === tempId ? created : p)));
-        try {
-          const myIds = JSON.parse(localStorage.getItem("koharu_my_uploaded_ids") || "[]");
-          localStorage.setItem("koharu_my_uploaded_ids", JSON.stringify([created.id, ...myIds]));
-        } catch {}
+        const myIds = ls<number[]>(STORAGE_KEY_MY_IDS, []);
+        lsSet(STORAGE_KEY_MY_IDS, [created.id, ...myIds]);
       }
     } catch {
-      // Local optimistic copy already persisted
+      // keep optimistic
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // ── Delete Post ───────────────────────────────────────────────────────────
+  const handleDeletePost = async (postId: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm("이 게시물을 정말 삭제하시겠습니까?")) return;
+
+    setPosts((prev) => {
+      const updated = prev.filter((p) => p.id !== postId);
+      lsSet(STORAGE_KEY_POSTS, updated);
+      return updated;
+    });
+    if (selectedPost && selectedPost.id === postId) setSelectedPost(null);
+    toast.success("게시물이 삭제되었습니다! 🗑️");
+    try {
+      await fetch(`/api/posts/${postId}`, { method: "DELETE" });
+    } catch {}
+  };
+
+  // ── Save Profile ──────────────────────────────────────────────────────────
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProfileSaving(true);
-
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("koharu_my_profile", JSON.stringify(editForm));
-      } catch {}
-    }
-    setMyAccount(editForm);
-
+    lsSet(STORAGE_KEY_PROFILE, editForm);
+    setProfile(editForm);
     setIsEditProfileOpen(false);
-    toast.success("프로필 세팅이 저장되었습니다! ✨");
+    toast.success("프로필이 저장되었습니다! ✨");
     setIsProfileSaving(false);
   };
 
-  const canDeletePost = (post: Post) => {
-    return isMyPost(post);
-  };
-
-  // Safe Post Share Link: uses query param and sub-path both so EVERY environment works without 404
+  // ── Share ─────────────────────────────────────────────────────────────────
   const copyPostLink = (slug: string) => {
     const postUrl = `${window.location.origin}/instagram?post=${encodeURIComponent(slug)}`;
     if (navigator.clipboard) {
@@ -663,100 +597,12 @@ export default function BlogPage() {
     }
   };
 
-  const openPostModal = (post: Post) => {
-    setSelectedPost(post);
-    fetchCommentsForPost(post.id);
+  const copyShareLink = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(profileShareUrl);
+      toast.success(`프로필 링크가 복사되었습니다! 🔗`);
+    }
   };
-
-  const handleDeletePost = async (postId: number, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    if (!window.confirm("이 게시물을 정말 삭제하시겠습니까?")) return;
-
-    setPosts((prev) => {
-      const updated = prev.filter((p) => p.id !== postId);
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem("koharu_posts_cache", JSON.stringify(updated));
-        } catch {}
-      }
-      return updated;
-    });
-
-    if (selectedPost && selectedPost.id === postId) {
-      setSelectedPost(null);
-    }
-
-    toast.success("게시물이 성공적으로 삭제되었습니다! 🗑️");
-
-    try {
-      await fetch(`/api/posts/${postId}`, {
-        method: "DELETE",
-      });
-    } catch {}
-  };
-
-  // Universal Auto-detect for Shared Links & Query Params (Guaranteed NO 404)
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const pathname = window.location.pathname;
-    const searchParams = new URLSearchParams(window.location.search);
-    const postQuery =
-      searchParams.get("post") ||
-      searchParams.get("p") ||
-      searchParams.get("slug") ||
-      searchParams.get("id");
-
-    const match = pathname.match(
-      /^\/(?:instagram|posts|post|share|p|blog|board)(?:\/post|\/p)?\/([^/?#]+)/i
-    );
-    const rawSlug = postQuery || (match ? match[1] : null);
-
-    if (rawSlug && !rawSlug.startsWith("@") && rawSlug !== "index.html") {
-      const cleanSlug = decodeURIComponent(rawSlug).replace(/\.html$/, "").trim();
-
-      // 1. Search in current posts state
-      const foundInState = posts.find(
-        (p) => p.slug === cleanSlug || String(p.id) === cleanSlug
-      );
-      if (foundInState) {
-        setSelectedPost(foundInState);
-        fetchCommentsForPost(foundInState.id);
-      } else {
-        // 2. Fetch directly from remote Neon DB
-        fetchPostBySlugOrId(cleanSlug).then((remotePost) => {
-          if (remotePost) {
-            setSelectedPost(remotePost);
-            fetchCommentsForPost(remotePost.id);
-            setPosts((prev) => (prev.some((p) => p.id === remotePost.id) ? prev : [remotePost, ...prev]));
-          }
-        });
-      }
-    }
-
-    // Profile handle routing check
-    const userQuery = searchParams.get("user") || searchParams.get("u");
-    const handleMatch = pathname.match(/^\/(?:@|%40|u\/|user\/|profile\/)([^/?#]+)/i);
-    const handleSlug = userQuery || (handleMatch ? handleMatch[1] : null);
-
-    if (handleSlug) {
-      const cleanHandleSlug = decodeURIComponent(handleSlug).replace(/\.html$/, "").toLowerCase();
-      if (cleanHandleSlug === "koharu.live" || cleanHandleSlug === "koharu") {
-        setIsViewingKoharu(true);
-      } else {
-        setIsViewingKoharu(false);
-      }
-    }
-  }, [posts]);
-
-  // Clean handle without @
-  const cleanHandle = (profile.username || "user").replace(/^@/, "").trim();
-  const profileShareUrl =
-    typeof window !== "undefined"
-      ? (isViewingKoharu
-          ? `${window.location.origin}/@koharu.live`
-          : `${window.location.origin}/@${cleanHandle}`)
-      : `/@${cleanHandle}`;
 
   const handleShareProfile = () => {
     if (navigator.share) {
@@ -766,73 +612,64 @@ export default function BlogPage() {
           text: profile.bio || "포트폴리오 인스타그램 프로필",
           url: profileShareUrl,
         })
-        .catch(() => {
-          setIsShareModalOpen(true);
-        });
+        .catch(() => setIsShareModalOpen(true));
     } else {
       setIsShareModalOpen(true);
     }
   };
 
-  const copyShareLink = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(profileShareUrl);
-      toast.success(`프로필 공유 링크가 복사되었습니다! (${isViewingKoharu ? "/@koharu.live" : `/@${cleanHandle}`}) 🔗`);
+  const openPostModal = (post: Post) => {
+    setSelectedPost(post);
+    fetchCommentsForPost(post.id);
+  };
+
+  // File handlers
+  const handlePostFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setNewCoverUrl(await processImageFile(file));
+      toast.success("사진이 선택되었습니다! 📷");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "이미지를 처리하지 못했습니다.");
     }
   };
 
-  // Dynamic user-defined tags extracted from real posts
-  const availableTags = Array.from(
-    new Set(posts.map((p) => (p.category || "").trim()).filter(Boolean))
-  );
+  const handleBannerFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await processImageFile(file);
+      setEditForm((prev) => ({ ...prev, bannerUrl: dataUrl }));
+      toast.success("배너 사진이 선택되었습니다! 🖼️");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "이미지를 처리하지 못했습니다.");
+    }
+  };
 
-  const filteredPosts = posts.filter((p) => {
-    if (activeTag === "all") return true;
-    return p.category === activeTag;
-  });
+  const handleAvatarFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await processImageFile(file);
+      setEditForm((prev) => ({ ...prev, avatarUrl: dataUrl }));
+      toast.success("프로필 사진이 선택되었습니다! 🌸");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "이미지를 처리하지 못했습니다.");
+    }
+  };
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen">
       <SiteNav active="/instagram" />
 
       <main className="page-container" id="main">
-        {/* Profile Switcher Bar (Switch between My Account & Koharu Official Account) */}
-        <div className="flex items-center justify-between mb-4 bg-white/70 backdrop-blur-md p-2 rounded-2xl border border-pink-100 shadow-sm">
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => {
-                setIsViewingKoharu(false);
-                setEditForm(myAccount);
-              }}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                !isViewingKoharu
-                  ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-md shadow-pink-500/20"
-                  : "text-[#7a6e8f] hover:bg-pink-50"
-              }`}
-            >
-              <User className="w-3.5 h-3.5" /> 내 프로필 ({myAccount.name || "기본 계정"})
-            </button>
-            <button
-              onClick={() => {
-                setIsViewingKoharu(true);
-              }}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                isViewingKoharu
-                  ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-md shadow-pink-500/20"
-                  : "text-[#7a6e8f] hover:bg-pink-50"
-              }`}
-            >
-              🌸 코하루 공식 계정 (@koharu.live)
-            </button>
-          </div>
-          <span className="text-[11px] text-[#9e8fa6] hidden sm:inline-block pr-2">
-            {!isViewingKoharu ? "💡 사진·소개글 없는 기본 생성 프로필입니다" : "🌸 코하루의 메인 포트폴리오 계정입니다"}
-          </span>
-        </div>
-
-        {/* Instagram Profile Header Card */}
+        {/* ── Profile Card ───────────────────────────────────────────────── */}
         <div className="glass-card !p-0 overflow-hidden mb-8 shadow-xl">
-          {/* Profile Banner */}
+          {/* Banner */}
           <div className="relative w-full h-44 sm:h-56 overflow-hidden bg-gradient-to-r from-pink-200 via-purple-200 to-sky-200">
             {profile.bannerUrl ? (
               <img
@@ -845,24 +682,22 @@ export default function BlogPage() {
             )}
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/5 to-black/30" />
 
-            {/* Quick Banner Action Button (Only on My Account) */}
-            {!isViewingKoharu && (
-              <button
-                onClick={() => {
-                  setEditForm(myAccount);
-                  setIsEditProfileOpen(true);
-                }}
-                className="absolute top-4 right-4 bg-white/90 hover:bg-white text-xs font-bold text-pink-700 px-3.5 py-1.5 rounded-full shadow-md backdrop-blur-md flex items-center gap-1.5 transition-all cursor-pointer"
-              >
-                <Edit3 className="w-3.5 h-3.5" /> 프로필 세팅
-              </button>
-            )}
+            {/* Quick edit button on banner */}
+            <button
+              onClick={() => {
+                setEditForm(profile);
+                setIsEditProfileOpen(true);
+              }}
+              className="absolute top-4 right-4 bg-white/90 hover:bg-white text-xs font-bold text-pink-700 px-3.5 py-1.5 rounded-full shadow-md backdrop-blur-md flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Edit3 className="w-3.5 h-3.5" /> 프로필 세팅
+            </button>
           </div>
 
-          {/* Profile Info Row */}
+          {/* Profile Info */}
           <div className="p-6 sm:p-8 pt-0 relative">
             <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 -mt-16 sm:-mt-20 mb-6">
-              {/* Overlapping Avatar */}
+              {/* Avatar */}
               <div className="insta-avatar-wrapper !m-0">
                 <div className="insta-avatar-ring">
                   {profile.avatarUrl ? (
@@ -879,96 +714,49 @@ export default function BlogPage() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Actions */}
               <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-                {!isViewingKoharu ? (
-                  <>
-                    <button
-                      onClick={() => {
-                        setEditForm(myAccount);
-                        setIsEditProfileOpen(true);
-                      }}
-                      className="insta-action-btn insta-btn-secondary cursor-pointer"
-                      title="프로필 세팅 변경"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" /> 프로필 세팅
-                    </button>
+                <button
+                  onClick={() => {
+                    setEditForm(profile);
+                    setIsEditProfileOpen(true);
+                  }}
+                  className="insta-action-btn insta-btn-secondary cursor-pointer"
+                  title="프로필 세팅 변경"
+                >
+                  <Edit3 className="w-3.5 h-3.5" /> 프로필 세팅
+                </button>
 
-                    <button
-                      onClick={handleShareProfile}
-                      className="insta-action-btn insta-btn-secondary cursor-pointer"
-                      title="프로필 공유하기"
-                    >
-                      <Share2 className="w-4 h-4" /> 공유
-                    </button>
+                <button
+                  onClick={handleShareProfile}
+                  className="insta-action-btn insta-btn-secondary cursor-pointer"
+                  title="프로필 공유하기"
+                >
+                  <Share2 className="w-4 h-4" /> 공유
+                </button>
 
-                    <button
-                      onClick={() => setIsCreateOpen(true)}
-                      className="insta-action-btn insta-btn-primary !bg-gradient-to-r !from-purple-500 !to-pink-500 cursor-pointer"
-                    >
-                      <PlusCircle className="w-4 h-4" /> 새 글
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={toggleFollow}
-                      className={`insta-action-btn cursor-pointer ${
-                        isFollowing
-                          ? "insta-btn-secondary"
-                          : "insta-btn-primary !bg-gradient-to-r !from-pink-500 !to-purple-500 text-white"
-                      }`}
-                    >
-                      {isFollowing ? (
-                        <>
-                          <Check className="w-4 h-4 text-emerald-600" /> 팔로잉
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="w-4 h-4" /> 팔로우
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      onClick={handleShareProfile}
-                      className="insta-action-btn insta-btn-secondary cursor-pointer"
-                      title="프로필 공유하기"
-                    >
-                      <Share2 className="w-4 h-4" /> 공유
-                    </button>
-
-                    <button
-                      onClick={() => setIsViewingKoharu(false)}
-                      className="insta-action-btn insta-btn-secondary text-xs !text-pink-600 font-bold cursor-pointer"
-                      title="내 프로필 모드로 복귀"
-                    >
-                      👤 내 프로필
-                    </button>
-                  </>
-                )}
+                <button
+                  onClick={() => setIsCreateOpen(true)}
+                  className="insta-action-btn insta-btn-primary !bg-gradient-to-r !from-purple-500 !to-pink-500 cursor-pointer"
+                >
+                  <PlusCircle className="w-4 h-4" /> 새 글
+                </button>
               </div>
             </div>
 
-            {/* Profile Titles & Stats */}
+            {/* Name / Handle / Stats / Bio */}
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-2xl font-extrabold text-[#38314a]">
-                  {profile.name || "사용자"}
+                  {profile.name || "코하루"}
                 </h1>
                 <span className="text-sm font-semibold text-pink-600 flex items-center gap-1">
                   @{cleanHandle}
-                  {isViewingKoharu && (
-                    <svg
-                      className="insta-verified !w-4 !h-4"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                    </svg>
-                  )}
+                  {/* Verified badge always shown for owner */}
+                  <svg className="insta-verified !w-4 !h-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                  </svg>
                 </span>
-
                 {profile.birthdate && (
                   <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-pink-100/80 text-pink-700">
                     <Cake className="w-3.5 h-3.5" /> {profile.birthdate}
@@ -976,7 +764,7 @@ export default function BlogPage() {
                 )}
               </div>
 
-              {/* Stats - Clickable for Followers & Following Modals */}
+              {/* Stats */}
               <div className="flex gap-6 text-sm text-[#7a6e8f] py-1 select-none">
                 <div>
                   게시물 <strong className="text-[#38314a] font-bold">{posts.length}</strong>
@@ -989,7 +777,7 @@ export default function BlogPage() {
                 >
                   팔로워{" "}
                   <strong className="text-[#38314a] font-bold hover:text-pink-600">
-                    {isViewingKoharu ? (isFollowing ? 1 : 0) : 0}
+                    {followers.length}
                   </strong>
                 </button>
                 <button
@@ -1000,7 +788,7 @@ export default function BlogPage() {
                 >
                   팔로잉{" "}
                   <strong className="text-[#38314a] font-bold hover:text-pink-600">
-                    {isViewingKoharu ? (isFollowing ? 1 : 0) : (isFollowing ? 1 : 0)}
+                    {followingList.length}
                   </strong>
                 </button>
               </div>
@@ -1016,7 +804,7 @@ export default function BlogPage() {
                 </p>
               )}
 
-              {/* Social Links Row */}
+              {/* Social Links */}
               <div className="flex flex-wrap items-center gap-2 pt-2">
                 {profile.githubUrl && (
                   <a
@@ -1062,7 +850,7 @@ export default function BlogPage() {
           </div>
         </div>
 
-        {/* Dynamic Category / Tag Filter Pills */}
+        {/* ── Tag Filter ─────────────────────────────────────────────────── */}
         {availableTags.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-4 mb-4 scrollbar-none justify-center">
             <button
@@ -1091,7 +879,7 @@ export default function BlogPage() {
           </div>
         )}
 
-        {/* View Toggle Tabs */}
+        {/* ── View Tabs ──────────────────────────────────────────────────── */}
         <div className="insta-tabs">
           <button
             onClick={() => setActiveTab("grid")}
@@ -1107,14 +895,13 @@ export default function BlogPage() {
           </button>
         </div>
 
-        {/* Main Content Area */}
+        {/* ── Content ────────────────────────────────────────────────────── */}
         {loading ? (
           <div className="text-center py-20 text-[#7a6e8f]">
             <Sparkles className="w-8 h-8 animate-spin mx-auto mb-3 text-pink-500" />
-            인스타그램 피드를 불러오는 중...
+            피드를 불러오는 중...
           </div>
         ) : filteredPosts.length === 0 ? (
-          /* Empty State */
           <div className="glass-card text-center py-20 max-w-lg mx-auto">
             <div className="w-16 h-16 rounded-3xl bg-pink-100 flex items-center justify-center mx-auto mb-4 text-pink-600">
               <Camera className="w-8 h-8" />
@@ -1122,9 +909,7 @@ export default function BlogPage() {
             <h3 className="text-lg font-bold text-[#38314a] mb-1">
               아직 등록된 게시물이 없습니다
             </h3>
-            <p className="text-xs text-[#7a6e8f] mb-6">
-              사진을 선택하고 첫 번째 소식을 남겨보세요!
-            </p>
+            <p className="text-xs text-[#7a6e8f] mb-6">사진을 선택하고 첫 번째 소식을 남겨보세요!</p>
             <button
               onClick={() => setIsCreateOpen(true)}
               className="insta-action-btn insta-btn-primary cursor-pointer"
@@ -1133,7 +918,7 @@ export default function BlogPage() {
             </button>
           </div>
         ) : activeTab === "grid" ? (
-          /* Instagram 3-Column Square Grid */
+          /* Grid */
           <div className="insta-grid">
             {filteredPosts.map((post) => (
               <div
@@ -1147,13 +932,11 @@ export default function BlogPage() {
                   className="insta-grid-img"
                   loading="lazy"
                 />
-
                 {post.images && post.images.length > 1 && (
                   <span className="absolute top-2.5 right-2.5 bg-black/60 text-white p-1 rounded-md text-xs">
                     <Layers className="w-3.5 h-3.5" />
                   </span>
                 )}
-
                 <div className="insta-grid-overlay">
                   <div className="insta-overlay-stat">
                     <Heart className="w-5 h-5 fill-current" />
@@ -1168,7 +951,7 @@ export default function BlogPage() {
             ))}
           </div>
         ) : (
-          /* Instagram Feed Stream (Vertical cards) */
+          /* Feed */
           <div className="space-y-8 max-w-xl mx-auto">
             {filteredPosts.map((post) => {
               const isLiked = likedPosts[post.id];
@@ -1186,7 +969,7 @@ export default function BlogPage() {
                       {post.authorAvatar ? (
                         <img
                           src={post.authorAvatar}
-                          alt={post.authorName || "사용자"}
+                          alt={post.authorName || "코하루"}
                           className="w-9 h-9 rounded-full object-cover ring-2 ring-pink-100"
                         />
                       ) : (
@@ -1196,10 +979,11 @@ export default function BlogPage() {
                       )}
                       <div>
                         <div className="flex items-center gap-1 font-bold text-xs text-[#38314a]">
-                          {post.authorName || "사용자"}
+                          {post.authorName || "코하루"}
                           {(post.authorName === "! Koharu" ||
                             post.authorName === "코하루" ||
-                            post.authorName === "! Koharu · 코하루") && (
+                            post.authorName === "! Koharu · 코하루" ||
+                            post.authorName === profile.name) && (
                             <svg
                               className="insta-verified !w-3.5 !h-3.5"
                               viewBox="0 0 24 24"
@@ -1216,7 +1000,7 @@ export default function BlogPage() {
                     </div>
 
                     <div className="flex items-center gap-1">
-                      {canDeletePost(post) && (
+                      {isMyPost(post) && (
                         <button
                           onClick={(e) => handleDeletePost(post.id, e)}
                           className="text-gray-400 hover:text-rose-600 p-1.5 rounded-lg transition-colors cursor-pointer"
@@ -1235,7 +1019,7 @@ export default function BlogPage() {
                     </div>
                   </div>
 
-                  {/* Card Media (Double-tap to like) */}
+                  {/* Image */}
                   <div
                     className="relative cursor-pointer select-none bg-black/5"
                     onDoubleClick={() => handleDoubleTap(post)}
@@ -1246,14 +1030,11 @@ export default function BlogPage() {
                       className="w-full aspect-square sm:aspect-[4/3] object-cover"
                       loading="lazy"
                     />
-
-                    {/* Heart burst animation */}
                     {heartBurst === post.id && (
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none animate-in zoom-in-50 fade-in duration-300">
                         <Heart className="w-24 h-24 text-white fill-white drop-shadow-2xl" />
                       </div>
                     )}
-
                     {post.category && (
                       <span className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
                         #{post.category}
@@ -1261,7 +1042,7 @@ export default function BlogPage() {
                     )}
                   </div>
 
-                  {/* Actions Row */}
+                  {/* Actions */}
                   <div className="insta-card-actions flex items-center justify-between p-3.5 pb-2">
                     <div className="flex items-center gap-4">
                       <button
@@ -1269,17 +1050,9 @@ export default function BlogPage() {
                         className={`insta-icon-btn ${isLiked ? "is-liked" : ""} ${
                           isMyPost(post) ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
                         }`}
-                        title={
-                          isMyPost(post)
-                            ? "자신의 게시물에는 좋아요를 누를 수 없습니다"
-                            : "좋아요"
-                        }
+                        title={isMyPost(post) ? "자신의 게시물에는 좋아요를 누를 수 없습니다" : "좋아요"}
                       >
-                        <Heart
-                          className={`w-6 h-6 ${
-                            isLiked ? "fill-[#ff3040] text-[#ff3040]" : ""
-                          }`}
-                        />
+                        <Heart className={`w-6 h-6 ${isLiked ? "fill-[#ff3040] text-[#ff3040]" : ""}`} />
                       </button>
                       <button
                         onClick={() => openPostModal(post)}
@@ -1294,36 +1067,27 @@ export default function BlogPage() {
                         <Share2 className="w-5 h-5" />
                       </button>
                     </div>
-
                     <button
                       onClick={() =>
-                        setBookmarkedPosts((prev) => ({
-                          ...prev,
-                          [post.id]: !isBookmarked,
-                        }))
+                        setBookmarkedPosts((prev) => ({ ...prev, [post.id]: !isBookmarked }))
                       }
                       className="insta-icon-btn cursor-pointer"
                     >
                       <Bookmark
-                        className={`w-6 h-6 ${
-                          isBookmarked ? "fill-[#38314a] text-[#38314a]" : ""
-                        }`}
+                        className={`w-6 h-6 ${isBookmarked ? "fill-[#38314a] text-[#38314a]" : ""}`}
                       />
                     </button>
                   </div>
 
-                  {/* Likes Count */}
                   <div className="px-3.5 text-xs font-bold text-[#38314a] mb-1.5">
                     좋아요 {post.likesCount}개
                   </div>
 
-                  {/* Caption */}
                   <div className="px-3.5 text-xs text-[#38314a] leading-relaxed mb-2">
                     <strong className="mr-2 font-bold">{post.authorName || profile.name}</strong>
                     <span className="whitespace-pre-line">{post.caption}</span>
                   </div>
 
-                  {/* Comments Preview */}
                   {postComments.length > 0 && (
                     <div className="px-3.5 mb-2">
                       <button
@@ -1343,31 +1107,32 @@ export default function BlogPage() {
                     </div>
                   )}
 
-                  {/* Quick Inline Comment Input */}
+                  {/* Inline Comment */}
                   <div className="insta-card-comment p-3 border-t border-pink-50">
                     <form
                       onSubmit={(e) => {
                         e.preventDefault();
-                        const val = commentInputs[post.id] || "";
-                        handleAddComment(post.id, val);
+                        handleAddComment(post.id, commentInputs[post.id] || "");
                       }}
                       className="flex items-center gap-2"
                     >
-                      <img
-                        src={isOwner ? (profile.avatarUrl || "/assets/koharu-profile.png") : "/assets/koharu-profile.png"}
-                        alt="profile"
-                        className="w-6 h-6 rounded-full object-cover ring-1 ring-pink-200 flex-shrink-0"
-                        title={`${isOwner ? profile.name : "방문자"} 프로필로 작성`}
-                      />
+                      {profile.avatarUrl ? (
+                        <img
+                          src={profile.avatarUrl}
+                          alt="profile"
+                          className="w-6 h-6 rounded-full object-cover ring-1 ring-pink-200 flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-pink-100 flex items-center justify-center text-pink-400 flex-shrink-0 ring-1 ring-pink-200">
+                          <User className="w-3.5 h-3.5" />
+                        </div>
+                      )}
                       <input
                         type="text"
                         placeholder="댓글 달기..."
                         value={commentInputs[post.id] || ""}
                         onChange={(e) =>
-                          setCommentInputs((prev) => ({
-                            ...prev,
-                            [post.id]: e.target.value,
-                          }))
+                          setCommentInputs((prev) => ({ ...prev, [post.id]: e.target.value }))
                         }
                         className="insta-comment-input flex-1"
                       />
@@ -1391,12 +1156,9 @@ export default function BlogPage() {
           MODALS
           ========================================================================= */}
 
-      {/* 1. Profile Settings Modal (File Upload for Banner & Avatar) */}
+      {/* 1. Profile Settings Modal */}
       {isEditProfileOpen && (
-        <div
-          className="insta-modal-backdrop"
-          onClick={() => setIsEditProfileOpen(false)}
-        >
+        <div className="insta-modal-backdrop" onClick={() => setIsEditProfileOpen(false)}>
           <div
             className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl relative my-auto max-h-[88vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
@@ -1414,7 +1176,7 @@ export default function BlogPage() {
             </div>
 
             <form onSubmit={handleSaveProfile} className="space-y-4">
-              {/* Banner Image File Picker */}
+              {/* Banner */}
               <div>
                 <label className="block text-xs font-bold text-[#7a6e8f] mb-1.5">
                   배너 이미지 선택 (파일 업로드)
@@ -1443,16 +1205,12 @@ export default function BlogPage() {
                 </div>
                 {editForm.bannerUrl && (
                   <div className="mt-2.5 w-full h-24 rounded-xl overflow-hidden border border-pink-200 shadow-inner">
-                    <img
-                      src={editForm.bannerUrl}
-                      alt="Banner Preview"
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={editForm.bannerUrl} alt="Banner Preview" className="w-full h-full object-cover" />
                   </div>
                 )}
               </div>
 
-              {/* Avatar Image File Picker */}
+              {/* Avatar */}
               <div>
                 <label className="block text-xs font-bold text-[#7a6e8f] mb-1.5">
                   프로필 사진 선택 (파일 업로드)
@@ -1460,11 +1218,7 @@ export default function BlogPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-pink-400 flex-shrink-0 bg-pink-100 flex items-center justify-center">
                     {editForm.avatarUrl ? (
-                      <img
-                        src={editForm.avatarUrl}
-                        alt="Avatar Preview"
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={editForm.avatarUrl} alt="Avatar Preview" className="w-full h-full object-cover" />
                     ) : (
                       <User className="w-8 h-8 text-pink-400 stroke-[1.8]" />
                     )}
@@ -1495,9 +1249,7 @@ export default function BlogPage() {
               {/* Name & Handle */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#7a6e8f] mb-1">
-                    닉네임 / 이름
-                  </label>
+                  <label className="block text-xs font-bold text-[#7a6e8f] mb-1">닉네임 / 이름</label>
                   <input
                     type="text"
                     required
@@ -1507,9 +1259,7 @@ export default function BlogPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#7a6e8f] mb-1">
-                    핸들명 (@username)
-                  </label>
+                  <label className="block text-xs font-bold text-[#7a6e8f] mb-1">핸들명 (@username)</label>
                   <input
                     type="text"
                     required
@@ -1522,9 +1272,7 @@ export default function BlogPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#7a6e8f] mb-1">
-                  생년월일 (Birthdate)
-                </label>
+                <label className="block text-xs font-bold text-[#7a6e8f] mb-1">생년월일 (Birthdate)</label>
                 <input
                   type="text"
                   placeholder="예: 2004. 12. 04"
@@ -1535,9 +1283,7 @@ export default function BlogPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#7a6e8f] mb-1">
-                  소개글 (Bio)
-                </label>
+                <label className="block text-xs font-bold text-[#7a6e8f] mb-1">소개글 (Bio)</label>
                 <textarea
                   rows={3}
                   value={editForm.bio}
@@ -1553,18 +1299,14 @@ export default function BlogPage() {
                   type="url"
                   placeholder="GitHub 링크 (https://github.com/...)"
                   value={editForm.githubUrl}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, githubUrl: e.target.value })
-                  }
+                  onChange={(e) => setEditForm({ ...editForm, githubUrl: e.target.value })}
                   className="w-full text-xs px-3 py-1.5 rounded-lg border border-pink-100 outline-none"
                 />
                 <input
                   type="url"
                   placeholder="Instagram 링크 (https://instagram.com/...)"
                   value={editForm.instagramUrl}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, instagramUrl: e.target.value })
-                  }
+                  onChange={(e) => setEditForm({ ...editForm, instagramUrl: e.target.value })}
                   className="w-full text-xs px-3 py-1.5 rounded-lg border border-pink-100 outline-none"
                 />
                 <input
@@ -1578,9 +1320,7 @@ export default function BlogPage() {
                   type="url"
                   placeholder="웹사이트 URL (https://koharu.live)"
                   value={editForm.websiteUrl}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, websiteUrl: e.target.value })
-                  }
+                  onChange={(e) => setEditForm({ ...editForm, websiteUrl: e.target.value })}
                   className="w-full text-xs px-3 py-1.5 rounded-lg border border-pink-100 outline-none"
                 />
               </div>
@@ -1608,10 +1348,7 @@ export default function BlogPage() {
 
       {/* 2. Profile Share Modal */}
       {isShareModalOpen && (
-        <div
-          className="insta-modal-backdrop"
-          onClick={() => setIsShareModalOpen(false)}
-        >
+        <div className="insta-modal-backdrop" onClick={() => setIsShareModalOpen(false)}>
           <div
             className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl relative text-center my-auto"
             onClick={(e) => e.stopPropagation()}
@@ -1619,18 +1356,12 @@ export default function BlogPage() {
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-pink-200 to-purple-200 flex items-center justify-center mx-auto mb-4 text-pink-600 shadow-md">
               <Share2 className="w-7 h-7" />
             </div>
-
-            <h3 className="text-lg font-bold text-[#38314a] mb-1">
-              프로필 공유하기
-            </h3>
+            <h3 className="text-lg font-bold text-[#38314a] mb-1">프로필 공유하기</h3>
             <p className="text-xs text-[#7a6e8f] mb-5">
               코하루의 핸들명(@{cleanHandle}) 링크를 복사하여 공유해보세요!
             </p>
-
             <div className="p-3 bg-pink-50/70 rounded-2xl border border-pink-100 flex items-center justify-between gap-2 mb-5 text-left">
-              <div className="truncate text-xs font-semibold text-[#38314a]">
-                {profileShareUrl}
-              </div>
+              <div className="truncate text-xs font-semibold text-[#38314a]">{profileShareUrl}</div>
               <button
                 onClick={copyShareLink}
                 className="p-1.5 bg-pink-600 text-white rounded-lg hover:bg-pink-700 flex-shrink-0 cursor-pointer"
@@ -1639,7 +1370,6 @@ export default function BlogPage() {
                 <Copy className="w-3.5 h-3.5" />
               </button>
             </div>
-
             <div className="flex gap-2">
               <button
                 onClick={() => setIsShareModalOpen(false)}
@@ -1663,10 +1393,7 @@ export default function BlogPage() {
 
       {/* 3. Post Detail Modal */}
       {selectedPost && (
-        <div
-          className="insta-modal-backdrop"
-          onClick={() => setSelectedPost(null)}
-        >
+        <div className="insta-modal-backdrop" onClick={() => setSelectedPost(null)}>
           <div
             className="insta-modal-content my-auto"
             onClick={(e) => e.stopPropagation()}
@@ -1678,25 +1405,26 @@ export default function BlogPage() {
             <div className="insta-modal-right">
               <div className="flex items-center justify-between p-4 border-b border-pink-100">
                 <div className="flex items-center gap-3">
-                  <img
-                    src={selectedPost.authorAvatar || profile.avatarUrl || "/assets/koharu-profile.png"}
-                    alt={selectedPost.authorName || profile.name}
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
+                  {selectedPost.authorAvatar ? (
+                    <img
+                      src={selectedPost.authorAvatar}
+                      alt={selectedPost.authorName || "코하루"}
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-400">
+                      <User className="w-4 h-4" />
+                    </div>
+                  )}
                   <div>
                     <div className="font-bold text-xs text-[#38314a] flex items-center gap-1">
                       {selectedPost.authorName || profile.name}
-                      <svg
-                        className="insta-verified !w-3.5 !h-3.5"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                      >
+                      <svg className="insta-verified !w-3.5 !h-3.5" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                       </svg>
                     </div>
                   </div>
                 </div>
-
                 <button
                   onClick={() => setSelectedPost(null)}
                   className="text-gray-400 hover:text-gray-700 p-1 cursor-pointer"
@@ -1705,25 +1433,23 @@ export default function BlogPage() {
                 </button>
               </div>
 
-              {/* Scrollable Comments & Caption Area */}
               <div className="p-4 flex-1 overflow-y-auto space-y-4">
+                {/* Caption */}
                 <div className="flex gap-3 text-xs">
                   {selectedPost.authorAvatar ? (
                     <img
                       src={selectedPost.authorAvatar}
-                      alt={selectedPost.authorName || "사용자"}
+                      alt={selectedPost.authorName || "코하루"}
                       className="w-8 h-8 rounded-full object-cover flex-shrink-0"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-500 flex-shrink-0 ring-1 ring-pink-200">
-                      <User className="w-4 h-4 stroke-[1.8]" />
+                    <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-400 flex-shrink-0">
+                      <User className="w-4 h-4" />
                     </div>
                   )}
                   <div>
                     <div className="leading-relaxed whitespace-pre-line">
-                      <strong className="mr-2 text-[#38314a]">
-                        {selectedPost.authorName || "사용자"}
-                      </strong>
+                      <strong className="mr-2 text-[#38314a]">{selectedPost.authorName || "코하루"}</strong>
                       {selectedPost.caption}
                     </div>
                     <div className="text-[11px] text-gray-400 mt-1">
@@ -1734,6 +1460,7 @@ export default function BlogPage() {
 
                 <div className="h-px bg-pink-100/60 my-2" />
 
+                {/* Comments */}
                 {(comments[selectedPost.id] || []).map((comment) => (
                   <div key={comment.id} className="flex gap-3 text-sm">
                     {comment.authorAvatar ? (
@@ -1743,15 +1470,13 @@ export default function BlogPage() {
                         className="w-8 h-8 rounded-full object-cover ring-1 ring-pink-200 flex-shrink-0"
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-500 flex-shrink-0 ring-1 ring-pink-200">
-                        <User className="w-4 h-4 stroke-[1.8]" />
+                      <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-400 flex-shrink-0">
+                        <User className="w-4 h-4" />
                       </div>
                     )}
                     <div>
                       <div>
-                        <strong className="mr-1.5 text-[#38314a] font-bold">
-                          {comment.authorName}
-                        </strong>
+                        <strong className="mr-1.5 text-[#38314a] font-bold">{comment.authorName}</strong>
                         {(comment.authorName === profile.name ||
                           comment.authorName === "! Koharu · 코하루" ||
                           comment.authorName === "코하루") && (
@@ -1772,28 +1497,19 @@ export default function BlogPage() {
                 ))}
               </div>
 
+              {/* Modal Actions + Comment Input */}
               <div className="p-4 border-t border-pink-100 bg-white">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-4">
                     <button
                       onClick={() => handleLike(selectedPost)}
-                      className={`insta-icon-btn ${
-                        likedPosts[selectedPost.id] ? "is-liked" : ""
-                      } ${
+                      className={`insta-icon-btn ${likedPosts[selectedPost.id] ? "is-liked" : ""} ${
                         isMyPost(selectedPost) ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
                       }`}
-                      title={
-                        isMyPost(selectedPost)
-                          ? "자신의 게시물에는 좋아요를 누를 수 없습니다"
-                          : "좋아요"
-                      }
+                      title={isMyPost(selectedPost) ? "자신의 게시물에는 좋아요를 누를 수 없습니다" : "좋아요"}
                     >
                       <Heart
-                        className={`w-6 h-6 ${
-                          likedPosts[selectedPost.id]
-                            ? "fill-[#ff3040] text-[#ff3040]"
-                            : ""
-                        }`}
+                        className={`w-6 h-6 ${likedPosts[selectedPost.id] ? "fill-[#ff3040] text-[#ff3040]" : ""}`}
                       />
                     </button>
                     <button
@@ -1803,7 +1519,7 @@ export default function BlogPage() {
                     >
                       <Share2 className="w-5 h-5" />
                     </button>
-                    {canDeletePost(selectedPost) && (
+                    {isMyPost(selectedPost) && (
                       <button
                         onClick={(e) => handleDeletePost(selectedPost.id, e)}
                         className="insta-icon-btn hover:text-rose-600 cursor-pointer"
@@ -1819,19 +1535,22 @@ export default function BlogPage() {
                 </div>
 
                 <div className="space-y-2">
-                  {/* Current Active Profile Indicator */}
                   <div className="flex items-center gap-2 text-xs text-[#7a6e8f] px-1 font-medium">
-                    <img
-                      src={isOwner ? (profile.avatarUrl || "/assets/koharu-profile.png") : "/assets/koharu-profile.png"}
-                      alt="profile"
-                      className="w-5 h-5 rounded-full object-cover ring-1 ring-pink-200"
-                    />
+                    {profile.avatarUrl ? (
+                      <img
+                        src={profile.avatarUrl}
+                        alt="profile"
+                        className="w-5 h-5 rounded-full object-cover ring-1 ring-pink-200"
+                      />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-pink-100 flex items-center justify-center text-pink-400">
+                        <User className="w-3 h-3" />
+                      </div>
+                    )}
                     <span>
-                      <strong className="text-[#38314a] font-bold">
-                        {isOwner ? profile.name : "방문자"}
-                      </strong>
+                      <strong className="text-[#38314a] font-bold">{profile.name}</strong>
                       <span className="text-[10px] ml-1.5 px-1.5 py-0.2 rounded-full bg-pink-100 text-pink-700 font-bold">
-                        {isOwner ? "내 프로필" : "방문자"}
+                        내 프로필
                       </span>
                       {" "}로 댓글 작성
                     </span>
@@ -1868,10 +1587,7 @@ export default function BlogPage() {
 
       {/* 4. Create Post Modal */}
       {isCreateOpen && (
-        <div
-          className="insta-modal-backdrop"
-          onClick={() => setIsCreateOpen(false)}
-        >
+        <div className="insta-modal-backdrop" onClick={() => setIsCreateOpen(false)}>
           <div
             className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl relative my-auto max-h-[88vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
@@ -1908,22 +1624,15 @@ export default function BlogPage() {
                     onChange={handlePostFileSelect}
                   />
                 </label>
-
                 {newCoverUrl && (
                   <div className="mt-3 w-full h-44 rounded-xl overflow-hidden border border-pink-200 shadow-md">
-                    <img
-                      src={newCoverUrl}
-                      alt="Post Preview"
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={newCoverUrl} alt="Post Preview" className="w-full h-full object-cover" />
                   </div>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#7a6e8f] mb-1">
-                  게시물 제목
-                </label>
+                <label className="block text-xs font-bold text-[#7a6e8f] mb-1">게시물 제목</label>
                 <input
                   type="text"
                   placeholder="예: 오늘 완성한 작은 작업물!"
@@ -1948,19 +1657,14 @@ export default function BlogPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#7a6e8f] mb-1">
-                  태그 설정 (사용자 직접 지정)
-                </label>
+                <label className="block text-xs font-bold text-[#7a6e8f] mb-1">태그 설정</label>
                 <input
                   type="text"
-                  placeholder="원하는 태그를 입력해주세요 (예: 일상, 팬아트, 디스코드, 개발)"
+                  placeholder="원하는 태그를 입력해주세요 (예: 일상, 팬아트, 개발)"
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
                   className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-pink-200 focus:border-pink-500 outline-none bg-pink-50/30"
                 />
-                <span className="text-[11px] text-[#7a6e8f] mt-1 block">
-                  원하는 태그를 자유롭게 지정할 수 있습니다.
-                </span>
               </div>
 
               <div className="pt-2 flex justify-end gap-2 border-t border-pink-100">
@@ -1986,62 +1690,51 @@ export default function BlogPage() {
 
       {/* 5. Followers Modal */}
       {isFollowersModalOpen && (
-        <div
-          className="insta-modal-backdrop"
-          onClick={() => setIsFollowersModalOpen(false)}
-        >
+        <div className="insta-modal-backdrop" onClick={() => setIsFollowersModalOpen(false)}>
           <div
             className="glass-card !p-0 max-w-sm w-full mx-4 overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 my-auto bg-white/95 backdrop-blur-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-pink-100 bg-white/80">
               <div className="w-5" />
               <h3 className="text-base font-bold text-[#38314a]">팔로워</h3>
               <button
                 onClick={() => setIsFollowersModalOpen(false)}
                 className="text-gray-400 hover:text-gray-700 p-1 cursor-pointer"
-                aria-label="닫기"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-
-            {/* List */}
             <div className="max-h-80 overflow-y-auto divide-y divide-pink-50/80 p-3">
-              {isOwner || !isFollowing ? (
+              {followers.length === 0 ? (
                 <div className="text-center py-10 text-xs sm:text-sm text-gray-400">
                   아직 팔로워가 없습니다.
                 </div>
               ) : (
-                <div className="flex items-center justify-between p-2.5 hover:bg-pink-50/40 rounded-xl transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-400 to-purple-400 text-white flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white flex-shrink-0">
-                      🌸
-                    </div>
-                    <div>
-                      <div className="font-bold text-xs text-[#38314a] flex items-center gap-1.5">
-                        방문자
-                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-pink-100 text-pink-700">
-                          나
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-[#7a6e8f] font-mono">
-                        @visitor
+                followers.map((f, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-2.5 hover:bg-pink-50/40 rounded-xl transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      {f.avatarUrl ? (
+                        <img
+                          src={f.avatarUrl}
+                          alt={f.name}
+                          className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-400 to-purple-400 text-white flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white flex-shrink-0">
+                          🌸
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-bold text-xs text-[#38314a]">{f.name}</div>
+                        <div className="text-[11px] text-[#7a6e8f] font-mono">@{f.username}</div>
                       </div>
                     </div>
                   </div>
-
-                  <button
-                    onClick={() => {
-                      handleUnfollow();
-                      setIsFollowersModalOpen(false);
-                    }}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-pink-200 text-pink-700 hover:bg-pink-50 transition-colors cursor-pointer"
-                  >
-                    언팔로우
-                  </button>
-                </div>
+                ))
               )}
             </div>
           </div>
@@ -2050,63 +1743,62 @@ export default function BlogPage() {
 
       {/* 6. Following Modal */}
       {isFollowingModalOpen && (
-        <div
-          className="insta-modal-backdrop"
-          onClick={() => setIsFollowingModalOpen(false)}
-        >
+        <div className="insta-modal-backdrop" onClick={() => setIsFollowingModalOpen(false)}>
           <div
             className="glass-card !p-0 max-w-sm w-full mx-4 overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 my-auto bg-white/95 backdrop-blur-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-pink-100 bg-white/80">
               <div className="w-5" />
               <h3 className="text-base font-bold text-[#38314a]">팔로잉</h3>
               <button
                 onClick={() => setIsFollowingModalOpen(false)}
                 className="text-gray-400 hover:text-gray-700 p-1 cursor-pointer"
-                aria-label="닫기"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-
-            {/* List */}
             <div className="max-h-80 overflow-y-auto p-4">
-              {!isOwner && isFollowing ? (
-                <div className="flex items-center justify-between p-2.5 hover:bg-pink-50/40 rounded-xl transition-colors">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={profile.avatarUrl || "/assets/koharu-profile.png"}
-                      alt={profile.name}
-                      className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm flex-shrink-0"
-                    />
-                    <div>
-                      <div className="font-bold text-xs text-[#38314a] flex items-center gap-1">
-                        {profile.name}
-                        <svg className="w-3.5 h-3.5 text-pink-500 fill-current" viewBox="0 0 24 24">
-                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                        </svg>
-                      </div>
-                      <div className="text-[11px] text-[#7a6e8f] font-mono">
-                        @{cleanHandle}
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      handleUnfollow();
-                      setIsFollowingModalOpen(false);
-                    }}
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-pink-200 text-pink-700 hover:bg-pink-50 transition-colors cursor-pointer"
-                  >
-                    팔로우 취소
-                  </button>
-                </div>
-              ) : (
+              {followingList.length === 0 ? (
                 <div className="text-center py-10 text-xs sm:text-sm text-gray-400">
                   아직 팔로잉 중인 계정이 없습니다.
                 </div>
+              ) : (
+                followingList.map((f, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-2.5 hover:bg-pink-50/40 rounded-xl transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      {f.avatarUrl ? (
+                        <img
+                          src={f.avatarUrl}
+                          alt={f.name}
+                          className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-400 to-purple-400 text-white flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white flex-shrink-0">
+                          👤
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-bold text-xs text-[#38314a] flex items-center gap-1">
+                          {f.name}
+                        </div>
+                        <div className="text-[11px] text-[#7a6e8f] font-mono">@{f.username}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setFollowingList((prev) => prev.filter((_, idx) => idx !== i));
+                        toast.success(`${f.name} 팔로우를 취소했습니다.`);
+                      }}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-pink-200 text-pink-700 hover:bg-pink-50 transition-colors cursor-pointer flex items-center gap-1"
+                    >
+                      <UserMinus className="w-3.5 h-3.5" /> 팔로우 취소
+                    </button>
+                  </div>
+                ))
               )}
             </div>
           </div>
