@@ -17,9 +17,13 @@ import {
   MessageCircle,
   MoreHorizontal,
   PlusCircle,
+  Search,
   Share2,
   Sparkles,
+  Trash2,
   UploadCloud,
+  UserCheck,
+  UserPlus,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -123,15 +127,30 @@ function processImageFile(file: File): Promise<string> {
   });
 }
 
+interface FriendUser {
+  name: string;
+  handle: string;
+  role: string;
+  avatarColor: string;
+}
+
+const CURATED_FRIENDS: FriendUser[] = [
+  { name: "선아", handle: "sx0n._.a", role: "Discord Friend 💖", avatarColor: "from-pink-400 to-rose-500" },
+  { name: "코블", handle: "_koble_", role: "Discord Friend 🌸", avatarColor: "from-purple-400 to-indigo-500" },
+  { name: "소성", handle: "seosungdev", role: "Developer ✨", avatarColor: "from-blue-400 to-cyan-500" },
+  { name: "수냥", handle: "aer.unnynag0214", role: "Discord Friend 🐱", avatarColor: "from-amber-400 to-orange-500" },
+  { name: "제이", handle: "jxayx._.", role: "Discord Friend 💫", avatarColor: "from-violet-400 to-purple-600" },
+  { name: "김치", handle: "kimchi090113", role: "Discord Friend 🥬", avatarColor: "from-emerald-400 to-teal-500" },
+  { name: "현이", handle: "07lee_hyun", role: "Discord Friend 🌿", avatarColor: "from-green-400 to-emerald-600" },
+  { name: "치킨무", handle: "chimu314", role: "Discord Friend 🍗", avatarColor: "from-yellow-400 to-amber-500" },
+];
+
 export default function BlogPage() {
   const [, setLocation] = useLocation();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"grid" | "feed">("grid");
   const [activeTag, setActiveTag] = useState<string>("all");
-  const [followed, setFollowed] = useState(false);
-  const [followerCount, setFollowerCount] = useState(0);
-  const [followingCount, setFollowingCount] = useState(0);
 
   // Profile data
   const [profile, setProfile] = useState<ProfileData>(DEFAULT_PROFILE);
@@ -141,6 +160,13 @@ export default function BlogPage() {
 
   // Profile share modal
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  // Followers & Following Modals
+  const [isFollowersModalOpen, setIsFollowersModalOpen] = useState(false);
+  const [isFollowingModalOpen, setIsFollowingModalOpen] = useState(false);
+  const [followersSearch, setFollowersSearch] = useState("");
+  const [followingSearch, setFollowingSearch] = useState("");
+  const [unfollowedMap, setUnfollowedMap] = useState<Record<string, boolean>>({});
 
   // Active post for detail modal
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -181,9 +207,6 @@ export default function BlogPage() {
       if (!window.localStorage.getItem("koharu_uid")) {
         window.localStorage.setItem("koharu_uid", Math.random().toString(36).substring(2, 9));
       }
-      const isF = localStorage.getItem("koharu_is_followed") === "1";
-      setFollowed(isF);
-      setFollowerCount(isF ? 1 : 0);
     }
     fetchProfile();
     fetchPosts();
@@ -572,6 +595,83 @@ export default function BlogPage() {
     fetchCommentsForPost(post.id);
   };
 
+  const handleDeletePost = async (postId: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm("이 게시물을 정말 삭제하시겠습니까?")) return;
+
+    setPosts((prev) => {
+      const updated = prev.filter((p) => p.id !== postId);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("koharu_posts_cache", JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
+
+    if (selectedPost && selectedPost.id === postId) {
+      setSelectedPost(null);
+    }
+
+    toast.success("게시물이 성공적으로 삭제되었습니다! 🗑️");
+
+    try {
+      await fetch(`/api/posts/${postId}`, {
+        method: "DELETE",
+      });
+    } catch (err) {
+      console.warn("[Post Delete] Background sync error:", err);
+    }
+  };
+
+  // Auto-detect post from share link / URL parameter so shared links NEVER 404
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const pathname = window.location.pathname;
+    const searchParams = new URLSearchParams(window.location.search);
+    const postQuery = searchParams.get("post") || searchParams.get("p");
+
+    // Check pathname: /instagram/slug, /post/slug, /p/slug, /blog/slug
+    const match = pathname.match(/^\/(?:instagram|post|p|blog)\/([^/?#]+)/i);
+    const rawSlug = postQuery || (match ? match[1] : null);
+
+    if (rawSlug && !rawSlug.startsWith("@") && rawSlug !== "index.html") {
+      const slug = decodeURIComponent(rawSlug).replace(/\.html$/, "");
+      const found = posts.find((p) => p.slug === slug || String(p.id) === slug);
+      if (found) {
+        setSelectedPost(found);
+        fetchCommentsForPost(found.id);
+      } else if (posts.length > 0) {
+        fetch(`/api/posts/${encodeURIComponent(slug)}`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data?.post) {
+              setSelectedPost(data.post);
+              fetchCommentsForPost(data.post.id);
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, [posts]);
+
+  // Dynamic filter lists for Followers & Following modals
+  const displayedFollowers = CURATED_FRIENDS.filter((f) => !unfollowedMap[`follower-${f.handle}`]);
+  const displayedFollowing = CURATED_FRIENDS.filter((f) => !unfollowedMap[`following-${f.handle}`]);
+
+  const filteredFollowers = displayedFollowers.filter(
+    (f) =>
+      f.name.toLowerCase().includes(followersSearch.toLowerCase()) ||
+      f.handle.toLowerCase().includes(followersSearch.toLowerCase())
+  );
+
+  const filteredFollowing = CURATED_FRIENDS.filter(
+    (f) =>
+      f.name.toLowerCase().includes(followingSearch.toLowerCase()) ||
+      f.handle.toLowerCase().includes(followingSearch.toLowerCase())
+  );
+
   // Dynamic user-defined tags extracted from real posts
   const availableTags = Array.from(
     new Set(posts.map((p) => (p.category || "").trim()).filter(Boolean))
@@ -623,33 +723,14 @@ export default function BlogPage() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons (On own profile, self-follow is prevented) */}
               <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
                 <button
-                  onClick={() => {
-                    const next = !followed;
-                    setFollowed(next);
-                    setFollowerCount((prev) => (next ? prev + 1 : Math.max(0, prev - 1)));
-                    if (typeof window !== "undefined") {
-                      localStorage.setItem("koharu_is_followed", next ? "1" : "0");
-                    }
-                    toast.success(
-                      next
-                        ? `@${cleanHandle} 님을 팔로우했습니다! 💕`
-                        : "팔로우를 취소했습니다."
-                    );
-                  }}
-                  className={`insta-action-btn ${
-                    followed ? "insta-btn-secondary" : "insta-btn-primary"
-                  }`}
+                  onClick={() => setIsEditProfileOpen(true)}
+                  className="insta-action-btn insta-btn-secondary"
+                  title="프로필 세팅 변경"
                 >
-                  {followed ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" /> 팔로우 중
-                    </>
-                  ) : (
-                    "팔로우"
-                  )}
+                  <Edit3 className="w-3.5 h-3.5" /> 세팅
                 </button>
 
                 <button
@@ -658,13 +739,6 @@ export default function BlogPage() {
                   title="프로필 공유하기"
                 >
                   <Share2 className="w-4 h-4" /> 공유
-                </button>
-
-                <button
-                  onClick={() => setIsEditProfileOpen(true)}
-                  className="insta-action-btn insta-btn-secondary"
-                >
-                  <Edit3 className="w-3.5 h-3.5" /> 세팅
                 </button>
 
                 <button
@@ -700,20 +774,39 @@ export default function BlogPage() {
                 )}
               </div>
 
-              {/* Stats */}
-              <div className="flex gap-6 text-sm text-[#7a6e8f] py-1">
+              {/* Stats - Clickable for Followers & Following Modals */}
+              <div className="flex gap-6 text-sm text-[#7a6e8f] py-1 select-none">
                 <div>
                   게시물 <strong className="text-[#38314a] font-bold">{posts.length}</strong>
                 </div>
-                <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFollowersSearch("");
+                    setIsFollowersModalOpen(true);
+                  }}
+                  className="hover:text-pink-600 transition-colors cursor-pointer text-left"
+                  title="팔로워 목록 보기"
+                >
                   팔로워{" "}
-                  <strong className="text-[#38314a] font-bold">
-                    {followerCount.toLocaleString()}
+                  <strong className="text-[#38314a] font-bold hover:text-pink-600">
+                    {displayedFollowers.length}
                   </strong>
-                </div>
-                <div>
-                  팔로잉 <strong className="text-[#38314a] font-bold">{followingCount}</strong>
-                </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFollowingSearch("");
+                    setIsFollowingModalOpen(true);
+                  }}
+                  className="hover:text-pink-600 transition-colors cursor-pointer text-left"
+                  title="팔로잉 목록 보기"
+                >
+                  팔로잉{" "}
+                  <strong className="text-[#38314a] font-bold hover:text-pink-600">
+                    {displayedFollowing.length}
+                  </strong>
+                </button>
               </div>
 
               {/* Bio */}
@@ -907,8 +1000,13 @@ export default function BlogPage() {
                       </div>
                     </div>
 
-                    <button className="text-gray-400 hover:text-gray-600 p-1">
-                      <MoreHorizontal className="w-5 h-5" />
+                    <button
+                      onClick={(e) => handleDeletePost(post.id, e)}
+                      className="text-gray-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                      title="게시물 삭제"
+                      aria-label="게시물 삭제"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
 
@@ -1344,12 +1442,22 @@ export default function BlogPage() {
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => setSelectedPost(null)}
-                  className="text-gray-400 hover:text-gray-700 p-1"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={(e) => handleDeletePost(selectedPost.id, e)}
+                    className="text-gray-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                    title="게시물 삭제"
+                    aria-label="게시물 삭제"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setSelectedPost(null)}
+                    className="text-gray-400 hover:text-gray-700 p-1"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               <div className="insta-modal-comments-scroll space-y-4">
@@ -1442,6 +1550,13 @@ export default function BlogPage() {
                       title="게시물 링크 복사"
                     >
                       <Share2 className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={(e) => handleDeletePost(selectedPost.id, e)}
+                      className="insta-icon-btn hover:text-rose-600"
+                      title="게시물 삭제"
+                    >
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                   <div className="text-xs font-bold text-[#38314a]">
@@ -1602,6 +1717,203 @@ export default function BlogPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Followers Modal (팔로워 목록 모달) */}
+      {isFollowersModalOpen && (
+        <div
+          className="insta-modal-backdrop"
+          onClick={() => setIsFollowersModalOpen(false)}
+        >
+          <div
+            className="glass-card !p-0 max-w-sm w-full mx-4 overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 my-auto bg-white/95 backdrop-blur-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-pink-100 bg-white/80">
+              <div className="w-5" />
+              <h3 className="text-base font-bold text-[#38314a]">팔로워</h3>
+              <button
+                onClick={() => setIsFollowersModalOpen(false)}
+                className="text-gray-400 hover:text-gray-700 p-1"
+                aria-label="닫기"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="p-3 border-b border-pink-100/60 bg-pink-50/40">
+              <div className="relative flex items-center">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="검색"
+                  value={followersSearch}
+                  onChange={(e) => setFollowersSearch(e.target.value)}
+                  className="w-full text-xs pl-9 pr-3 py-2 rounded-xl bg-white border border-pink-100 outline-none focus:border-pink-400"
+                />
+              </div>
+            </div>
+
+            {/* List */}
+            <div className="max-h-80 overflow-y-auto divide-y divide-pink-50/80 p-2">
+              {filteredFollowers.length === 0 ? (
+                <div className="text-center py-10 text-xs text-gray-400">
+                  팔로워를 찾을 수 없습니다.
+                </div>
+              ) : (
+                filteredFollowers.map((friend) => (
+                  <div
+                    key={friend.handle}
+                    className="flex items-center justify-between p-2.5 hover:bg-pink-50/40 rounded-xl transition-colors"
+                  >
+                    <div
+                      className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity"
+                      onClick={() => {
+                        setIsFollowersModalOpen(false);
+                        goToProfile(friend.handle);
+                      }}
+                      title={`${friend.name} 프로필 보기`}
+                    >
+                      <div
+                        className={`w-10 h-10 rounded-full bg-gradient-to-tr ${friend.avatarColor} text-white flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white flex-shrink-0`}
+                      >
+                        {friend.name[0]}
+                      </div>
+                      <div>
+                        <div className="font-bold text-xs text-[#38314a] flex items-center gap-1">
+                          {friend.name}
+                        </div>
+                        <div className="text-[11px] text-[#7a6e8f] font-mono">
+                          @{friend.handle}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setUnfollowedMap((prev) => ({
+                          ...prev,
+                          [`follower-${friend.handle}`]: true,
+                        }));
+                        toast.success(`${friend.name} 님을 팔로워에서 삭제했습니다.`);
+                      }}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-pink-200 text-[#7a6e8f] hover:bg-pink-50 hover:text-rose-600 transition-colors cursor-pointer"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Following Modal (팔로잉 목록 모달) */}
+      {isFollowingModalOpen && (
+        <div
+          className="insta-modal-backdrop"
+          onClick={() => setIsFollowingModalOpen(false)}
+        >
+          <div
+            className="glass-card !p-0 max-w-sm w-full mx-4 overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 my-auto bg-white/95 backdrop-blur-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-pink-100 bg-white/80">
+              <div className="w-5" />
+              <h3 className="text-base font-bold text-[#38314a]">팔로잉</h3>
+              <button
+                onClick={() => setIsFollowingModalOpen(false)}
+                className="text-gray-400 hover:text-gray-700 p-1"
+                aria-label="닫기"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="p-3 border-b border-pink-100/60 bg-pink-50/40">
+              <div className="relative flex items-center">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="검색"
+                  value={followingSearch}
+                  onChange={(e) => setFollowingSearch(e.target.value)}
+                  className="w-full text-xs pl-9 pr-3 py-2 rounded-xl bg-white border border-pink-100 outline-none focus:border-pink-400"
+                />
+              </div>
+            </div>
+
+            {/* List */}
+            <div className="max-h-80 overflow-y-auto divide-y divide-pink-50/80 p-2">
+              {filteredFollowing.length === 0 ? (
+                <div className="text-center py-10 text-xs text-gray-400">
+                  팔로잉 중인 사용자를 찾을 수 없습니다.
+                </div>
+              ) : (
+                filteredFollowing.map((friend) => {
+                  const isUnfollowed = unfollowedMap[`following-${friend.handle}`];
+
+                  return (
+                    <div
+                      key={friend.handle}
+                      className="flex items-center justify-between p-2.5 hover:bg-pink-50/40 rounded-xl transition-colors"
+                    >
+                      <div
+                        className="flex items-center gap-3 cursor-pointer hover:opacity-85 transition-opacity"
+                        onClick={() => {
+                          setIsFollowingModalOpen(false);
+                          goToProfile(friend.handle);
+                        }}
+                        title={`${friend.name} 프로필 보기`}
+                      >
+                        <div
+                          className={`w-10 h-10 rounded-full bg-gradient-to-tr ${friend.avatarColor} text-white flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white flex-shrink-0`}
+                        >
+                          {friend.name[0]}
+                        </div>
+                        <div>
+                          <div className="font-bold text-xs text-[#38314a]">
+                            {friend.name}
+                          </div>
+                          <div className="text-[11px] text-[#7a6e8f] font-mono">
+                            @{friend.handle}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          const next = !isUnfollowed;
+                          setUnfollowedMap((prev) => ({
+                            ...prev,
+                            [`following-${friend.handle}`]: next,
+                          }));
+                          toast.success(
+                            next
+                              ? `${friend.name} 님의 팔로우를 취소했습니다.`
+                              : `${friend.name} 님을 다시 팔로우했습니다!`
+                          );
+                        }}
+                        className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                          isUnfollowed
+                            ? "bg-pink-600 text-white hover:bg-pink-700"
+                            : "border border-pink-200 text-[#38314a] bg-pink-50/50 hover:bg-pink-100/60"
+                        }`}
+                      >
+                        {isUnfollowed ? "팔로우" : "팔로잉"}
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -63,13 +63,7 @@ export default function PeoplePage() {
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-10">
-            <span className="text-xs uppercase tracking-widest font-bold text-[#5865F2] flex items-center justify-center gap-1.5">
-              <svg
-                className="w-4 h-4 fill-current"
-                viewBox="0 0 127.14 96.36"
-              >
-                <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.91,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.91,96.12,53,91.08,65.69,84.69,65.69Z" />
-              </svg>
+            <span className="text-xs uppercase tracking-widest font-bold text-[#5865F2] flex items-center justify-center">
               Discord Connections & Friends
             </span>
             <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1">
@@ -80,7 +74,7 @@ export default function PeoplePage() {
             </p>
           </div>
 
-          {/* People Grid (Discord-themed, NO photos) */}
+          {/* People Grid (Discord-themed) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {people.map((person) => {
               const cleanHandle = person.handle.replace(/^@/, "").trim();
@@ -91,12 +85,11 @@ export default function PeoplePage() {
                   key={person.name}
                   className="glass-card !p-5 flex flex-col items-center text-center hover:border-[#5865F2]/40 transition-all group shadow-sm hover:shadow-md"
                 >
-                  {/* Discord Logo Icon (No photo) */}
-                  <div className="w-14 h-14 rounded-2xl bg-[#5865F2]/10 border border-[#5865F2]/20 flex items-center justify-center mb-3 shadow-sm group-hover:scale-105 group-hover:bg-[#5865F2]/15 transition-all flex-shrink-0">
+                  {/* Profile Avatar (Circular 프사) */}
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#5865F2] to-[#7289da] text-white flex items-center justify-center mb-3 shadow-md ring-2 ring-white/90 group-hover:scale-105 transition-all flex-shrink-0">
                     <svg
-                      className="w-7 h-7 text-[#5865F2]"
+                      className="w-7 h-7 fill-white"
                       viewBox="0 0 127.14 96.36"
-                      fill="currentColor"
                     >
                       <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.91,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.91,96.12,53,91.08,65.69,84.69,65.69Z" />
                     </svg>

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import {
   createBlogPost,
+  deleteBlogPost,
   createGuestbookMessage,
   createPostComment,
   getBlogPostById,
@@ -168,6 +169,21 @@ apiRouter.post("/posts", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("[API] Error creating post:", error);
     res.status(500).json({ error: error?.message || "Failed to create post" });
+  }
+});
+
+// Delete post
+apiRouter.delete("/posts/:id", async (req: Request, res: Response) => {
+  try {
+    const postId = parseInt(req.params.id, 10);
+    if (isNaN(postId)) {
+      return res.status(400).json({ error: "Invalid post id" });
+    }
+    const success = await deleteBlogPost(postId);
+    res.json({ success, message: "Post deleted successfully" });
+  } catch (error) {
+    console.error("[API] Error deleting post:", error);
+    res.status(500).json({ error: "Failed to delete post" });
   }
 });
 

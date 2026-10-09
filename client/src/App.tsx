@@ -57,11 +57,8 @@ function HandleRoute({ params }: { params: { handle?: string } }) {
   return <NotFound />;
 }
 
-function InstagramSlugRoute({ params }: { params: { slug: string } }) {
-  if (params.slug && params.slug.startsWith("@")) {
-    return <BlogPage />;
-  }
-  return <BlogPostPage />;
+function InstagramSlugRoute() {
+  return <BlogPage />;
 }
 
 function Router() {
@@ -107,12 +104,14 @@ function Router() {
       <Route path="/instagram.html" component={BlogPage} />
       <Route path="/instagram/:slug" component={InstagramSlugRoute} />
       <Route path="/instagram/:slug.html" component={InstagramSlugRoute} />
+      <Route path="/post/:slug" component={BlogPage} />
+      <Route path="/post/:slug.html" component={BlogPage} />
 
       {/* Aliases for Board & Blog */}
       <Route path="/blog" component={BlogPage} />
       <Route path="/blog.html" component={BlogPage} />
-      <Route path="/blog/:slug" component={BlogPostPage} />
-      <Route path="/blog/:slug.html" component={BlogPostPage} />
+      <Route path="/blog/:slug" component={BlogPage} />
+      <Route path="/blog/:slug.html" component={BlogPage} />
       <Route path="/board" component={BlogPage} />
       <Route path="/board.html" component={BlogPage} />
 
