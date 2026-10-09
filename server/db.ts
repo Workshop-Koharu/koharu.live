@@ -12,11 +12,14 @@ import {
   InsertGuestbookMessage,
   SiteProfile,
   InsertSiteProfile,
+  SitePerson,
+  InsertSitePerson,
   blogPosts,
   postComments,
   postLikes,
   guestbookMessages,
   siteProfile,
+  sitePeople,
   users,
 } from "../drizzle/schema";
 
@@ -294,6 +297,41 @@ export async function updateSiteProfile(data: any): Promise<SiteProfile> {
     }
   } catch (error) {
     console.error("[Database] Error in updateSiteProfile:", error);
+    throw error;
+  }
+}
+
+export async function getSitePeople(): Promise<SitePerson[]> {
+  const db = getDb();
+  if (!db) return [];
+  try {
+    return await db.select().from(sitePeople).orderBy(desc(sitePeople.createdAt));
+  } catch (error) {
+    console.error("[Database] Error in getSitePeople:", error);
+    return [];
+  }
+}
+
+export async function createSitePerson(data: InsertSitePerson): Promise<SitePerson> {
+  const db = getDb();
+  if (!db) throw new Error("Database connection unavailable");
+  try {
+    const result = await db.insert(sitePeople).values(data).returning();
+    return result[0];
+  } catch (error) {
+    console.error("[Database] Error in createSitePerson:", error);
+    throw error;
+  }
+}
+
+export async function deleteSitePerson(id: number): Promise<boolean> {
+  const db = getDb();
+  if (!db) throw new Error("Database connection unavailable");
+  try {
+    await db.delete(sitePeople).where(eq(sitePeople.id, id));
+    return true;
+  } catch (error) {
+    console.error("[Database] Error in deleteSitePerson:", error);
     throw error;
   }
 }

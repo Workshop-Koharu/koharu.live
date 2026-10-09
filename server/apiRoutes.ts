@@ -11,9 +11,63 @@ import {
   getSiteProfile,
   togglePostLike,
   updateSiteProfile,
+  getSitePeople,
+  createSitePerson,
+  deleteSitePerson,
 } from "./db";
 
 export const apiRouter = Router();
+
+// Get acquaintances (People / Friends)
+apiRouter.get("/people", async (_req: Request, res: Response) => {
+  try {
+    const people = await getSitePeople();
+    res.json({ people });
+  } catch (error) {
+    console.error("[API] Error fetching people:", error);
+    res.status(500).json({ error: "Failed to fetch people" });
+  }
+});
+
+// Create new acquaintance
+apiRouter.post("/people", async (req: Request, res: Response) => {
+  try {
+    const { name, handle, role, status, avatar, link } = req.body;
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return res.status(400).json({ error: "Name is required" });
+    }
+
+    const person = await createSitePerson({
+      name: name.trim(),
+      handle: handle?.trim() || null,
+      role: role?.trim() || "Friend",
+      status: status?.trim() || null,
+      avatar: avatar?.trim() || "/assets/koharu-profile.png",
+      link: link?.trim() || null,
+    });
+
+    res.json({ person });
+  } catch (error) {
+    console.error("[API] Error creating person:", error);
+    res.status(500).json({ error: "Failed to create person" });
+  }
+});
+
+// Delete acquaintance
+apiRouter.delete("/people/:id", async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "Invalid person ID" });
+    }
+
+    await deleteSitePerson(id);
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error("[API] Error deleting person:", error);
+    res.status(500).json({ error: "Failed to delete person" });
+  }
+});
 
 // Get profile settings
 apiRouter.get("/profile", async (req: Request, res: Response) => {

@@ -106,3 +106,20 @@ export const siteProfile = pgTable("site_profile", {
 
 export type SiteProfile = typeof siteProfile.$inferSelect;
 export type InsertSiteProfile = typeof siteProfile.$inferInsert;
+
+/**
+ * Site Acquaintances / Friends table
+ */
+export const sitePeople = pgTable("site_people", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  handle: varchar("handle", { length: 100 }),
+  role: varchar("role", { length: 100 }).default("Friend"),
+  status: text("status"),
+  avatar: text("avatar"),
+  link: text("link"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type SitePerson = typeof sitePeople.$inferSelect;
+export type InsertSitePerson = typeof sitePeople.$inferInsert;
