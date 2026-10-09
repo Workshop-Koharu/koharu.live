@@ -10,14 +10,14 @@ interface Person {
 }
 
 const CURATED_PEOPLE: Person[] = [
-  { name: "선아", handle: "sx0n._.a", role: "Discord Friend 💖" },
-  { name: "코블", handle: "_koble_", role: "Discord Friend 🌸" },
-  { name: "소성", handle: "seosungdev", role: "Developer ✨" },
-  { name: "수냥", handle: "aer.unnynag0214", role: "Discord Friend 🐱" },
-  { name: "제이", handle: "jxayx._.", role: "Discord Friend 💫" },
-  { name: "김치", handle: "kimchi090113", role: "Discord Friend 🥬" },
-  { name: "현이", handle: "07lee_hyun", role: "Discord Friend 🌿" },
-  { name: "치킨무", handle: "chimu314", role: "Discord Friend 🍗" },
+  { name: "선아", handle: "sx0n._.a", role: "소중한 친구 💖" },
+  { name: "코블", handle: "_koble_", role: "소중한 친구 🌸" },
+  { name: "소성", handle: "seosungdev", role: "개발자 ✨" },
+  { name: "수냥", handle: "aer.unnynag0214", role: "소중한 친구 🐱" },
+  { name: "제이", handle: "jxayx._.", role: "소중한 친구 💫" },
+  { name: "김치", handle: "kimchi090113", role: "소중한 친구 🥬" },
+  { name: "현이", handle: "07lee_hyun", role: "소중한 친구 🌿" },
+  { name: "치킨무", handle: "chimu314", role: "소중한 친구 🍗" },
 ];
 
 export default function PeoplePage() {
@@ -31,10 +31,11 @@ export default function PeoplePage() {
         if (data && data.people && data.people.length > 0) {
           const merged = data.people.map((dbPerson: Person) => {
             const fallback = CURATED_PEOPLE.find((c) => c.name === dbPerson.name);
+            const cleanRole = (dbPerson.role || fallback?.role || "소중한 친구").replace(/Discord\s*Friend\s*/gi, "소중한 친구");
             return {
               name: dbPerson.name,
               handle: (dbPerson.handle || fallback?.handle || "").replace(/^@/, ""),
-              role: dbPerson.role || fallback?.role || "Discord Friend",
+              role: cleanRole,
             };
           });
           setPeople(merged);
@@ -45,13 +46,13 @@ export default function PeoplePage() {
       });
   }, []);
 
-  const copyDiscordId = (name: string, handle: string) => {
+  const copyId = (name: string, handle: string) => {
     const clean = handle.replace(/^@/, "").trim();
     if (navigator?.clipboard) {
       navigator.clipboard.writeText(clean);
     }
     setCopiedHandle(clean);
-    toast.success(`${name}님의 디스코드 아이디(${clean})를 복사했습니다! ✨`);
+    toast.success(`${name}님의 아이디(@${clean})를 복사했습니다! ✨`);
     setTimeout(() => setCopiedHandle(null), 2000);
   };
 
@@ -63,18 +64,18 @@ export default function PeoplePage() {
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-10">
-            <span className="text-xs uppercase tracking-widest font-bold text-[#5865F2] flex items-center justify-center">
-              Discord Connections & Friends
+            <span className="text-xs uppercase tracking-widest font-bold text-pink-600 flex items-center justify-center">
+              Connections & Friends
             </span>
             <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1">
               소중한 지인들 🌸
             </h1>
             <p className="text-sm text-[#7a6e8f] mt-2">
-              코하루와 함께하는 소중한 디스코드 친구들과 지인들입니다.
+              코하루와 함께하는 소중한 친구들과 지인들입니다.
             </p>
           </div>
 
-          {/* People Grid (Discord-themed) */}
+          {/* People Grid (No avatars, no discord references) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {people.map((person) => {
               const cleanHandle = person.handle.replace(/^@/, "").trim();
@@ -83,41 +84,31 @@ export default function PeoplePage() {
               return (
                 <div
                   key={person.name}
-                  className="glass-card !p-5 flex flex-col items-center text-center hover:border-[#5865F2]/40 transition-all group shadow-sm hover:shadow-md"
+                  className="glass-card !p-6 flex flex-col items-center text-center hover:border-pink-300 transition-all group shadow-sm hover:shadow-md"
                 >
-                  {/* Profile Avatar (Circular 프사) */}
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-[#5865F2] to-[#7289da] text-white flex items-center justify-center mb-3 shadow-md ring-2 ring-white/90 group-hover:scale-105 transition-all flex-shrink-0">
-                    <svg
-                      className="w-7 h-7 fill-white"
-                      viewBox="0 0 127.14 96.36"
-                    >
-                      <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.91,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.91,96.12,53,91.08,65.69,84.69,65.69Z" />
-                    </svg>
-                  </div>
-
-                  {/* 한글 디스코드 닉네임 */}
-                  <h2 className="font-extrabold text-base text-[#38314a] group-hover:text-[#5865F2] transition-colors">
+                  {/* 이름 */}
+                  <h2 className="font-extrabold text-lg text-[#38314a] group-hover:text-pink-600 transition-colors">
                     {person.name}
                   </h2>
 
-                  {/* 영어 디스코드 아이디 */}
-                  <div className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-[#5865F2]/10 text-[#5865F2] font-mono mt-1 mb-2">
+                  {/* 아이디 */}
+                  <div className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-pink-50 text-pink-700 font-mono mt-2 mb-2 border border-pink-100">
                     @{cleanHandle}
                   </div>
 
                   {/* Role */}
                   {person.role && (
-                    <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100/70 text-pink-700 mb-2">
-                      {person.role}
+                    <span className="inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-100 mb-2">
+                      {person.role.replace(/Discord\s*/gi, "")}
                     </span>
                   )}
 
-                  {/* Copy Discord ID Button */}
+                  {/* Copy ID Button */}
                   <button
                     type="button"
-                    onClick={() => copyDiscordId(person.name, cleanHandle)}
-                    className="w-full mt-2 pt-3 border-t border-pink-100/70 flex items-center justify-center gap-1.5 text-xs font-semibold text-[#5865F2] hover:text-[#4752c4] transition-colors cursor-pointer"
-                    title="디스코드 아이디 복사"
+                    onClick={() => copyId(person.name, cleanHandle)}
+                    className="w-full mt-3 pt-3 border-t border-pink-100/70 flex items-center justify-center gap-1.5 text-xs font-semibold text-pink-600 hover:text-pink-700 transition-colors cursor-pointer"
+                    title="아이디 복사"
                   >
                     {isCopied ? (
                       <>
@@ -127,7 +118,7 @@ export default function PeoplePage() {
                     ) : (
                       <>
                         <Copy className="w-3.5 h-3.5" />
-                        <span>디스코드 아이디 복사</span>
+                        <span>아이디 복사</span>
                       </>
                     )}
                   </button>
