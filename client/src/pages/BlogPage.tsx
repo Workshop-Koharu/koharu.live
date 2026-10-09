@@ -23,12 +23,20 @@ import {
   Sparkles,
   Trash2,
   UploadCloud,
+  User,
   UserCheck,
   UserPlus,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import SiteNav from "@/components/SiteNav";
+import {
+  fetchAllPosts,
+  createNewPost,
+  fetchComments,
+  addComment,
+  fetchPostBySlugOrId,
+} from "@/lib/remoteDb";
 
 interface Post {
   id: number;
@@ -68,7 +76,8 @@ interface ProfileData {
   websiteUrl: string;
 }
 
-const DEFAULT_PROFILE: ProfileData = {
+// Koharu official profile (viewable via /@koharu.live or profile switcher)
+const KOHARU_OFFICIAL_PROFILE: ProfileData = {
   username: "koharu.live",
   name: "! Koharu · 코하루",
   bio: "🌸 개발과 창작을 좋아하는 코하루의 공간입니다.\n🎮 인디 게임 & 웹 프로젝트 제작\n✨ 비공식 스텔라이브 팬서버를 함께 운영하고 있어요!",
@@ -80,6 +89,22 @@ const DEFAULT_PROFILE: ProfileData = {
   email: "admin@koharu.live",
   websiteUrl: "https://koharu.live",
 };
+
+// Default newly created visitor account profile (strictly blank avatar and empty bio)
+const BLANK_DEFAULT_PROFILE: ProfileData = {
+  username: "user",
+  name: "새 사용자",
+  bio: "",
+  avatarUrl: "",
+  bannerUrl: "",
+  birthdate: "",
+  githubUrl: "",
+  instagramUrl: "",
+  email: "",
+  websiteUrl: "",
+};
+
+const DEFAULT_PROFILE = BLANK_DEFAULT_PROFILE;
 
 const DEFAULT_POSTS: Post[] = [
   {
@@ -212,38 +237,54 @@ export default function BlogPage() {
   const [activeTab, setActiveTab] = useState<"grid" | "feed">("grid");
   const [activeTag, setActiveTag] = useState<string>("all");
 
-  // Profile data (Koharu's profile is the sole account on Instagram)
-  const [profile, setProfile] = useState<ProfileData>(DEFAULT_PROFILE);
-  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
-  const [editForm, setEditForm] = useState<ProfileData>(DEFAULT_PROFILE);
-  const [isProfileSaving, setIsProfileSaving] = useState(false);
-
-  // Owner identity: Koharu is the profile owner. Default true.
-  const [isOwner, setIsOwner] = useState<boolean>(() => {
+  // Profile states:
+  // 1. myAccount: The current visitor's own profile (initialized blank: no image, no bio)
+  const [myAccount, setMyAccount] = useState<ProfileData>(() => {
     if (typeof window !== "undefined") {
       try {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get("view") === "visitor") return false;
-        if (urlParams.get("view") === "owner") return true;
-        const stored = localStorage.getItem("koharu_is_owner");
-        if (stored !== null) return stored === "1";
+        const stored = localStorage.getItem("koharu_my_profile");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && typeof parsed === "object") {
+            return { ...BLANK_DEFAULT_PROFILE, ...parsed };
+          }
+        }
       } catch {}
     }
-    return true;
+    return BLANK_DEFAULT_PROFILE;
   });
 
-  // Persistent Follow state:
-  // Strictly prevented for the owner (oneself can NEVER follow oneself).
+  // Whether user is viewing Koharu's official profile or their own profile
+  const [isViewingKoharu, setIsViewingKoharu] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const path = window.location.pathname.toLowerCase();
+        const search = window.location.search.toLowerCase();
+        if (
+          path.includes("@koharu") ||
+          path.includes("koharu.live") ||
+          search.includes("koharu.live") ||
+          search.includes("view=koharu")
+        ) {
+          return true;
+        }
+      } catch {}
+    }
+    return false;
+  });
+
+  // Current active displayed profile
+  const profile = isViewingKoharu ? KOHARU_OFFICIAL_PROFILE : myAccount;
+  const isOwner = !isViewingKoharu; // You are the owner of your own profile
+
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [editForm, setEditForm] = useState<ProfileData>(myAccount);
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
+
+  // Persistent Follow state for Koharu:
   const [isFollowing, setIsFollowing] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const isVisitorParam = urlParams.get("view") === "visitor";
-        const storedOwner = localStorage.getItem("koharu_is_owner");
-        const effectiveOwner = !isVisitorParam && (storedOwner === null || storedOwner === "1");
-        if (effectiveOwner) {
-          return false;
-        }
         const val = localStorage.getItem("koharu_is_following");
         return val === "1" || val === "true";
       } catch {
@@ -280,7 +321,7 @@ export default function BlogPage() {
   const [modalCommentInput, setModalCommentInput] = useState("");
 
   const handleFollow = () => {
-    if (isOwner) {
+    if (!isViewingKoharu) {
       toast.error("자신은 자신을 팔로우할 수 없습니다 🙅");
       return;
     }
@@ -297,18 +338,15 @@ export default function BlogPage() {
     setIsFollowing(false);
     if (typeof window !== "undefined") {
       try {
-        // Explicitly set to "0" and remove to permanently clear follow state across reloads
         localStorage.setItem("koharu_is_following", "0");
         localStorage.removeItem("koharu_is_following");
-        localStorage.removeItem("koharu_my_account");
-        localStorage.removeItem("koharu_following");
       } catch {}
     }
     toast.success("팔로우를 취소했습니다.");
   };
 
   const toggleFollow = () => {
-    if (isOwner) {
+    if (!isViewingKoharu) {
       toast.error("자신은 자신을 팔로우할 수 없습니다 🙅");
       return;
     }
@@ -320,92 +358,32 @@ export default function BlogPage() {
   };
 
   useEffect(() => {
-    // If owner, strictly prevent self-follow and clear any stored self-following record
-    if (isOwner) {
-      setIsFollowing(false);
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.removeItem("koharu_is_following");
-          localStorage.removeItem("koharu_following");
-          localStorage.setItem("koharu_is_following", "0");
-        } catch {}
-      }
-    }
-  }, [isOwner]);
-
-  useEffect(() => {
-    fetchProfile();
     fetchPosts();
   }, []);
-
-  const fetchProfile = async () => {
-    if (typeof window !== "undefined") {
-      const cached = localStorage.getItem("koharu_profile");
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (parsed && parsed.name) {
-            setProfile((prev) => ({ ...prev, ...parsed }));
-            setEditForm((prev) => ({ ...prev, ...parsed }));
-          }
-        } catch {}
-      }
-    }
-
-    try {
-      const res = await fetch("/api/profile");
-      if (res.ok) {
-        const data = await res.json();
-        if (data.profile) {
-          const loaded: ProfileData = {
-            username: data.profile.username || DEFAULT_PROFILE.username,
-            name: data.profile.name || DEFAULT_PROFILE.name,
-            bio: data.profile.bio || DEFAULT_PROFILE.bio,
-            avatarUrl: data.profile.avatarUrl || DEFAULT_PROFILE.avatarUrl,
-            bannerUrl: data.profile.bannerUrl || DEFAULT_PROFILE.bannerUrl,
-            birthdate: data.profile.birthdate || DEFAULT_PROFILE.birthdate,
-            githubUrl: data.profile.githubUrl || DEFAULT_PROFILE.githubUrl,
-            instagramUrl: data.profile.instagramUrl || DEFAULT_PROFILE.instagramUrl,
-            email: data.profile.email || DEFAULT_PROFILE.email,
-            websiteUrl: data.profile.websiteUrl || DEFAULT_PROFILE.websiteUrl,
-          };
-          setProfile(loaded);
-          setEditForm(loaded);
-          if (typeof window !== "undefined") {
-            localStorage.setItem("koharu_profile", JSON.stringify(loaded));
-          }
-        }
-      }
-    } catch {}
-  };
 
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/posts");
-      if (res.ok) {
-        const data = await res.json();
-        const serverPosts: Post[] = data.posts || [];
-        if (serverPosts.length > 0) {
+      const dbPosts = await fetchAllPosts();
+      if (Array.isArray(dbPosts) && dbPosts.length > 0) {
+        setPosts((prev) => {
           // Merge with any locally created posts so newly created posts are never lost
-          setPosts((prev) => {
-            const serverIds = new Set(serverPosts.map((p) => p.id));
-            const serverSlugs = new Set(serverPosts.map((p) => p.slug));
-            const localOnly = prev.filter(
-              (p) => !serverIds.has(p.id) && !serverSlugs.has(p.slug)
-            );
-            const merged = [...localOnly, ...serverPosts];
-            if (typeof window !== "undefined") {
-              try {
-                localStorage.setItem("koharu_posts_cache", JSON.stringify(merged));
-              } catch {}
-            }
-            return merged;
-          });
-        }
+          const serverIds = new Set(dbPosts.map((p) => p.id));
+          const serverSlugs = new Set(dbPosts.map((p) => p.slug));
+          const localOnly = prev.filter(
+            (p) => !serverIds.has(p.id) && !serverSlugs.has(p.slug)
+          );
+          const merged = [...localOnly, ...dbPosts];
+          if (typeof window !== "undefined") {
+            try {
+              localStorage.setItem("koharu_posts_cache", JSON.stringify(merged));
+            } catch {}
+          }
+          return merged;
+        });
       }
-    } catch {
-      // Keep existing posts
+    } catch (err) {
+      console.warn("fetchPosts error:", err);
     } finally {
       setLoading(false);
     }
@@ -413,21 +391,27 @@ export default function BlogPage() {
 
   const fetchCommentsForPost = async (postId: number) => {
     try {
-      const res = await fetch(`/api/posts/${postId}/comments`);
-      if (res.ok) {
-        const data = await res.json();
-        setComments((prev) => ({ ...prev, [postId]: data.comments || [] }));
+      const list = await fetchComments(postId);
+      if (Array.isArray(list)) {
+        setComments((prev) => ({ ...prev, [postId]: list }));
       }
     } catch {}
   };
 
   const isMyPost = (post: Post) => {
-    if (isOwner) return true;
     try {
       const myUploadedIds: number[] = JSON.parse(
         localStorage.getItem("koharu_my_uploaded_ids") || "[]"
       );
       if (myUploadedIds.includes(post.id)) return true;
+      if (
+        myAccount.name &&
+        post.authorName === myAccount.name &&
+        post.authorName !== "! Koharu" &&
+        post.authorName !== "코하루"
+      ) {
+        return true;
+      }
     } catch {}
     return false;
   };
@@ -475,7 +459,7 @@ export default function BlogPage() {
       const res = await fetch(`/api/posts/${post.id}/like`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userIdentifier: "guest-visitor", isOwner }),
+        body: JSON.stringify({ userIdentifier: myAccount.username || "guest-visitor", isOwner: false }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -500,32 +484,33 @@ export default function BlogPage() {
 
   const handleAddComment = async (postId: number, content: string) => {
     if (!content.trim()) return;
-    const author = isOwner ? profile.name : "방문자";
-    const authorAvatar = isOwner
-      ? (profile.avatarUrl || "/assets/koharu-profile.png")
-      : "/assets/koharu-profile.png";
+    const author = myAccount.name || "방문자";
+    const authorAvatar = myAccount.avatarUrl || "";
 
     try {
-      const res = await fetch(`/api/posts/${postId}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          authorName: author,
-          authorAvatar: authorAvatar,
-          content: content.trim(),
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
+      const created = await addComment(postId, author, authorAvatar, content.trim());
+      if (created) {
         setComments((prev) => ({
           ...prev,
-          [postId]: [data.comment, ...(prev[postId] || [])],
+          [postId]: [created, ...(prev[postId] || [])],
         }));
-        setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
-        setModalCommentInput("");
-        toast.success("댓글을 등록했습니다! 🌸");
+      } else {
+        const fallbackComment: Comment = {
+          id: Date.now(),
+          postId,
+          authorName: author,
+          authorAvatar: authorAvatar || null,
+          content: content.trim(),
+          createdAt: new Date().toISOString(),
+        };
+        setComments((prev) => ({
+          ...prev,
+          [postId]: [fallbackComment, ...(prev[postId] || [])],
+        }));
       }
+      setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
+      setModalCommentInput("");
+      toast.success("댓글을 등록했습니다! 🌸");
     } catch {
       toast.error("댓글 등록에 실패했습니다.");
     }
@@ -584,8 +569,8 @@ export default function BlogPage() {
     const slug = "post-" + Date.now().toString(36);
     const title = newTitle.trim() || newCaption.slice(0, 40) + "...";
     const category = newTag.trim() || "일상";
-    const authorName = profile.name || "! Koharu";
-    const authorAvatar = profile.avatarUrl || "/assets/koharu-profile.png";
+    const authorName = myAccount.name || "사용자";
+    const authorAvatar = myAccount.avatarUrl || "";
 
     // Optimistic local post creation: instant feed update with zero failure
     const tempId = Date.now();
@@ -625,25 +610,22 @@ export default function BlogPage() {
     setNewTag("");
 
     try {
-      const res = await fetch("/api/posts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slug,
-          title,
-          caption: newCaption,
-          coverUrl: newCoverUrl,
-          category,
-          authorName,
-          authorAvatar,
-        }),
+      const created = await createNewPost({
+        slug,
+        title,
+        caption: newCaption,
+        coverUrl: newCoverUrl,
+        category,
+        authorName,
+        authorAvatar,
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.post) {
-          setPosts((prev) => prev.map((p) => (p.id === tempId ? data.post : p)));
-        }
+      if (created) {
+        setPosts((prev) => prev.map((p) => (p.id === tempId ? created : p)));
+        try {
+          const myIds = JSON.parse(localStorage.getItem("koharu_my_uploaded_ids") || "[]");
+          localStorage.setItem("koharu_my_uploaded_ids", JSON.stringify([created.id, ...myIds]));
+        } catch {}
       }
     } catch {
       // Local optimistic copy already persisted
@@ -657,39 +639,19 @@ export default function BlogPage() {
     setIsProfileSaving(true);
 
     if (typeof window !== "undefined") {
-      localStorage.setItem("koharu_profile", JSON.stringify(editForm));
+      try {
+        localStorage.setItem("koharu_my_profile", JSON.stringify(editForm));
+      } catch {}
     }
-    setProfile(editForm);
+    setMyAccount(editForm);
 
-    try {
-      const res = await fetch("/api/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.profile) {
-          setProfile(data.profile);
-          setEditForm(data.profile);
-          if (typeof window !== "undefined") {
-            localStorage.setItem("koharu_profile", JSON.stringify(data.profile));
-          }
-        }
-      }
-      setIsEditProfileOpen(false);
-      toast.success("프로필 세팅이 저장되었습니다! ✨");
-    } catch {
-      setIsEditProfileOpen(false);
-      toast.success("프로필 세팅이 저장되었습니다! ✨");
-    } finally {
-      setIsProfileSaving(false);
-    }
+    setIsEditProfileOpen(false);
+    toast.success("프로필 세팅이 저장되었습니다! ✨");
+    setIsProfileSaving(false);
   };
 
-  const canDeletePost = (_post: Post) => {
-    return true;
+  const canDeletePost = (post: Post) => {
+    return isMyPost(post);
   };
 
   // Safe Post Share Link: uses query param and sub-path both so EVERY environment works without 404
@@ -760,53 +722,40 @@ export default function BlogPage() {
       if (foundInState) {
         setSelectedPost(foundInState);
         fetchCommentsForPost(foundInState.id);
-        return;
-      }
-
-      // 2. Search in localStorage cached posts
-      try {
-        const cached = localStorage.getItem("koharu_posts_cache");
-        if (cached) {
-          const parsed: Post[] = JSON.parse(cached);
-          const foundInCache = parsed.find(
-            (p) => p.slug === cleanSlug || String(p.id) === cleanSlug
-          );
-          if (foundInCache) {
-            setSelectedPost(foundInCache);
-            fetchCommentsForPost(foundInCache.id);
-            return;
+      } else {
+        // 2. Fetch directly from remote Neon DB
+        fetchPostBySlugOrId(cleanSlug).then((remotePost) => {
+          if (remotePost) {
+            setSelectedPost(remotePost);
+            fetchCommentsForPost(remotePost.id);
+            setPosts((prev) => (prev.some((p) => p.id === remotePost.id) ? prev : [remotePost, ...prev]));
           }
-        }
-      } catch {}
-
-      // 3. Search in DEFAULT_POSTS fallback
-      const foundInDefault = DEFAULT_POSTS.find(
-        (p) => p.slug === cleanSlug || String(p.id) === cleanSlug
-      );
-      if (foundInDefault) {
-        setSelectedPost(foundInDefault);
-        fetchCommentsForPost(foundInDefault.id);
-        return;
+        });
       }
+    }
 
-      // 4. Try API fetch
-      fetch(`/api/posts/${encodeURIComponent(cleanSlug)}`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data?.post) {
-            setSelectedPost(data.post);
-            fetchCommentsForPost(data.post.id);
-          }
-        })
-        .catch(() => {});
+    // Profile handle routing check
+    const userQuery = searchParams.get("user") || searchParams.get("u");
+    const handleMatch = pathname.match(/^\/(?:@|%40|u\/|user\/|profile\/)([^/?#]+)/i);
+    const handleSlug = userQuery || (handleMatch ? handleMatch[1] : null);
+
+    if (handleSlug) {
+      const cleanHandleSlug = decodeURIComponent(handleSlug).replace(/\.html$/, "").toLowerCase();
+      if (cleanHandleSlug === "koharu.live" || cleanHandleSlug === "koharu") {
+        setIsViewingKoharu(true);
+      } else {
+        setIsViewingKoharu(false);
+      }
     }
   }, [posts]);
 
   // Clean handle without @
-  const cleanHandle = (profile.username || "koharu.live").replace(/^@/, "").trim();
+  const cleanHandle = (profile.username || "user").replace(/^@/, "").trim();
   const profileShareUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/@${cleanHandle}`
+      ? (isViewingKoharu
+          ? `${window.location.origin}/@koharu.live`
+          : `${window.location.origin}/@${cleanHandle}`)
       : `/@${cleanHandle}`;
 
   const handleShareProfile = () => {
@@ -814,7 +763,7 @@ export default function BlogPage() {
       navigator
         .share({
           title: `${profile.name} (@${cleanHandle})`,
-          text: profile.bio,
+          text: profile.bio || "포트폴리오 인스타그램 프로필",
           url: profileShareUrl,
         })
         .catch(() => {
@@ -828,7 +777,7 @@ export default function BlogPage() {
   const copyShareLink = () => {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(profileShareUrl);
-      toast.success(`프로필 공유 링크가 복사되었습니다! (/@${cleanHandle}) 🔗`);
+      toast.success(`프로필 공유 링크가 복사되었습니다! (${isViewingKoharu ? "/@koharu.live" : `/@${cleanHandle}`}) 🔗`);
     }
   };
 
@@ -847,26 +796,67 @@ export default function BlogPage() {
       <SiteNav active="/instagram" />
 
       <main className="page-container" id="main">
+        {/* Profile Switcher Bar (Switch between My Account & Koharu Official Account) */}
+        <div className="flex items-center justify-between mb-4 bg-white/70 backdrop-blur-md p-2 rounded-2xl border border-pink-100 shadow-sm">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => {
+                setIsViewingKoharu(false);
+                setEditForm(myAccount);
+              }}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                !isViewingKoharu
+                  ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-md shadow-pink-500/20"
+                  : "text-[#7a6e8f] hover:bg-pink-50"
+              }`}
+            >
+              <User className="w-3.5 h-3.5" /> 내 프로필 ({myAccount.name || "기본 계정"})
+            </button>
+            <button
+              onClick={() => {
+                setIsViewingKoharu(true);
+              }}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                isViewingKoharu
+                  ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-md shadow-pink-500/20"
+                  : "text-[#7a6e8f] hover:bg-pink-50"
+              }`}
+            >
+              🌸 코하루 공식 계정 (@koharu.live)
+            </button>
+          </div>
+          <span className="text-[11px] text-[#9e8fa6] hidden sm:inline-block pr-2">
+            {!isViewingKoharu ? "💡 사진·소개글 없는 기본 생성 프로필입니다" : "🌸 코하루의 메인 포트폴리오 계정입니다"}
+          </span>
+        </div>
+
         {/* Instagram Profile Header Card */}
         <div className="glass-card !p-0 overflow-hidden mb-8 shadow-xl">
           {/* Profile Banner */}
-          <div className="relative w-full h-44 sm:h-56 overflow-hidden bg-gradient-to-r from-pink-300 via-purple-300 to-sky-300">
-            {profile.bannerUrl && (
+          <div className="relative w-full h-44 sm:h-56 overflow-hidden bg-gradient-to-r from-pink-200 via-purple-200 to-sky-200">
+            {profile.bannerUrl ? (
               <img
                 src={profile.bannerUrl}
                 alt="Profile Banner"
                 className="w-full h-full object-cover"
               />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-r from-pink-200 via-purple-100 to-sky-200 opacity-80" />
             )}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/40" />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/5 to-black/30" />
 
-            {/* Quick Banner Action Button */}
-            <button
-              onClick={() => setIsEditProfileOpen(true)}
-              className="absolute top-4 right-4 bg-white/90 hover:bg-white text-xs font-bold text-pink-700 px-3.5 py-1.5 rounded-full shadow-md backdrop-blur-md flex items-center gap-1.5 transition-all cursor-pointer"
-            >
-              <Edit3 className="w-3.5 h-3.5" /> 프로필 세팅
-            </button>
+            {/* Quick Banner Action Button (Only on My Account) */}
+            {!isViewingKoharu && (
+              <button
+                onClick={() => {
+                  setEditForm(myAccount);
+                  setIsEditProfileOpen(true);
+                }}
+                className="absolute top-4 right-4 bg-white/90 hover:bg-white text-xs font-bold text-pink-700 px-3.5 py-1.5 rounded-full shadow-md backdrop-blur-md flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Edit3 className="w-3.5 h-3.5" /> 프로필 세팅
+              </button>
+            )}
           </div>
 
           {/* Profile Info Row */}
@@ -875,20 +865,29 @@ export default function BlogPage() {
               {/* Overlapping Avatar */}
               <div className="insta-avatar-wrapper !m-0">
                 <div className="insta-avatar-ring">
-                  <img
-                    src={profile.avatarUrl || "/assets/koharu-profile.png"}
-                    alt={profile.name}
-                    className="insta-avatar-img !w-24 !h-24 sm:!w-28 sm:!h-28"
-                  />
+                  {profile.avatarUrl ? (
+                    <img
+                      src={profile.avatarUrl}
+                      alt={profile.name}
+                      className="insta-avatar-img !w-24 !h-24 sm:!w-28 sm:!h-28"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-pink-50 to-purple-100 flex items-center justify-center text-pink-400 border-2 border-white shadow-inner">
+                      <User className="w-12 h-12 sm:w-14 sm:h-14 stroke-[1.5]" />
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-                {isOwner ? (
+                {!isViewingKoharu ? (
                   <>
                     <button
-                      onClick={() => setIsEditProfileOpen(true)}
+                      onClick={() => {
+                        setEditForm(myAccount);
+                        setIsEditProfileOpen(true);
+                      }}
                       className="insta-action-btn insta-btn-secondary cursor-pointer"
                       title="프로필 세팅 변경"
                     >
@@ -908,20 +907,6 @@ export default function BlogPage() {
                       className="insta-action-btn insta-btn-primary !bg-gradient-to-r !from-purple-500 !to-pink-500 cursor-pointer"
                     >
                       <PlusCircle className="w-4 h-4" /> 새 글
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setIsOwner(false);
-                        try {
-                          localStorage.setItem("koharu_is_owner", "0");
-                        } catch {}
-                        toast.info("방문자 시점으로 전환되었습니다 👀");
-                      }}
-                      className="insta-action-btn insta-btn-secondary text-xs !text-[#7a6e8f] hover:!text-pink-600 cursor-pointer"
-                      title="방문자 시점 미리보기 (팔로우 버튼 확인 등)"
-                    >
-                      <Eye className="w-3.5 h-3.5" /> 방문자 시점
                     </button>
                   </>
                 ) : (
@@ -954,20 +939,11 @@ export default function BlogPage() {
                     </button>
 
                     <button
-                      onClick={() => {
-                        setIsOwner(true);
-                        setIsFollowing(false);
-                        try {
-                          localStorage.setItem("koharu_is_owner", "1");
-                          localStorage.setItem("koharu_is_following", "0");
-                          localStorage.removeItem("koharu_is_following");
-                        } catch {}
-                        toast.success("내 프로필(관리자) 모드로 돌아왔습니다 🌸");
-                      }}
+                      onClick={() => setIsViewingKoharu(false)}
                       className="insta-action-btn insta-btn-secondary text-xs !text-pink-600 font-bold cursor-pointer"
                       title="내 프로필 모드로 복귀"
                     >
-                      🌸 내 프로필 모드
+                      👤 내 프로필
                     </button>
                   </>
                 )}
@@ -978,17 +954,19 @@ export default function BlogPage() {
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-2xl font-extrabold text-[#38314a]">
-                  {profile.name}
+                  {profile.name || "사용자"}
                 </h1>
                 <span className="text-sm font-semibold text-pink-600 flex items-center gap-1">
                   @{cleanHandle}
-                  <svg
-                    className="insta-verified !w-4 !h-4"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                  </svg>
+                  {isViewingKoharu && (
+                    <svg
+                      className="insta-verified !w-4 !h-4"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                    </svg>
+                  )}
                 </span>
 
                 {profile.birthdate && (
@@ -1011,7 +989,7 @@ export default function BlogPage() {
                 >
                   팔로워{" "}
                   <strong className="text-[#38314a] font-bold hover:text-pink-600">
-                    {!isOwner && isFollowing ? 1 : 0}
+                    {isViewingKoharu ? (isFollowing ? 1 : 0) : 0}
                   </strong>
                 </button>
                 <button
@@ -1022,15 +1000,21 @@ export default function BlogPage() {
                 >
                   팔로잉{" "}
                   <strong className="text-[#38314a] font-bold hover:text-pink-600">
-                    {!isOwner && isFollowing ? 1 : 0}
+                    {isViewingKoharu ? (isFollowing ? 1 : 0) : (isFollowing ? 1 : 0)}
                   </strong>
                 </button>
               </div>
 
               {/* Bio */}
-              <p className="text-sm leading-relaxed text-[#4a3952] whitespace-pre-line max-w-2xl">
-                {profile.bio}
-              </p>
+              {profile.bio ? (
+                <p className="text-sm leading-relaxed text-[#4a3952] whitespace-pre-line max-w-2xl">
+                  {profile.bio}
+                </p>
+              ) : (
+                <p className="text-xs italic text-[#9e8fa6] py-1">
+                  소개글이 없습니다. 프로필 세팅을 눌러 나만의 소개글을 등록해보세요 🌸
+                </p>
+              )}
 
               {/* Social Links Row */}
               <div className="flex flex-wrap items-center gap-2 pt-2">
@@ -1199,21 +1183,31 @@ export default function BlogPage() {
                   {/* Card Header */}
                   <div className="insta-card-header flex items-center justify-between p-3.5 border-b border-pink-50">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={post.authorAvatar || profile.avatarUrl || "/assets/koharu-profile.png"}
-                        alt={post.authorName || profile.name}
-                        className="w-9 h-9 rounded-full object-cover ring-2 ring-pink-100"
-                      />
+                      {post.authorAvatar ? (
+                        <img
+                          src={post.authorAvatar}
+                          alt={post.authorName || "사용자"}
+                          className="w-9 h-9 rounded-full object-cover ring-2 ring-pink-100"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-pink-100 flex items-center justify-center text-pink-500 ring-2 ring-pink-100">
+                          <User className="w-5 h-5 stroke-[1.8]" />
+                        </div>
+                      )}
                       <div>
                         <div className="flex items-center gap-1 font-bold text-xs text-[#38314a]">
-                          {post.authorName || profile.name}
-                          <svg
-                            className="insta-verified !w-3.5 !h-3.5"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                          >
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                          </svg>
+                          {post.authorName || "사용자"}
+                          {(post.authorName === "! Koharu" ||
+                            post.authorName === "코하루" ||
+                            post.authorName === "! Koharu · 코하루") && (
+                            <svg
+                              className="insta-verified !w-3.5 !h-3.5"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                            >
+                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                            </svg>
+                          )}
                         </div>
                         <div className="text-[11px] text-[#7a6e8f]">
                           {new Date(post.createdAt).toLocaleDateString("ko-KR")}
@@ -1464,13 +1458,27 @@ export default function BlogPage() {
                   프로필 사진 선택 (파일 업로드)
                 </label>
                 <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-pink-400 flex-shrink-0 bg-pink-100">
-                    <img
-                      src={editForm.avatarUrl || "/assets/koharu-profile.png"}
-                      alt="Avatar Preview"
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-pink-400 flex-shrink-0 bg-pink-100 flex items-center justify-center">
+                    {editForm.avatarUrl ? (
+                      <img
+                        src={editForm.avatarUrl}
+                        alt="Avatar Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-8 h-8 text-pink-400 stroke-[1.8]" />
+                    )}
                   </div>
+                  {editForm.avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setEditForm((prev) => ({ ...prev, avatarUrl: "" }))}
+                      className="p-2 text-gray-400 hover:text-red-500 rounded-lg cursor-pointer"
+                      title="사진 삭제"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                   <label className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-pink-300 hover:border-pink-500 bg-pink-50/40 hover:bg-pink-50/70 text-xs font-bold text-pink-700 cursor-pointer transition-colors">
                     <Camera className="w-4 h-4" />
                     <span>프로필 사진 파일 선택하기</span>
@@ -1700,15 +1708,21 @@ export default function BlogPage() {
               {/* Scrollable Comments & Caption Area */}
               <div className="p-4 flex-1 overflow-y-auto space-y-4">
                 <div className="flex gap-3 text-xs">
-                  <img
-                    src={selectedPost.authorAvatar || profile.avatarUrl || "/assets/koharu-profile.png"}
-                    alt={selectedPost.authorName || profile.name}
-                    className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                  />
+                  {selectedPost.authorAvatar ? (
+                    <img
+                      src={selectedPost.authorAvatar}
+                      alt={selectedPost.authorName || "사용자"}
+                      className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-500 flex-shrink-0 ring-1 ring-pink-200">
+                      <User className="w-4 h-4 stroke-[1.8]" />
+                    </div>
+                  )}
                   <div>
                     <div className="leading-relaxed whitespace-pre-line">
                       <strong className="mr-2 text-[#38314a]">
-                        {selectedPost.authorName || profile.name}
+                        {selectedPost.authorName || "사용자"}
                       </strong>
                       {selectedPost.caption}
                     </div>
@@ -1722,19 +1736,17 @@ export default function BlogPage() {
 
                 {(comments[selectedPost.id] || []).map((comment) => (
                   <div key={comment.id} className="flex gap-3 text-sm">
-                    <img
-                      src={
-                        comment.authorAvatar ||
-                        (comment.authorName === profile.name ||
-                        comment.authorName === "! Koharu · 코하루" ||
-                        comment.authorName === "코하루"
-                          ? profile.avatarUrl
-                          : null) ||
-                        "/assets/koharu-profile.png"
-                      }
-                      alt={comment.authorName}
-                      className="w-8 h-8 rounded-full object-cover ring-1 ring-pink-200 flex-shrink-0"
-                    />
+                    {comment.authorAvatar ? (
+                      <img
+                        src={comment.authorAvatar}
+                        alt={comment.authorName}
+                        className="w-8 h-8 rounded-full object-cover ring-1 ring-pink-200 flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center text-pink-500 flex-shrink-0 ring-1 ring-pink-200">
+                        <User className="w-4 h-4 stroke-[1.8]" />
+                      </div>
+                    )}
                     <div>
                       <div>
                         <strong className="mr-1.5 text-[#38314a] font-bold">

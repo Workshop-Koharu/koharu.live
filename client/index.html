@@ -13,6 +13,29 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
     <title>! Koharu — Portfolio</title>
+    <script>
+      // SPA route restoration from 404.html redirect
+      (function () {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, null, redirect);
+        }
+        var search = window.location.search;
+        if (search.indexOf("?p=/") === 0 || search.indexOf("&p=/") !== -1) {
+          var params = new URLSearchParams(search);
+          var path = params.get("p") || "";
+          var q = params.get("q") || "";
+          if (path) {
+            var restoredUrl =
+              path +
+              (q ? "?" + q.replace(/~and~/g, "&") : "") +
+              window.location.hash;
+            window.history.replaceState(null, null, restoredUrl);
+          }
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
