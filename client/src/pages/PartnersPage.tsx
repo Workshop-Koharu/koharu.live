@@ -23,7 +23,7 @@ const PARTNERS = [
 export default function PartnersPage() {
   return (
     <div className="min-h-screen">
-      <SiteNav active="/partners.html" />
+      <SiteNav active="/partners" />
 
       <main className="page-container" id="main">
         <div className="max-w-3xl mx-auto">

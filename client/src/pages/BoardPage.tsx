@@ -77,7 +77,7 @@ export default function BoardPage() {
 
   return (
     <div className="min-h-screen">
-      <SiteNav active="/board.html" />
+      <SiteNav active="/board" />
 
       <main className="page-container" id="main">
         <div className="max-w-3xl mx-auto">

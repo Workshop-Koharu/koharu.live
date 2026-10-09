@@ -9,7 +9,7 @@ const skills = [
 
 export default function SkillsPage() {
   return (
-    <PageShell active="/skills.html" eyebrow="Skills" title="스킬" description="만드는 데 필요한 도구를 익히고, 더 나은 흐름을 찾아가는 중입니다.">
+    <PageShell active="/skills" eyebrow="Skills" title="스킬" description="만드는 데 필요한 도구를 익히고, 더 나은 흐름을 찾아가는 중입니다.">
       <section className="skill-stack entrance delay-1" aria-label="! Koharu 스킬 목록">
         {skills.map((skill) => (
           <article className="skill-row" key={skill.name}>

@@ -34,7 +34,7 @@ export default function LetterPage() {
 
   return (
     <div className="min-h-screen">
-      <SiteNav active="/letter.html" />
+      <SiteNav active="/letter" />
 
       <main className="page-container" id="main">
         <div className="max-w-xl mx-auto">

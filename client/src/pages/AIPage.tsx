@@ -87,7 +87,7 @@ export default function AIPage() {
 
   return (
     <div className="min-h-screen">
-      <SiteNav active="/ai.html" />
+      <SiteNav active="/ai" />
 
       <main className="page-container" id="main">
         <div className="max-w-3xl mx-auto">

@@ -17,7 +17,7 @@ export default function ContactPage() {
   };
 
   return (
-    <PageShell active="/contact.html" eyebrow="Contact" title="연락 및 링크" description="필요한 링크와 연락 수단을 한곳에 모았습니다.">
+    <PageShell active="/contact" eyebrow="Contact" title="연락 및 링크" description="필요한 링크와 연락 수단을 한곳에 모았습니다.">
       <section className="contact-card entrance delay-1">
         <div><div className="section-kicker">open to ideas</div><h2 className="contact-title">같이 재미있는 것을 만들어볼까요?</h2><p className="contact-copy">협업, 프로젝트, 가벼운 이야기 모두 편하게 연락해주세요.</p></div>
         <div className="contact-actions">

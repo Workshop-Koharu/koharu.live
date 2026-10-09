@@ -317,7 +317,6 @@ body {
   width: min(94%, var(--content-width));
   margin: 36px auto 80px;
   position: relative;
-  z-index: 1;
 }
 
 /* Glass Card */
@@ -824,13 +823,15 @@ body {
 .insta-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 200;
-  background: rgba(30, 15, 26, 0.65);
-  backdrop-filter: blur(8px);
+  z-index: 999999;
+  background: rgba(30, 15, 26, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 24px 16px;
+  overflow-y: auto;
 }
 
 .insta-modal-content {

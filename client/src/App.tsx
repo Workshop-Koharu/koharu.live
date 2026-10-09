@@ -17,62 +17,76 @@ import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import SkillsPage from "./pages/SkillsPage";
 
+function HandleRoute({ params }: { params: { handle: string } }) {
+  if (params.handle && params.handle.startsWith("@")) {
+    return <BlogPage />;
+  }
+  return <NotFound />;
+}
+
+function InstagramSlugRoute({ params }: { params: { slug: string } }) {
+  if (params.slug && params.slug.startsWith("@")) {
+    return <BlogPage />;
+  }
+  return <BlogPostPage />;
+}
+
 function Router() {
   return (
     <Switch>
       {/* Home / Profile */}
       <Route path="/" component={Home} />
+      <Route path="/profile" component={Home} />
       <Route path="/index.html" component={Home} />
       <Route path="/profile.html" component={Home} />
-      <Route path="/profile" component={Home} />
 
       {/* Skills */}
-      <Route path="/skills.html" component={SkillsPage} />
       <Route path="/skills" component={SkillsPage} />
+      <Route path="/skills.html" component={SkillsPage} />
 
       {/* Projects */}
-      <Route path="/projects.html" component={ProjectsPage} />
       <Route path="/projects" component={ProjectsPage} />
+      <Route path="/projects.html" component={ProjectsPage} />
       <Route path="/project.html" component={ProjectsPage} />
-      <Route path="/project/:slug.html" component={ProjectDetailPage} />
       <Route path="/project/:slug" component={ProjectDetailPage} />
+      <Route path="/project/:slug.html" component={ProjectDetailPage} />
 
       {/* History Timeline */}
-      <Route path="/history.html" component={HistoryPage} />
       <Route path="/history" component={HistoryPage} />
+      <Route path="/history.html" component={HistoryPage} />
 
       {/* Secret Letter */}
-      <Route path="/letter.html" component={LetterPage} />
       <Route path="/letter" component={LetterPage} />
+      <Route path="/letter.html" component={LetterPage} />
 
       {/* Partners */}
-      <Route path="/partners.html" component={PartnersPage} />
       <Route path="/partners" component={PartnersPage} />
+      <Route path="/partners.html" component={PartnersPage} />
       <Route path="/partner.html" component={PartnersPage} />
 
       {/* People / Acquaintances */}
-      <Route path="/person.html" component={PeoplePage} />
       <Route path="/person" component={PeoplePage} />
+      <Route path="/person.html" component={PeoplePage} />
       <Route path="/people" component={PeoplePage} />
 
       {/* Instagram (Feed & Gallery, replacing board & blog) */}
-      <Route path="/instagram.html" component={BlogPage} />
       <Route path="/instagram" component={BlogPage} />
-      <Route path="/instagram/:slug.html" component={BlogPostPage} />
-      <Route path="/instagram/:slug" component={BlogPostPage} />
+      <Route path="/instagram.html" component={BlogPage} />
+      <Route path="/instagram/:slug" component={InstagramSlugRoute} />
+      <Route path="/instagram/:slug.html" component={InstagramSlugRoute} />
 
       {/* Aliases for Board & Blog */}
-      <Route path="/blog.html" component={BlogPage} />
       <Route path="/blog" component={BlogPage} />
-      <Route path="/blog/:slug.html" component={BlogPostPage} />
+      <Route path="/blog.html" component={BlogPage} />
       <Route path="/blog/:slug" component={BlogPostPage} />
-      <Route path="/board.html" component={BlogPage} />
+      <Route path="/blog/:slug.html" component={BlogPostPage} />
       <Route path="/board" component={BlogPage} />
+      <Route path="/board.html" component={BlogPage} />
 
       {/* AI Category Removed: Redirects to Home */}
+      <Route path="/ai" component={Home} />
       <Route path="/ai.html" component={Home} />
       <Route path="/AI.html" component={Home} />
-      <Route path="/ai" component={Home} />
 
       {/* Admin */}
       <Route path="/admin" component={BlogAdminPage} />
@@ -80,8 +94,11 @@ function Router() {
       <Route path="/admin/blog.html" component={BlogAdminPage} />
 
       {/* Contact */}
-      <Route path="/contact.html" component={ContactPage} />
       <Route path="/contact" component={ContactPage} />
+      <Route path="/contact.html" component={ContactPage} />
+
+      {/* Handle-based Profile Sharing (e.g. /@koharu.live) */}
+      <Route path="/:handle" component={HandleRoute} />
 
       {/* Fallback */}
       <Route path="/404" component={NotFound} />

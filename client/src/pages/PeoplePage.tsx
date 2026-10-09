@@ -112,7 +112,7 @@ const PEOPLE = [
 export default function PeoplePage() {
   return (
     <div className="min-h-screen">
-      <SiteNav active="/person.html" />
+      <SiteNav active="/person" />
 
       <main className="page-container" id="main">
         <div className="max-w-4xl mx-auto">

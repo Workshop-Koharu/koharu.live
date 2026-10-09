@@ -4,9 +4,9 @@ import SiteNav from "@/components/SiteNav";
 const PROJECTS = [
   {
     title: "Mirae AI (미래 AI)",
-    category: "AI / Next-Gen Platform",
-    desc: "차세대 지능형 인터랙션과 대화 엔진을 구현한 코하루의 핵심 AI 프로젝트입니다. 자연스러운 맥락 이해와 창의적인 어시스턴트 기능을 제공합니다.",
-    tags: ["Mirae AI", "LLM", "Interactive", "Web"],
+    category: "AI Service",
+    desc: "코하루가 개발한 AI 어시스턴트 서비스입니다. 편리하고 자연스러운 대화와 다양한 기능들을 웹에서 바로 경험해보실 수 있어요 🌸",
+    tags: ["Mirae AI", "AI", "Assistant", "Web"],
     image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80",
     demoUrl: "https://mirae.koharu.live/",
     githubUrl: "https://github.com/Workshop-Koharu",
@@ -14,74 +14,35 @@ const PROJECTS = [
     featured: true,
   },
   {
-    title: "스텔라이브 협업 팬 프로젝트 (Stellive Project)",
-    category: "Fan Game / Media Collab",
-    desc: "스텔라이브 크리에이터와 함께하는 인터랙티브 팬 게임 및 미디어 협업 프로젝트입니다. 고유한 캐릭터 액션과 화려한 비주얼 연출을 담았습니다.",
-    tags: ["Stellive", "Fan Game", "Unity", "Action"],
-    image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80",
-    demoUrl: "https://stellive.me",
-    githubUrl: "https://github.com/Workshop-Koharu",
+    title: "비공식 스텔라이브 팬서버",
+    category: "Community / Fan Discord",
+    desc: "7,000명 이상의 파스텔(팬)들이 함께 교류하고 소통하는 비공식 스텔라이브 팬 디스코드 커뮤니티 서버입니다 🌸 팬아트, 클립 공유, 정기 이벤트 등 활발한 커뮤니티 활동이 이루어지고 있습니다.",
+    tags: ["스텔라이브", "디스코드", "7000+ Members", "팬서버"],
+    image: "/images/stellive-banner.png",
+    demoUrl: "https://discord.gg/pwRZEZ4zmt",
+    githubUrl: "",
     icon: Gamepad2,
     featured: true,
-  },
-  {
-    title: "Custom HLSL Shader Graph Pack",
-    category: "Unity / Graphics",
-    desc: "물 반사 림라이트, 수채화 셰이더, 카툰 렌더링을 구현한 유니티 URP 커스텀 셰이더 패키지입니다. 씬 라이팅 최적화와 절차적 노이즈를 결합했습니다.",
-    tags: ["Unity", "HLSL", "ShaderGraph", "URP"],
-    image: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80",
-    demoUrl: "https://koharu.live",
-    githubUrl: "https://github.com/Workshop-Koharu/koharu.live",
-    icon: Sparkles,
-  },
-  {
-    title: "Procedural 2D Dungeon Crawler",
-    category: "Game / Algorithm",
-    desc: "Bsp Tree와 셀룰러 오토마타를 결합하여 절차적으로 생성되는 맵과 타격감 있는 전투 액션 프로토타입입니다.",
-    tags: ["C#", "Algorithm", "2D Action", "PixelArt"],
-    image: "https://images.unsplash.com/photo-1551103782-8ab07afd45c1?auto=format&fit=crop&w=800&q=80",
-    demoUrl: "https://koharu.live",
-    githubUrl: "https://github.com/Workshop-Koharu",
-    icon: Gamepad2,
-  },
-  {
-    title: "Koharu Script Engine (AST Interpreter)",
-    category: "Language / Tool",
-    desc: "게임 내 대화 분기 트리와 퀘스트 트리거를 빌드 없이 실시간 핫리로드할 수 있는 C# 기반 경량 스크립트 인터프리터입니다.",
-    tags: ["Compiler", "Lexer", "Parser", "C#"],
-    image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=800&q=80",
-    demoUrl: "https://koharu.live",
-    githubUrl: "https://github.com/Workshop-Koharu",
-    icon: FolderGit2,
-  },
-  {
-    title: "koharu.live v2.0 Portfolio",
-    category: "Full-Stack Web",
-    desc: "감성적인 파스텔 비주얼과 인터랙티브 반응형 인터페이스를 갖춘 코하루의 포트폴리오. 인스타그램 피드 및 Neon PostgreSQL 연동.",
-    tags: ["React 19", "Vite", "Neon Postgres", "Instagram"],
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=800&q=80",
-    demoUrl: "https://koharu.live",
-    githubUrl: "https://github.com/Workshop-Koharu/koharu.live",
-    icon: Globe,
+    actionLabel: "디스코드 참여하기",
   },
 ];
 
 export default function ProjectsPage() {
   return (
     <div className="min-h-screen">
-      <SiteNav active="/projects.html" />
+      <SiteNav active="/projects" />
 
       <main className="page-container" id="main">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
             <span className="text-xs uppercase tracking-widest font-bold text-pink-600">
-              Works & Experiments
+              Featured Works
             </span>
             <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1">
               프로젝트 🎮
             </h1>
             <p className="text-sm text-[#7a6e8f] mt-2">
-              직접 고민하고 코드로 실체화한 AI, 게임, 셰이더, 엔진 툴 작업물들입니다.
+              코하루가 직접 제작하고 운영하는 대표 프로젝트들입니다.
             </p>
           </div>
 
@@ -149,17 +110,23 @@ export default function ProjectsPage() {
                           rel="noopener noreferrer"
                           className="insta-action-btn insta-btn-primary !text-xs !py-1.5 !px-3"
                         >
-                          {proj.demoUrl.includes("mirae") ? "Mirae AI 바로가기" : "라이브 데모"}{" "}
+                          {proj.demoUrl.includes("discord")
+                            ? "디스코드 참여하기"
+                            : proj.demoUrl.includes("mirae")
+                            ? "Mirae AI 바로가기"
+                            : "바로가기"}{" "}
                           <ArrowUpRight className="w-3.5 h-3.5" />
                         </a>
-                        <a
-                          href={proj.githubUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="insta-action-btn insta-btn-secondary !text-xs !py-1.5 !px-3"
-                        >
-                          GitHub <ArrowUpRight className="w-3.5 h-3.5" />
-                        </a>
+                        {proj.githubUrl ? (
+                          <a
+                            href={proj.githubUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="insta-action-btn insta-btn-secondary !text-xs !py-1.5 !px-3"
+                          >
+                            GitHub <ArrowUpRight className="w-3.5 h-3.5" />
+                          </a>
+                        ) : null}
                       </div>
                     </div>
                   </div>

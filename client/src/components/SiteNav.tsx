@@ -39,13 +39,13 @@ export default function SiteNav({ active }: SiteNavProps) {
   }, []);
 
   const navLinks = [
-    { href: "/profile.html", label: "메인", icon: Home },
-    { href: "/projects.html", label: "프로젝트", icon: FolderGit2 },
-    { href: "/history.html", label: "히스토리", icon: Calendar },
-    { href: "/letter.html", label: "편지", icon: Mail },
-    { href: "/partners.html", label: "파트너", icon: Users },
-    { href: "/person.html", label: "지인", icon: UserCheck },
-    { href: "/instagram.html", label: "인스타그램", icon: Camera },
+    { href: "/profile", label: "메인", icon: Home },
+    { href: "/projects", label: "프로젝트", icon: FolderGit2 },
+    { href: "/history", label: "히스토리", icon: Calendar },
+    { href: "/letter", label: "편지", icon: Mail },
+    { href: "/partners", label: "파트너", icon: Users },
+    { href: "/person", label: "지인", icon: UserCheck },
+    { href: "/instagram", label: "인스타그램", icon: Camera },
   ];
 
   return (
@@ -63,7 +63,7 @@ export default function SiteNav({ active }: SiteNavProps) {
       {/* Topbar */}
       <div className="topbar-wrapper">
         <header className="topbar">
-          <Link href="/profile.html" className="brand" aria-label="! Koharu 홈으로">
+          <Link href="/profile" className="brand" aria-label="! Koharu 홈으로">
             <img className="brand-avatar" src="/assets/koharu-profile.png" alt="! Koharu 프로필" />
             <div className="brand-text">
               <span className="brand-name-ko">! Koharu</span>
@@ -76,9 +76,10 @@ export default function SiteNav({ active }: SiteNavProps) {
               const Icon = item.icon;
               const isActive =
                 currentPath === item.href ||
-                (item.href === "/profile.html" && (currentPath === "/" || currentPath === "/profile" || currentPath === "/index.html")) ||
-                (item.href === "/projects.html" && currentPath.startsWith("/project")) ||
-                (item.href === "/instagram.html" && (currentPath.startsWith("/instagram") || currentPath.startsWith("/blog") || currentPath.startsWith("/board")));
+                currentPath === `${item.href}.html` ||
+                (item.href === "/profile" && (currentPath === "/" || currentPath === "/profile" || currentPath === "/profile.html" || currentPath === "/index.html")) ||
+                (item.href === "/projects" && currentPath.startsWith("/project")) ||
+                (item.href === "/instagram" && (currentPath.startsWith("/instagram") || currentPath.startsWith("/@") || currentPath.startsWith("/blog") || currentPath.startsWith("/board")));
 
               return (
                 <Link
@@ -96,7 +97,7 @@ export default function SiteNav({ active }: SiteNavProps) {
 
         {/* Floating Notice Bar */}
         <Link
-          href={latestPost && latestPost.slug ? `/instagram/${latestPost.slug}.html` : "/instagram.html"}
+          href={latestPost && latestPost.slug ? `/instagram/${latestPost.slug}` : "/instagram"}
           className="notice-bar"
         >
           <span className="notice-badge">인스타그램</span>

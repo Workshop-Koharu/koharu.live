@@ -40,7 +40,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <SiteNav active="/profile.html" />
+      <SiteNav active="/profile" />
 
       <main className="page-container" id="main">
         {/* Centered Profile Card */}
@@ -89,7 +89,7 @@ export default function Home() {
               <Sparkles className="w-6 h-6 text-pink-500" />
               스킬 & 역량
             </h2>
-            <Link href="/skills.html" className="text-xs font-bold text-pink-600 hover:underline flex items-center gap-1">
+            <Link href="/skills" className="text-xs font-bold text-pink-600 hover:underline flex items-center gap-1">
               전체 보기 <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -134,7 +134,7 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
             {/* Instagram Feed Link */}
             <Link
-              href="/instagram.html"
+              href="/instagram"
               className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300"
             >
               <div className="flex items-center gap-3">
@@ -151,7 +151,7 @@ export default function Home() {
 
             {/* Projects Link */}
             <Link
-              href="/projects.html"
+              href="/projects"
               className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300"
             >
               <div className="flex items-center gap-3">
@@ -168,7 +168,7 @@ export default function Home() {
 
             {/* History Link */}
             <Link
-              href="/history.html"
+              href="/history"
               className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300"
             >
               <div className="flex items-center gap-3">
@@ -185,7 +185,7 @@ export default function Home() {
 
             {/* Secret Letter Link */}
             <Link
-              href="/letter.html"
+              href="/letter"
               className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300"
             >
               <div className="flex items-center gap-3">
@@ -202,7 +202,7 @@ export default function Home() {
 
             {/* Partners Link */}
             <Link
-              href="/partners.html"
+              href="/partners"
               className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300"
             >
               <div className="flex items-center gap-3">
@@ -219,7 +219,7 @@ export default function Home() {
 
             {/* People Link */}
             <Link
-              href="/person.html"
+              href="/person"
               className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300"
             >
               <div className="flex items-center gap-3">

@@ -16,7 +16,7 @@ export default function PageShell({ active, eyebrow, title, description, childre
       <div className="page-frame">
         <div className="content-column">
           <header className="subpage-header entrance">
-            <a className="back-link" href="/profile.html"><ArrowLeft size={14} /> 프로필로 돌아가기</a>
+            <a className="back-link" href="/profile"><ArrowLeft size={14} /> 프로필로 돌아가기</a>
             <div className="section-kicker" style={{ marginTop: "20px" }}>{eyebrow}</div>
             <h1 className="subpage-title">{title}</h1>
             <p className="subpage-copy">{description}</p>
