@@ -12,7 +12,7 @@ interface Person {
 const CURATED_PEOPLE: Person[] = [
   { name: "선아", handle: "sx0n._.a", role: "소중한 친구 💖" },
   { name: "코블", handle: "_koble_", role: "소중한 친구 🌸" },
-  { name: "소성", handle: "seosungdev", role: "개발자 ✨" },
+  { name: "소성", handle: "seosungdev", role: "소중한 친구 ✨" },
   { name: "수냥", handle: "aer.unnynag0214", role: "소중한 친구 🐱" },
   { name: "제이", handle: "jxayx._.", role: "소중한 친구 💫" },
   { name: "김치", handle: "kimchi090113", role: "소중한 친구 🥬" },
@@ -31,7 +31,10 @@ export default function PeoplePage() {
         if (data && data.people && data.people.length > 0) {
           const merged = data.people.map((dbPerson: Person) => {
             const fallback = CURATED_PEOPLE.find((c) => c.name === dbPerson.name);
-            const cleanRole = (dbPerson.role || fallback?.role || "소중한 친구").replace(/Discord\s*Friend\s*/gi, "소중한 친구");
+            const cleanRole = (dbPerson.role || fallback?.role || "소중한 친구")
+              .replace(/Discord\s*Friend\s*/gi, "소중한 친구")
+              .replace(/Developer/gi, "소중한 친구")
+              .replace(/개발자/gi, "소중한 친구");
             return {
               name: dbPerson.name,
               handle: (dbPerson.handle || fallback?.handle || "").replace(/^@/, ""),
@@ -99,7 +102,7 @@ export default function PeoplePage() {
                   {/* Role */}
                   {person.role && (
                     <span className="inline-block text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-100 mb-2">
-                      {person.role.replace(/Discord\s*/gi, "")}
+                      {person.role.replace(/Discord\s*/gi, "").replace(/Developer/gi, "소중한 친구").replace(/개발자/gi, "소중한 친구")}
                     </span>
                   )}
 

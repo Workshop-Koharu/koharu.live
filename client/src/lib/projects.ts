@@ -32,7 +32,7 @@ export const projects: Project[] = [
     name: "학습형 AI · Mirae AI",
     type: "Learning AI model",
     description: "대화와 피드백을 바탕으로 성장하는 생성형 AI 모델.",
-    details: "Mirae AI는 단순히 답을 내는 데서 그치지 않고, 사용자의 질문과 피드백을 바탕으로 더 나은 답변 흐름을 학습하도록 설계한 모델 프로젝트입니다.",
+    details: "2026년 8월부터 개발을 시작한 Mirae AI는 단순히 답을 내는 데서 그치지 않고, 사용자의 질문과 피드백을 바탕으로 더 나은 답변 흐름을 학습하도록 설계한 모델 프로젝트입니다.",
     tags: ["AI", "Learning", "Model"],
     href: "https://mirae.koharu.live/",
     external: true,

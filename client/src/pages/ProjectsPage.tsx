@@ -18,7 +18,7 @@ const PROJECTS: Project[] = [
   {
     title: "Mirae AI (미래 AI)",
     category: "AI Service",
-    desc: "코하루가 개발한 AI 어시스턴트 서비스입니다. 편리하고 자연스러운 대화와 다양한 기능들을 웹에서 바로 경험해보실 수 있어요 🌸",
+    desc: "2026년 8월부터 개발을 시작한 코하루의 AI 어시스턴트 서비스입니다. 편리하고 자연스러운 대화와 다양한 기능들을 웹에서 바로 경험해보실 수 있어요 🌸",
     tags: ["Mirae AI", "AI", "Assistant", "Web"],
     image: "", // 배너 없음
     demoUrl: "https://mirae.koharu.live/",

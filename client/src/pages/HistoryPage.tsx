@@ -25,21 +25,21 @@ interface TimelineItem {
 
 const TIMELINE: TimelineItem[] = [
   {
+    year: "2026. 08 ~",
+    title: "Mirae AI (미래 AI) 서비스 개발 및 웹 배포",
+    category: "AI Project",
+    desc: "2026년 8월부터 코하루가 직접 개발을 시작한 대화형 AI 어시스턴트 Mirae AI를 공식 웹사이트(mirae.koharu.live)로 런칭하여 자연스러운 대화와 유용한 편의 기능을 제공하기 시작했습니다 ✨",
+    tags: ["Mirae AI", "AI Assistant", "Web Service", "LLM"],
+    icon: Bot,
+    highlight: true,
+  },
+  {
     year: "2026. 03 ~ 현재",
     title: "! Koharu 포트폴리오 & 소셜 피드 플랫폼 오픈",
     category: "Release",
     desc: "자신만의 색깔과 따뜻한 감성을 담은 통합 포트폴리오 및 소셜 피드 플랫폼을 오픈했습니다. 다양한 프로젝트와 소중한 지인들과의 연결고리를 기록하고 소통하는 공간입니다 🌸",
     tags: ["React", "TypeScript", "TailwindCSS", "Full-Stack"],
     icon: Rocket,
-    highlight: true,
-  },
-  {
-    year: "2025. 10",
-    title: "Mirae AI (미래 AI) 서비스 개발 및 웹 배포",
-    category: "AI Project",
-    desc: "코하루가 직접 기획하고 개발한 대화형 AI 어시스턴트 Mirae AI를 공식 웹사이트(mirae.koharu.live)로 런칭하여 자연스러운 대화와 유용한 편의 기능을 제공하기 시작했습니다 ✨",
-    tags: ["Mirae AI", "AI Assistant", "Web Service", "LLM"],
-    icon: Bot,
     highlight: true,
   },
   {

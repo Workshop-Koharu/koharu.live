@@ -4,14 +4,14 @@ const connectionString =
   "postgresql://neondb_owner:npg_NJhT4IV8bDrx@ep-rough-voice-b4xapbff-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require";
 
 const CURATED_PEOPLE = [
-  { name: "선아", handle: "sx0n._.a", role: "Discord Friend 💖" },
-  { name: "코블", handle: "_koble_", role: "Discord Friend 🌸" },
-  { name: "소성", handle: "seosungdev", role: "Developer ✨" },
-  { name: "수냥", handle: "aer.unnynag0214", role: "Discord Friend 🐱" },
-  { name: "제이", handle: "jxayx._.", role: "Discord Friend 💫" },
-  { name: "김치", handle: "kimchi090113", role: "Discord Friend 🥬" },
-  { name: "현이", handle: "07lee_hyun", role: "Discord Friend 🌿" },
-  { name: "치킨무", handle: "chimu314", role: "Discord Friend 🍗" },
+  { name: "선아", handle: "sx0n._.a", role: "소중한 친구 💖" },
+  { name: "코블", handle: "_koble_", role: "소중한 친구 🌸" },
+  { name: "소성", handle: "seosungdev", role: "소중한 친구 ✨" },
+  { name: "수냥", handle: "aer.unnynag0214", role: "소중한 친구 🐱" },
+  { name: "제이", handle: "jxayx._.", role: "소중한 친구 💫" },
+  { name: "김치", handle: "kimchi090113", role: "소중한 친구 🥬" },
+  { name: "현이", handle: "07lee_hyun", role: "소중한 친구 🌿" },
+  { name: "치킨무", handle: "chimu314", role: "소중한 친구 🍗" },
 ];
 
 async function main() {
