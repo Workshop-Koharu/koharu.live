@@ -75,21 +75,21 @@ interface ProfileData {
   websiteUrl: string;
 }
 
-// ─── Koharu's canonical profile (editable via profile settings) ───────────────
+// ─── Empty default profile ─────────────────────────────────────────────────────
 const KOHARU_PROFILE_DEFAULTS: ProfileData = {
-  username: "koharu.live",
-  name: "! Koharu · 코하루",
-  bio: "🌸 개발과 창작을 좋아하는 코하루의 공간입니다.\n🎮 인디 게임 & 웹 프로젝트 제작\n✨ 비공식 스텔라이브 팬서버를 함께 운영하고 있어요!",
-  avatarUrl: "/assets/koharu-profile.png",
-  bannerUrl: "/images/stellive-banner.png",
-  birthdate: "2004. 12. 04",
-  githubUrl: "https://github.com/Workshop-Koharu",
-  instagramUrl: "https://instagram.com/koharu.live",
-  email: "admin@koharu.live",
-  websiteUrl: "https://koharu.live",
+  username: "",
+  name: "",
+  bio: "",
+  avatarUrl: "",
+  bannerUrl: "",
+  birthdate: "",
+  githubUrl: "",
+  instagramUrl: "",
+  email: "",
+  websiteUrl: "",
 };
 
-const STORAGE_KEY_PROFILE = "koharu_profile_v2";
+const STORAGE_KEY_PROFILE = "koharu_profile_v3";
 const STORAGE_KEY_POSTS = "koharu_posts_cache";
 const STORAGE_KEY_MY_IDS = "koharu_my_uploaded_ids";
 const STORAGE_KEY_LIKED = "koharu_liked_posts";
@@ -219,10 +219,11 @@ function lsSet(key: string, value: unknown) {
 export default function BlogPage() {
   const [, setLocation] = useLocation();
 
-  // ── Profile (single Koharu account, editable) ─────────────────────────────
+  // ── Profile (editable, starts completely blank for new users) ──────────────
   const [profile, setProfile] = useState<ProfileData>(() => {
     const stored = ls<ProfileData | null>(STORAGE_KEY_PROFILE, null);
-    if (stored && stored.username) return { ...KOHARU_PROFILE_DEFAULTS, ...stored };
+    // If user has ever saved a profile, use it directly (no merging with defaults)
+    if (stored) return { ...KOHARU_PROFILE_DEFAULTS, ...stored };
     return KOHARU_PROFILE_DEFAULTS;
   });
 
@@ -286,7 +287,7 @@ export default function BlogPage() {
   const [modalCommentInput, setModalCommentInput] = useState("");
 
   // ── Derived ───────────────────────────────────────────────────────────────
-  const cleanHandle = (profile.username || "koharu.live").replace(/^@/, "").trim();
+  const cleanHandle = (profile.username || "").replace(/^@/, "").trim();
   const profileShareUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/@${cleanHandle}`
