@@ -101,7 +101,7 @@ export default function ProjectsPage() {
               프로젝트 🎮
             </h1>
             <p className="text-sm text-[#7a6e8f] mt-2">
-              코하루가 직접 제작거나 제작 도움을 준 대표 프로젝트들입니다.
+              코하루가 직접 제작하거나 제작 도움을 준 대표 프로젝트들입니다.
             </p>
           </div>
 

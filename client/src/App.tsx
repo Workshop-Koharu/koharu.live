@@ -106,6 +106,8 @@ function Router() {
       <Route path="/instagram/:slug.html" component={InstagramSlugRoute} />
       <Route path="/post/:slug" component={BlogPage} />
       <Route path="/post/:slug.html" component={BlogPage} />
+      <Route path="/share/:slug" component={BlogPage} />
+      <Route path="/share/:slug.html" component={BlogPage} />
 
       {/* Aliases for Board & Blog */}
       <Route path="/blog" component={BlogPage} />
@@ -129,10 +131,12 @@ function Router() {
       <Route path="/contact" component={ContactPage} />
       <Route path="/contact.html" component={ContactPage} />
 
-      {/* Handle-based Profile Sharing (e.g. /@koharu.live, /u/koharu.live) */}
+      {/* Handle-based Profile Sharing (e.g. /@koharu.live, /u/koharu.live, /p/...) */}
       <Route path="/u/:handle" component={BlogPage} />
       <Route path="/user/:handle" component={BlogPage} />
+      <Route path="/profile/:handle" component={BlogPage} />
       <Route path="/p/:handle" component={BlogPage} />
+      <Route path="/@:handle" component={BlogPage} />
       <Route path="/:handle" component={HandleRoute} />
 
       {/* Fallback */}

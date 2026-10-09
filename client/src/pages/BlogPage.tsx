@@ -145,8 +145,18 @@ const CURATED_FRIENDS: FriendUser[] = [
   { name: "치킨무", handle: "chimu314", role: "Discord Friend 🍗", avatarColor: "from-yellow-400 to-amber-500" },
 ];
 
+interface UserAccount {
+  id: string;
+  username: string;
+  name: string;
+  avatarUrl: string;
+  bio: string;
+  createdAt: string;
+  following: string[];
+}
+
 export default function BlogPage() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"grid" | "feed">("grid");
@@ -157,6 +167,38 @@ export default function BlogPage() {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [editForm, setEditForm] = useState<ProfileData>(DEFAULT_PROFILE);
   const [isProfileSaving, setIsProfileSaving] = useState(false);
+
+  // User Account (Auto-generated on first access, stored in localStorage)
+  const [myAccount, setMyAccount] = useState<UserAccount>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("koharu_my_account");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.username) return parsed;
+        }
+      } catch {}
+    }
+    const randCode = Math.floor(1000 + Math.random() * 9000);
+    const newAcc: UserAccount = {
+      id: "u_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      username: `pastel_${randCode}`,
+      name: `파스텔_${randCode} 🌸`,
+      avatarUrl: "",
+      bio: "코하루의 인스타그램에 놀러온 파스텔입니다 🌸",
+      createdAt: new Date().toISOString(),
+      following: [],
+    };
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("koharu_my_account", JSON.stringify(newAcc));
+      } catch {}
+    }
+    return newAcc;
+  });
+
+  const [isAccountEditOpen, setIsAccountEditOpen] = useState(false);
+  const [accountForm, setAccountForm] = useState<UserAccount>(myAccount);
 
   // Profile share modal
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -188,11 +230,134 @@ export default function BlogPage() {
   const [modalCommentInput, setModalCommentInput] = useState("");
   const [commenterName, setCommenterName] = useState("");
 
-  const userIdentifier =
-    "visitor-" +
-    (typeof window !== "undefined"
-      ? window.localStorage.getItem("koharu_uid") || "guest"
-      : "guest");
+  const userIdentifier = myAccount.id;
+
+  // Detect which profile is being viewed from route
+  const currentPath = location || (typeof window !== "undefined" ? window.location.pathname : "");
+  let routeHandle = "";
+  const handleMatch = currentPath.match(/^\/(?:@|%40|u\/|user\/|instagram\/@|instagram\/%40|profile\/@|profile\/)([^/?#]+)/i);
+  if (handleMatch) {
+    routeHandle = decodeURIComponent(handleMatch[1]).replace(/\.html$/, "").trim();
+  } else {
+    const directMatch = currentPath.match(/^\/([^/?#]+)/i);
+    if (directMatch) {
+      const seg = decodeURIComponent(directMatch[1]).replace(/\.html$/, "").trim();
+      const nonUserRoutes = [
+        "instagram",
+        "skills",
+        "projects",
+        "project",
+        "history",
+        "letter",
+        "partners",
+        "partner",
+        "person",
+        "people",
+        "contact",
+        "admin",
+        "blog",
+        "board",
+        "ai",
+        "post",
+        "p",
+        "share",
+        "index",
+      ];
+      if (seg && !nonUserRoutes.includes(seg.toLowerCase())) {
+        routeHandle = seg.replace(/^@/, "");
+      }
+    }
+  }
+
+  const isViewingMyProfile = !!(
+    routeHandle &&
+    myAccount.username &&
+    routeHandle.toLowerCase() === myAccount.username.toLowerCase()
+  );
+
+  const currentFriend = CURATED_FRIENDS.find(
+    (f) => routeHandle && f.handle.toLowerCase() === routeHandle.toLowerCase()
+  );
+  const isViewingFriend = !isViewingMyProfile && !!currentFriend;
+  const isViewingKoharu = !isViewingMyProfile && !isViewingFriend;
+
+  // Active profile info
+  const activeProfile: ProfileData = isViewingMyProfile
+    ? {
+        username: myAccount.username,
+        name: myAccount.name,
+        bio: myAccount.bio || "코하루의 인스타그램에 놀러온 파스텔입니다 🌸",
+        avatarUrl: myAccount.avatarUrl || "",
+        bannerUrl: "",
+        birthdate: "",
+        githubUrl: "",
+        instagramUrl: `https://instagram.com/${myAccount.username}`,
+        email: "",
+        websiteUrl: "",
+      }
+    : isViewingFriend && currentFriend
+    ? {
+        username: currentFriend.handle,
+        name: currentFriend.name,
+        bio: `코하루의 소중한 지인 ${currentFriend.name}님의 프로필입니다 ✨\nDiscord: @${currentFriend.handle} (${currentFriend.role})`,
+        avatarUrl: "",
+        bannerUrl: "",
+        birthdate: "",
+        githubUrl: "",
+        instagramUrl: `https://instagram.com/${currentFriend.handle}`,
+        email: "",
+        websiteUrl: "",
+      }
+    : profile;
+
+  const isFollowingKoharu = myAccount.following.includes("koharu.live");
+  const isFollowingTarget = isViewingKoharu
+    ? isFollowingKoharu
+    : isViewingFriend && currentFriend
+    ? myAccount.following.includes(currentFriend.handle)
+    : false;
+
+  const toggleFollowTarget = (targetHandle: string, targetName: string) => {
+    if (targetHandle.toLowerCase() === myAccount.username.toLowerCase()) {
+      toast.error("자신은 자신을 팔로우할 수 없습니다 🙅");
+      return;
+    }
+
+    const currentlyFollowing = myAccount.following.includes(targetHandle);
+    const nextFollowing = currentlyFollowing
+      ? myAccount.following.filter((h) => h !== targetHandle)
+      : [...myAccount.following, targetHandle];
+
+    const updatedAccount: UserAccount = {
+      ...myAccount,
+      following: nextFollowing,
+    };
+    setMyAccount(updatedAccount);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("koharu_my_account", JSON.stringify(updatedAccount));
+      } catch {}
+    }
+
+    if (currentlyFollowing) {
+      toast.success(`${targetName} 님의 팔로우를 취소했습니다.`);
+    } else {
+      toast.success(`${targetName} 님을 팔로우했습니다! 🌸`);
+    }
+  };
+
+  const toggleFollowCurrentProfile = () => {
+    if (isViewingMyProfile) {
+      toast.error("자신은 자신을 팔로우할 수 없습니다 🙅");
+      return;
+    }
+
+    const targetKey = isViewingKoharu ? "koharu.live" : currentFriend?.handle;
+    const targetName = isViewingKoharu ? "! Koharu" : currentFriend?.name || "사용자";
+    if (targetKey) {
+      toggleFollowTarget(targetKey, targetName);
+    }
+  };
 
   const goToProfile = (username?: string) => {
     const target = (username || profile.username || "koharu.live").replace(/^@/, "").trim();
@@ -204,8 +369,13 @@ export default function BlogPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      if (!window.localStorage.getItem("koharu_uid")) {
-        window.localStorage.setItem("koharu_uid", Math.random().toString(36).substring(2, 9));
+      const isWelcomed = localStorage.getItem("koharu_welcomed");
+      if (!isWelcomed) {
+        localStorage.setItem("koharu_welcomed", "1");
+        toast.success(`환영합니다! @${myAccount.username} 계정이 생성되었습니다 🌸`, {
+          description: "이제 내 계정으로 글과 댓글을 남길 수 있어요!",
+          duration: 4000,
+        });
       }
     }
     fetchProfile();
@@ -444,8 +614,8 @@ export default function BlogPage() {
     const slug = "post-" + Date.now().toString(36);
     const title = newTitle.trim() || newCaption.slice(0, 40) + "...";
     const category = newTag.trim() || "일상";
-    const authorName = profile.name || "! Koharu";
-    const authorAvatar = profile.avatarUrl || "/assets/koharu-profile.png";
+    const authorName = myAccount.name || profile.name || "! Koharu";
+    const authorAvatar = myAccount.avatarUrl || profile.avatarUrl || "/assets/koharu-profile.png";
 
     // Optimistic local post creation: instant feed update with zero failure
     const tempId = Date.now();
@@ -471,6 +641,9 @@ export default function BlogPage() {
         const cached = localStorage.getItem("koharu_posts_cache");
         const prevPosts = cached ? JSON.parse(cached) : [];
         localStorage.setItem("koharu_posts_cache", JSON.stringify([optimisticPost, ...prevPosts]));
+
+        const myIds = JSON.parse(localStorage.getItem("koharu_my_uploaded_ids") || "[]");
+        localStorage.setItem("koharu_my_uploaded_ids", JSON.stringify([tempId, ...myIds]));
       } catch {}
     }
 
@@ -552,34 +725,48 @@ export default function BlogPage() {
     }
   };
 
-  // Clean handle without @
-  const cleanHandle = (profile.username || "koharu.live").replace(/^@/, "").trim();
-  const profileShareUrl =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/@${cleanHandle}`
-      : `/@${cleanHandle}`;
-
-  const handleShareProfile = () => {
-    if (navigator.share) {
-      navigator
-        .share({
-          title: `${profile.name} (@${cleanHandle})`,
-          text: profile.bio,
-          url: profileShareUrl,
-        })
-        .catch(() => {
-          setIsShareModalOpen(true);
-        });
-    } else {
-      setIsShareModalOpen(true);
+  const handleAvatarFileSelectForAccount = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const dataUrl = await processImageFile(file);
+      setAccountForm((prev) => ({ ...prev, avatarUrl: dataUrl }));
+      toast.success("프로필 사진이 선택되었습니다! 🌸");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "이미지를 처리하지 못했습니다.";
+      toast.error(msg);
     }
   };
 
-  const copyShareLink = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(profileShareUrl);
-      toast.success(`프로필 공유 링크가 복사되었습니다! (/@${cleanHandle}) 🔗`);
+  const handleSaveMyAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanUname = accountForm.username.replace(/^@/, "").trim() || myAccount.username;
+    const cleanN = accountForm.name.trim() || myAccount.name;
+    const updated: UserAccount = {
+      ...accountForm,
+      username: cleanUname,
+      name: cleanN,
+    };
+    setMyAccount(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("koharu_my_account", JSON.stringify(updated));
     }
+    setIsAccountEditOpen(false);
+    toast.success("내 계정 정보가 성공적으로 저장되었습니다! ✨");
+  };
+
+  const canDeletePost = (post: Post) => {
+    if (typeof window !== "undefined") {
+      try {
+        const myIds = JSON.parse(localStorage.getItem("koharu_my_uploaded_ids") || "[]");
+        if (myIds.includes(post.id)) return true;
+      } catch {}
+    }
+    return (
+      post.authorName === myAccount.name ||
+      post.authorName === myAccount.username ||
+      myAccount.username === "koharu.live"
+    );
   };
 
   const copyPostLink = (slug: string) => {
@@ -656,17 +843,120 @@ export default function BlogPage() {
     }
   }, [posts]);
 
-  // Dynamic filter lists for Followers & Following modals
-  const displayedFollowers = CURATED_FRIENDS.filter((f) => !unfollowedMap[`follower-${f.handle}`]);
-  const displayedFollowing = CURATED_FRIENDS.filter((f) => !unfollowedMap[`following-${f.handle}`]);
+  // Clean handle without @
+  const cleanHandle = (activeProfile.username || "koharu.live").replace(/^@/, "").trim();
+  const profileShareUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/@${cleanHandle}`
+      : `/@${cleanHandle}`;
 
-  const filteredFollowers = displayedFollowers.filter(
+  const handleShareProfile = () => {
+    if (navigator.share) {
+      navigator
+        .share({
+          title: `${activeProfile.name} (@${cleanHandle})`,
+          text: activeProfile.bio,
+          url: profileShareUrl,
+        })
+        .catch(() => {
+          setIsShareModalOpen(true);
+        });
+    } else {
+      setIsShareModalOpen(true);
+    }
+  };
+
+  const copyShareLink = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(profileShareUrl);
+      toast.success(`프로필 공유 링크가 복사되었습니다! (/@${cleanHandle}) 🔗`);
+    }
+  };
+
+  // Follow lists
+  interface FollowerDisplayItem {
+    name: string;
+    handle: string;
+    role: string;
+    avatarColor: string;
+    avatarUrl?: string;
+    isMe?: boolean;
+  }
+
+  const activeFollowersList: FollowerDisplayItem[] = isViewingKoharu
+    ? [
+        ...(isFollowingKoharu
+          ? [
+              {
+                name: myAccount.name,
+                handle: myAccount.username,
+                role: "나 (활동 중인 방문자) 🌸",
+                avatarColor: "from-pink-500 to-rose-400",
+                avatarUrl: myAccount.avatarUrl,
+                isMe: true,
+              },
+            ]
+          : []),
+        ...CURATED_FRIENDS.filter((f) => !unfollowedMap[`follower-${f.handle}`]),
+      ]
+    : isViewingFriend
+    ? [
+        ...(isFollowingTarget
+          ? [
+              {
+                name: myAccount.name,
+                handle: myAccount.username,
+                role: "나 (활동 중인 방문자) 🌸",
+                avatarColor: "from-pink-500 to-rose-400",
+                avatarUrl: myAccount.avatarUrl,
+                isMe: true,
+              },
+            ]
+          : []),
+        {
+          name: "! Koharu",
+          handle: "koharu.live",
+          role: "Creator & Friend 🌸",
+          avatarColor: "from-pink-400 to-purple-400",
+          avatarUrl: profile.avatarUrl,
+        },
+      ]
+    : [];
+
+  const activeFollowingList = isViewingKoharu
+    ? CURATED_FRIENDS.filter((f) => !unfollowedMap[`following-${f.handle}`])
+    : isViewingMyProfile
+    ? [
+        ...(isFollowingKoharu
+          ? [
+              {
+                name: profile.name || "! Koharu",
+                handle: "koharu.live",
+                role: "Portfolio Creator 🌸",
+                avatarColor: "from-pink-400 to-purple-400",
+                avatarUrl: profile.avatarUrl,
+              },
+            ]
+          : []),
+        ...CURATED_FRIENDS.filter((f) => myAccount.following.includes(f.handle)),
+      ]
+    : [
+        {
+          name: "! Koharu",
+          handle: "koharu.live",
+          role: "Creator & Friend 🌸",
+          avatarColor: "from-pink-400 to-purple-400",
+          avatarUrl: profile.avatarUrl,
+        },
+      ];
+
+  const filteredFollowers = activeFollowersList.filter(
     (f) =>
       f.name.toLowerCase().includes(followersSearch.toLowerCase()) ||
       f.handle.toLowerCase().includes(followersSearch.toLowerCase())
   );
 
-  const filteredFollowing = CURATED_FRIENDS.filter(
+  const filteredFollowing = activeFollowingList.filter(
     (f) =>
       f.name.toLowerCase().includes(followingSearch.toLowerCase()) ||
       f.handle.toLowerCase().includes(followingSearch.toLowerCase())
@@ -682,16 +972,109 @@ export default function BlogPage() {
     return p.category === activeTag;
   });
 
+  const displayedPosts = isViewingMyProfile
+    ? posts.filter((p) => canDeletePost(p))
+    : isViewingFriend && currentFriend
+    ? posts.filter(
+        (p) =>
+          p.authorName === currentFriend.name ||
+          p.authorName === currentFriend.handle ||
+          p.authorName === `@${currentFriend.handle}`
+      )
+    : filteredPosts;
+
   return (
     <div className="min-h-screen">
       <SiteNav active="/instagram" />
 
       <main className="page-container" id="main">
-        {/* Instagram Profile Header Card */}
+        {/* 1. My Account Status Bar - Shows visitor's auto-created account & actions */}
+        <div className="glass-card mb-6 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-pink-200/90 bg-white/95 shadow-sm rounded-3xl">
+          <div className="flex items-center gap-3.5">
+            <div className="relative flex-shrink-0">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-tr from-pink-400 to-purple-400 text-white flex items-center justify-center font-bold text-base shadow-sm ring-2 ring-pink-200">
+                {myAccount.avatarUrl ? (
+                  <img
+                    src={myAccount.avatarUrl}
+                    alt={myAccount.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  myAccount.name[0] || "🌸"
+                )}
+              </div>
+              <span
+                className="absolute -bottom-0.5 -right-0.5 bg-green-500 w-3.5 h-3.5 rounded-full ring-2 ring-white"
+                title="활동 중 (온라인)"
+              />
+            </div>
+
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-extrabold text-sm sm:text-base text-[#38314a]">
+                  {myAccount.name}
+                </span>
+                <span className="text-xs font-mono text-pink-600 font-semibold">
+                  @{myAccount.username}
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700">
+                  내 계정
+                </span>
+              </div>
+              <p className="text-xs text-[#7a6e8f] line-clamp-1 max-w-md mt-0.5">
+                {myAccount.bio || "첫 접속으로 자동 생성된 인스타 계정입니다. 자유롭게 활동해보세요!"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto justify-end">
+            {isViewingMyProfile ? (
+              <button
+                onClick={() => goToProfile("koharu.live")}
+                className="insta-action-btn insta-btn-secondary !text-xs !py-1.5"
+              >
+                🌸 코하루 홈으로
+              </button>
+            ) : (
+              <button
+                onClick={() => goToProfile(myAccount.username)}
+                className="insta-action-btn insta-btn-secondary !text-xs !py-1.5"
+              >
+                👤 내 프로필 피드
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setAccountForm(myAccount);
+                setIsAccountEditOpen(true);
+              }}
+              className="insta-action-btn insta-btn-secondary !text-xs !py-1.5"
+              title="내 계정 정보 수정"
+            >
+              <Edit3 className="w-3.5 h-3.5" /> 계정 세팅
+            </button>
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className="insta-action-btn insta-btn-primary !text-xs !py-1.5 !bg-gradient-to-r !from-pink-500 !to-purple-500"
+            >
+              <PlusCircle className="w-3.5 h-3.5" /> + 새 글
+            </button>
+          </div>
+        </div>
+
+        {/* 2. Instagram Profile Header Card */}
         <div className="glass-card !p-0 overflow-hidden mb-8 shadow-xl">
           {/* Profile Banner */}
-          <div className="relative w-full h-44 sm:h-56 bg-gradient-to-r from-pink-300 via-purple-300 to-sky-300 overflow-hidden">
-            {profile.bannerUrl && (
+          <div
+            className={`relative w-full h-44 sm:h-56 overflow-hidden ${
+              isViewingMyProfile
+                ? "bg-gradient-to-r from-pink-300 via-rose-200 to-purple-300"
+                : isViewingFriend
+                ? "bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300"
+                : "bg-gradient-to-r from-pink-300 via-purple-300 to-sky-300"
+            }`}
+          >
+            {isViewingKoharu && profile.bannerUrl && (
               <img
                 src={profile.bannerUrl}
                 alt="Profile Banner"
@@ -700,13 +1083,32 @@ export default function BlogPage() {
             )}
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/40" />
 
-            {/* Quick Banner Edit Button */}
-            <button
-              onClick={() => setIsEditProfileOpen(true)}
-              className="absolute top-4 right-4 bg-white/90 hover:bg-white text-xs font-bold text-pink-700 px-3.5 py-1.5 rounded-full shadow-md backdrop-blur-md flex items-center gap-1.5 transition-all"
-            >
-              <Edit3 className="w-3.5 h-3.5" /> 프로필 세팅
-            </button>
+            {/* Quick Banner Action Button */}
+            {isViewingKoharu ? (
+              <button
+                onClick={() => setIsEditProfileOpen(true)}
+                className="absolute top-4 right-4 bg-white/90 hover:bg-white text-xs font-bold text-pink-700 px-3.5 py-1.5 rounded-full shadow-md backdrop-blur-md flex items-center gap-1.5 transition-all"
+              >
+                <Edit3 className="w-3.5 h-3.5" /> 프로필 세팅
+              </button>
+            ) : isViewingMyProfile ? (
+              <button
+                onClick={() => {
+                  setAccountForm(myAccount);
+                  setIsAccountEditOpen(true);
+                }}
+                className="absolute top-4 right-4 bg-white/90 hover:bg-white text-xs font-bold text-pink-700 px-3.5 py-1.5 rounded-full shadow-md backdrop-blur-md flex items-center gap-1.5 transition-all"
+              >
+                <Edit3 className="w-3.5 h-3.5" /> 내 계정 세팅
+              </button>
+            ) : (
+              <button
+                onClick={() => goToProfile("koharu.live")}
+                className="absolute top-4 right-4 bg-white/90 hover:bg-white text-xs font-bold text-pink-700 px-3.5 py-1.5 rounded-full shadow-md backdrop-blur-md flex items-center gap-1.5 transition-all"
+              >
+                🌸 코하루 홈으로
+              </button>
+            )}
           </div>
 
           {/* Profile Info Row */}
@@ -715,38 +1117,158 @@ export default function BlogPage() {
               {/* Overlapping Avatar */}
               <div className="insta-avatar-wrapper !m-0">
                 <div className="insta-avatar-ring">
-                  <img
-                    src={profile.avatarUrl || "/assets/koharu-profile.png"}
-                    alt={profile.name}
-                    className="insta-avatar-img !w-24 !h-24 sm:!w-28 sm:!h-28"
-                  />
+                  {isViewingKoharu ? (
+                    <img
+                      src={profile.avatarUrl || "/assets/koharu-profile.png"}
+                      alt={profile.name}
+                      className="insta-avatar-img !w-24 !h-24 sm:!w-28 sm:!h-28"
+                    />
+                  ) : isViewingMyProfile ? (
+                    myAccount.avatarUrl ? (
+                      <img
+                        src={myAccount.avatarUrl}
+                        alt={myAccount.name}
+                        className="insta-avatar-img !w-24 !h-24 sm:!w-28 sm:!h-28"
+                      />
+                    ) : (
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-pink-400 to-rose-400 text-white flex items-center justify-center font-bold text-3xl">
+                        {myAccount.name[0] || "🌸"}
+                      </div>
+                    )
+                  ) : currentFriend ? (
+                    <div
+                      className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr ${currentFriend.avatarColor} text-white flex items-center justify-center font-bold text-3xl shadow-sm`}
+                    >
+                      {currentFriend.name[0]}
+                    </div>
+                  ) : (
+                    <img
+                      src="/assets/koharu-profile.png"
+                      alt="Avatar"
+                      className="insta-avatar-img !w-24 !h-24 sm:!w-28 sm:!h-28"
+                    />
+                  )}
                 </div>
               </div>
 
-              {/* Action Buttons (On own profile, self-follow is prevented) */}
+              {/* Action Buttons (Strictly prevents self-follow on own profile) */}
               <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-                <button
-                  onClick={() => setIsEditProfileOpen(true)}
-                  className="insta-action-btn insta-btn-secondary"
-                  title="프로필 세팅 변경"
-                >
-                  <Edit3 className="w-3.5 h-3.5" /> 세팅
-                </button>
+                {isViewingMyProfile ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setAccountForm(myAccount);
+                        setIsAccountEditOpen(true);
+                      }}
+                      className="insta-action-btn insta-btn-secondary"
+                      title="내 계정 세팅 변경"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" /> 계정 세팅
+                    </button>
 
-                <button
-                  onClick={handleShareProfile}
-                  className="insta-action-btn insta-btn-secondary"
-                  title="프로필 공유하기"
-                >
-                  <Share2 className="w-4 h-4" /> 공유
-                </button>
+                    <button
+                      onClick={handleShareProfile}
+                      className="insta-action-btn insta-btn-secondary"
+                      title="내 프로필 링크 복사"
+                    >
+                      <Share2 className="w-4 h-4" /> 내 프로필 공유
+                    </button>
 
-                <button
-                  onClick={() => setIsCreateOpen(true)}
-                  className="insta-action-btn insta-btn-primary !bg-gradient-to-r !from-purple-500 !to-pink-500"
-                >
-                  <PlusCircle className="w-4 h-4" /> 새 글
-                </button>
+                    <button
+                      onClick={() => setIsCreateOpen(true)}
+                      className="insta-action-btn insta-btn-primary !bg-gradient-to-r !from-pink-500 !to-purple-500"
+                    >
+                      <PlusCircle className="w-4 h-4" /> 새 글
+                    </button>
+
+                    <button
+                      onClick={() => goToProfile("koharu.live")}
+                      className="insta-action-btn insta-btn-secondary"
+                    >
+                      🌸 코하루 홈으로
+                    </button>
+                  </>
+                ) : isViewingFriend ? (
+                  <>
+                    <button
+                      onClick={toggleFollowCurrentProfile}
+                      className={`insta-action-btn ${
+                        isFollowingTarget
+                          ? "insta-btn-secondary"
+                          : "insta-btn-primary !bg-gradient-to-r !from-pink-500 !to-purple-500"
+                      }`}
+                    >
+                      {isFollowingTarget ? (
+                        <>
+                          <Check className="w-4 h-4" /> 팔로잉
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-4 h-4" /> 팔로우
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={handleShareProfile}
+                      className="insta-action-btn insta-btn-secondary"
+                      title="프로필 공유하기"
+                    >
+                      <Share2 className="w-4 h-4" /> 공유
+                    </button>
+
+                    <button
+                      onClick={() => goToProfile("koharu.live")}
+                      className="insta-action-btn insta-btn-secondary"
+                    >
+                      🌸 코하루 홈으로
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={toggleFollowCurrentProfile}
+                      className={`insta-action-btn ${
+                        isFollowingTarget
+                          ? "insta-btn-secondary"
+                          : "insta-btn-primary !bg-gradient-to-r !from-pink-500 !to-purple-500"
+                      }`}
+                    >
+                      {isFollowingTarget ? (
+                        <>
+                          <Check className="w-4 h-4" /> 팔로잉
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-4 h-4" /> 팔로우
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => setIsEditProfileOpen(true)}
+                      className="insta-action-btn insta-btn-secondary"
+                      title="프로필 세팅 변경"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" /> 세팅
+                    </button>
+
+                    <button
+                      onClick={handleShareProfile}
+                      className="insta-action-btn insta-btn-secondary"
+                      title="프로필 공유하기"
+                    >
+                      <Share2 className="w-4 h-4" /> 공유
+                    </button>
+
+                    <button
+                      onClick={() => setIsCreateOpen(true)}
+                      className="insta-action-btn insta-btn-primary !bg-gradient-to-r !from-purple-500 !to-pink-500"
+                    >
+                      <PlusCircle className="w-4 h-4" /> 새 글
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -754,7 +1276,7 @@ export default function BlogPage() {
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-2xl font-extrabold text-[#38314a]">
-                  {profile.name}
+                  {activeProfile.name}
                 </h1>
                 <span className="text-sm font-semibold text-pink-600 flex items-center gap-1">
                   @{cleanHandle}
@@ -767,7 +1289,7 @@ export default function BlogPage() {
                   </svg>
                 </span>
 
-                {profile.birthdate && (
+                {isViewingKoharu && profile.birthdate && (
                   <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-pink-100/80 text-pink-700">
                     <Cake className="w-3.5 h-3.5" /> {profile.birthdate}
                   </span>
@@ -777,7 +1299,7 @@ export default function BlogPage() {
               {/* Stats - Clickable for Followers & Following Modals */}
               <div className="flex gap-6 text-sm text-[#7a6e8f] py-1 select-none">
                 <div>
-                  게시물 <strong className="text-[#38314a] font-bold">{posts.length}</strong>
+                  게시물 <strong className="text-[#38314a] font-bold">{displayedPosts.length}</strong>
                 </div>
                 <button
                   type="button"
@@ -790,7 +1312,7 @@ export default function BlogPage() {
                 >
                   팔로워{" "}
                   <strong className="text-[#38314a] font-bold hover:text-pink-600">
-                    {displayedFollowers.length}
+                    {activeFollowersList.length}
                   </strong>
                 </button>
                 <button
@@ -804,58 +1326,60 @@ export default function BlogPage() {
                 >
                   팔로잉{" "}
                   <strong className="text-[#38314a] font-bold hover:text-pink-600">
-                    {displayedFollowing.length}
+                    {activeFollowingList.length}
                   </strong>
                 </button>
               </div>
 
               {/* Bio */}
               <p className="text-sm leading-relaxed text-[#4a3952] whitespace-pre-line max-w-2xl">
-                {profile.bio}
+                {activeProfile.bio}
               </p>
 
-              {/* Social Links Row */}
-              <div className="flex flex-wrap items-center gap-2 pt-2">
-                {profile.githubUrl && (
-                  <a
-                    href={profile.githubUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/80 border border-pink-100 text-xs font-semibold text-[#38314a] hover:bg-white hover:border-pink-300 transition-colors"
-                  >
-                    GitHub <ExternalLink className="w-3 h-3 text-pink-500" />
-                  </a>
-                )}
-                {profile.instagramUrl && (
-                  <a
-                    href={profile.instagramUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/80 border border-pink-100 text-xs font-semibold text-[#38314a] hover:bg-white hover:border-pink-300 transition-colors"
-                  >
-                    Instagram <ExternalLink className="w-3 h-3 text-pink-500" />
-                  </a>
-                )}
-                {profile.email && (
-                  <a
-                    href={`mailto:${profile.email}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/80 border border-pink-100 text-xs font-semibold text-[#38314a] hover:bg-white hover:border-pink-300 transition-colors"
-                  >
-                    <Mail className="w-3.5 h-3.5 text-pink-500" /> {profile.email}
-                  </a>
-                )}
-                {profile.websiteUrl && (
-                  <a
-                    href={profile.websiteUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/80 border border-pink-100 text-xs font-semibold text-[#38314a] hover:bg-white hover:border-pink-300 transition-colors"
-                  >
-                    <Globe className="w-3.5 h-3.5 text-pink-500" />{" "}
-                    {profile.websiteUrl.replace(/^https?:\/\//, "")}
-                  </a>
-                )}
-              </div>
+              {/* Social Links Row (When viewing Koharu) */}
+              {isViewingKoharu && (
+                <div className="flex flex-wrap items-center gap-2 pt-2">
+                  {profile.githubUrl && (
+                    <a
+                      href={profile.githubUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/80 border border-pink-100 text-xs font-semibold text-[#38314a] hover:bg-white hover:border-pink-300 transition-colors"
+                    >
+                      GitHub <ExternalLink className="w-3 h-3 text-pink-500" />
+                    </a>
+                  )}
+                  {profile.instagramUrl && (
+                    <a
+                      href={profile.instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/80 border border-pink-100 text-xs font-semibold text-[#38314a] hover:bg-white hover:border-pink-300 transition-colors"
+                    >
+                      Instagram <ExternalLink className="w-3 h-3 text-pink-500" />
+                    </a>
+                  )}
+                  {profile.email && (
+                    <a
+                      href={`mailto:${profile.email}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/80 border border-pink-100 text-xs font-semibold text-[#38314a] hover:bg-white hover:border-pink-300 transition-colors"
+                    >
+                      <Mail className="w-3.5 h-3.5 text-pink-500" /> {profile.email}
+                    </a>
+                  )}
+                  {profile.websiteUrl && (
+                    <a
+                      href={profile.websiteUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/80 border border-pink-100 text-xs font-semibold text-[#38314a] hover:bg-white hover:border-pink-300 transition-colors"
+                    >
+                      <Globe className="w-3.5 h-3.5 text-pink-500" />{" "}
+                      {profile.websiteUrl.replace(/^https?:\/\//, "")}
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -911,17 +1435,21 @@ export default function BlogPage() {
             <Sparkles className="w-8 h-8 animate-spin mx-auto mb-3 text-pink-500" />
             인스타그램 피드를 불러오는 중...
           </div>
-        ) : filteredPosts.length === 0 ? (
+        ) : displayedPosts.length === 0 ? (
           /* Empty State */
           <div className="glass-card text-center py-20 max-w-lg mx-auto">
             <div className="w-16 h-16 rounded-3xl bg-pink-100 flex items-center justify-center mx-auto mb-4 text-pink-600">
               <Camera className="w-8 h-8" />
             </div>
             <h3 className="text-lg font-bold text-[#38314a] mb-1">
-              아직 등록된 게시물이 없습니다
+              {isViewingMyProfile
+                ? "내가 등록한 게시물이 아직 없습니다"
+                : "아직 등록된 게시물이 없습니다"}
             </h3>
             <p className="text-xs text-[#7a6e8f] mb-6">
-              사진을 선택하고 첫 번째 소식을 남겨보세요!
+              {isViewingMyProfile
+                ? "첫 번째 사진과 문구를 등록해 나만의 인스타 피드를 채워보세요!"
+                : "사진을 선택하고 첫 번째 소식을 남겨보세요!"}
             </p>
             <button
               onClick={() => setIsCreateOpen(true)}
@@ -933,7 +1461,7 @@ export default function BlogPage() {
         ) : activeTab === "grid" ? (
           /* Instagram 3-Column Square Grid */
           <div className="insta-grid">
-            {filteredPosts.map((post) => (
+            {displayedPosts.map((post) => (
               <div
                 key={post.id}
                 onClick={() => openPostModal(post)}
@@ -968,7 +1496,7 @@ export default function BlogPage() {
         ) : (
           /* Instagram Single Column Scroll Feed */
           <div className="insta-feed">
-            {filteredPosts.map((post) => {
+            {displayedPosts.map((post) => {
               const postAuthor = post.authorName || profile.name || profile.username;
               const postAvatar = post.authorAvatar || profile.avatarUrl || "/assets/koharu-profile.png";
 
@@ -1000,14 +1528,16 @@ export default function BlogPage() {
                       </div>
                     </div>
 
-                    <button
-                      onClick={(e) => handleDeletePost(post.id, e)}
-                      className="text-gray-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                      title="게시물 삭제"
-                      aria-label="게시물 삭제"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {canDeletePost(post) && (
+                      <button
+                        onClick={(e) => handleDeletePost(post.id, e)}
+                        className="text-gray-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                        title="게시물 삭제 (작성자 전용)"
+                        aria-label="게시물 삭제"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
 
                   <div
@@ -1443,14 +1973,16 @@ export default function BlogPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button
-                    onClick={(e) => handleDeletePost(selectedPost.id, e)}
-                    className="text-gray-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                    title="게시물 삭제"
-                    aria-label="게시물 삭제"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {canDeletePost(selectedPost) && (
+                    <button
+                      onClick={(e) => handleDeletePost(selectedPost.id, e)}
+                      className="text-gray-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                      title="게시물 삭제 (작성자 전용)"
+                      aria-label="게시물 삭제"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
                     onClick={() => setSelectedPost(null)}
                     className="text-gray-400 hover:text-gray-700 p-1"
@@ -1551,13 +2083,15 @@ export default function BlogPage() {
                     >
                       <Share2 className="w-5 h-5" />
                     </button>
-                    <button
-                      onClick={(e) => handleDeletePost(selectedPost.id, e)}
-                      className="insta-icon-btn hover:text-rose-600"
-                      title="게시물 삭제"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    {canDeletePost(selectedPost) && (
+                      <button
+                        onClick={(e) => handleDeletePost(selectedPost.id, e)}
+                        className="insta-icon-btn hover:text-rose-600"
+                        title="게시물 삭제 (작성자 전용)"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
                   </div>
                   <div className="text-xs font-bold text-[#38314a]">
                     좋아요 {selectedPost.likesCount}개
@@ -1778,14 +2312,27 @@ export default function BlogPage() {
                       }}
                       title={`${friend.name} 프로필 보기`}
                     >
-                      <div
-                        className={`w-10 h-10 rounded-full bg-gradient-to-tr ${friend.avatarColor} text-white flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white flex-shrink-0`}
-                      >
-                        {friend.name[0]}
-                      </div>
+                      {friend.avatarUrl ? (
+                        <img
+                          src={friend.avatarUrl}
+                          alt={friend.name}
+                          className="w-10 h-10 rounded-full object-cover shadow-sm ring-2 ring-white flex-shrink-0"
+                        />
+                      ) : (
+                        <div
+                          className={`w-10 h-10 rounded-full bg-gradient-to-tr ${friend.avatarColor} text-white flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white flex-shrink-0`}
+                        >
+                          {friend.name[0]}
+                        </div>
+                      )}
                       <div>
-                        <div className="font-bold text-xs text-[#38314a] flex items-center gap-1">
+                        <div className="font-bold text-xs text-[#38314a] flex items-center gap-1.5">
                           {friend.name}
+                          {friend.isMe && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-pink-100 text-pink-700">
+                              나
+                            </span>
+                          )}
                         </div>
                         <div className="text-[11px] text-[#7a6e8f] font-mono">
                           @{friend.handle}
@@ -1793,18 +2340,30 @@ export default function BlogPage() {
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => {
-                        setUnfollowedMap((prev) => ({
-                          ...prev,
-                          [`follower-${friend.handle}`]: true,
-                        }));
-                        toast.success(`${friend.name} 님을 팔로워에서 삭제했습니다.`);
-                      }}
-                      className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-pink-200 text-[#7a6e8f] hover:bg-pink-50 hover:text-rose-600 transition-colors cursor-pointer"
-                    >
-                      삭제
-                    </button>
+                    {friend.isMe ? (
+                      <button
+                        onClick={() => {
+                          toggleFollowCurrentProfile();
+                          setIsFollowersModalOpen(false);
+                        }}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-pink-200 text-pink-700 hover:bg-pink-50 transition-colors cursor-pointer"
+                      >
+                        언팔로우
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setUnfollowedMap((prev) => ({
+                            ...prev,
+                            [`follower-${friend.handle}`]: true,
+                          }));
+                          toast.success(`${friend.name} 님을 팔로워에서 삭제했습니다.`);
+                        }}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-pink-200 text-[#7a6e8f] hover:bg-pink-50 hover:text-rose-600 transition-colors cursor-pointer"
+                      >
+                        삭제
+                      </button>
+                    )}
                   </div>
                 ))
               )}
@@ -1859,6 +2418,9 @@ export default function BlogPage() {
               ) : (
                 filteredFollowing.map((friend) => {
                   const isUnfollowed = unfollowedMap[`following-${friend.handle}`];
+                  const isActuallyFollowing = isViewingMyProfile
+                    ? myAccount.following.includes(friend.handle)
+                    : !isUnfollowed;
 
                   return (
                     <div
@@ -1890,30 +2452,171 @@ export default function BlogPage() {
 
                       <button
                         onClick={() => {
-                          const next = !isUnfollowed;
-                          setUnfollowedMap((prev) => ({
-                            ...prev,
-                            [`following-${friend.handle}`]: next,
-                          }));
-                          toast.success(
-                            next
-                              ? `${friend.name} 님의 팔로우를 취소했습니다.`
-                              : `${friend.name} 님을 다시 팔로우했습니다!`
-                          );
+                          if (isViewingMyProfile) {
+                            toggleFollowTarget(friend.handle, friend.name);
+                          } else {
+                            const next = !isUnfollowed;
+                            setUnfollowedMap((prev) => ({
+                              ...prev,
+                              [`following-${friend.handle}`]: next,
+                            }));
+                            toast.success(
+                              next
+                                ? `${friend.name} 님의 팔로우를 취소했습니다.`
+                                : `${friend.name} 님을 다시 팔로우했습니다!`
+                            );
+                          }
                         }}
                         className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                          isUnfollowed
+                          !isActuallyFollowing
                             ? "bg-pink-600 text-white hover:bg-pink-700"
                             : "border border-pink-200 text-[#38314a] bg-pink-50/50 hover:bg-pink-100/60"
                         }`}
                       >
-                        {isUnfollowed ? "팔로우" : "팔로잉"}
+                        {!isActuallyFollowing ? "팔로우" : "팔로잉"}
                       </button>
                     </div>
                   );
                 })
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. My Account Edit Modal (내 계정 정보 설정 모달) */}
+      {isAccountEditOpen && (
+        <div
+          className="insta-modal-backdrop"
+          onClick={() => setIsAccountEditOpen(false)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl relative my-auto max-h-[88vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-pink-100 mb-4 sticky top-0 bg-white z-10">
+              <h3 className="text-lg font-bold text-[#c93b77] flex items-center gap-2">
+                <Edit3 className="w-5 h-5" /> 내 계정 정보 설정
+              </h3>
+              <button
+                onClick={() => setIsAccountEditOpen(false)}
+                className="text-gray-400 hover:text-gray-700 p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveMyAccount} className="space-y-4">
+              {/* Avatar Upload */}
+              <div>
+                <label className="block text-xs font-bold text-[#7a6e8f] mb-1.5">
+                  프로필 사진 (파일 업로드)
+                </label>
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-pink-400 flex-shrink-0 bg-pink-100 flex items-center justify-center text-pink-600 font-bold text-lg">
+                    {accountForm.avatarUrl ? (
+                      <img
+                        src={accountForm.avatarUrl}
+                        alt="Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      accountForm.name[0] || "🌸"
+                    )}
+                  </div>
+                  <label className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-pink-300 hover:border-pink-500 bg-pink-50/40 hover:bg-pink-50/70 text-xs font-bold text-pink-700 cursor-pointer transition-colors">
+                    <Camera className="w-4 h-4" />
+                    <span>사진 파일 선택하기</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarFileSelectForAccount}
+                    />
+                  </label>
+                  {accountForm.avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setAccountForm((prev) => ({ ...prev, avatarUrl: "" }))}
+                      className="p-2 text-gray-400 hover:text-red-500 rounded-lg text-xs"
+                      title="사진 제거"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Name */}
+              <div>
+                <label className="block text-xs font-bold text-[#7a6e8f] mb-1">
+                  닉네임
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={accountForm.name}
+                  onChange={(e) =>
+                    setAccountForm({ ...accountForm, name: e.target.value })
+                  }
+                  className="w-full text-sm px-3.5 py-2 rounded-xl border border-pink-200 outline-none focus:border-pink-500"
+                />
+              </div>
+
+              {/* Handle */}
+              <div>
+                <label className="block text-xs font-bold text-[#7a6e8f] mb-1">
+                  핸들명 (@username)
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="pastel_1234"
+                  value={accountForm.username}
+                  onChange={(e) =>
+                    setAccountForm({
+                      ...accountForm,
+                      username: e.target.value.replace(/[^a-zA-Z0-9_.]/g, ""),
+                    })
+                  }
+                  className="w-full text-sm px-3.5 py-2 rounded-xl border border-pink-200 outline-none focus:border-pink-500"
+                />
+                <span className="text-[11px] text-[#7a6e8f] mt-1 block">
+                  내 프로필 링크: /@{accountForm.username || "username"}
+                </span>
+              </div>
+
+              {/* Bio */}
+              <div>
+                <label className="block text-xs font-bold text-[#7a6e8f] mb-1">
+                  소개글 (Bio)
+                </label>
+                <textarea
+                  rows={3}
+                  value={accountForm.bio}
+                  onChange={(e) =>
+                    setAccountForm({ ...accountForm, bio: e.target.value })
+                  }
+                  className="w-full text-sm px-3.5 py-2 rounded-xl border border-pink-200 outline-none focus:border-pink-500"
+                />
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2 border-t border-pink-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAccountEditOpen(false)}
+                  className="insta-action-btn insta-btn-secondary"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="insta-action-btn insta-btn-primary"
+                >
+                  저장하기 ✨
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
