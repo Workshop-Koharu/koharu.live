@@ -65,6 +65,22 @@ function rotatePiece(matrix: number[][]): number[][] {
   return result;
 }
 
+function rotatePieceCCW(matrix: number[][]): number[][] {
+  const rows = matrix.length;
+  const cols = matrix[0].length;
+  const result = Array.from({ length: cols }, () => Array(rows).fill(0));
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      result[cols - 1 - c][r] = matrix[r][c];
+    }
+  }
+  return result;
+}
+
+function rotatePiece180(matrix: number[][]): number[][] {
+  return rotatePiece(rotatePiece(matrix));
+}
+
 function emptyBoard(): string[][] {
   return Array.from({ length: ROWS }, () => Array(COLS).fill(""));
 }
@@ -211,6 +227,7 @@ export default function TetrisPage() {
   const [paused, setPaused] = useState(false);
   const [started, setStarted] = useState(false);
   const [combo, setCombo] = useState(0);
+  const [b2b, setB2b] = useState(0);
   const [clearFlash, setClearFlash] = useState(false);
 
   // Game state refs (avoid re-renders in game loop)
@@ -223,6 +240,7 @@ export default function TetrisPage() {
   const linesRef = useRef(0);
   const levelRef = useRef(1);
   const comboRef = useRef(0);
+  const b2bRef = useRef(0);
   const lastDropRef = useRef(0);
   const pausedRef = useRef(false);
   const gameOverRef = useRef(false);
@@ -266,7 +284,24 @@ export default function TetrisPage() {
       comboRef.current = newCombo;
       setCombo(newCombo);
 
-      const pts = (LINE_SCORES[cleared] || 0) * levelRef.current * (newCombo > 1 ? newCombo : 1);
+      // Back-to-Back (B2B): Tetris (4 lines) gives B2B
+      const isDifficult = cleared === 4;
+      let b2bMultiplier = 1;
+      if (isDifficult) {
+        if (b2bRef.current > 0) {
+          b2bRef.current += 1;
+          b2bMultiplier = 1.5;
+        } else {
+          b2bRef.current = 1;
+        }
+      } else {
+        // Single, Double, Triple breaks B2B
+        b2bRef.current = 0;
+      }
+      setB2b(b2bRef.current);
+
+      let pts = (LINE_SCORES[cleared] || 0) * levelRef.current * (newCombo > 1 ? newCombo : 1);
+      pts = Math.floor(pts * b2bMultiplier);
       scoreRef.current += pts;
       linesRef.current += cleared;
 
@@ -313,18 +348,53 @@ export default function TetrisPage() {
     lockAndSpawn();
   }, [lockAndSpawn]);
 
-  const rotate = useCallback(() => {
-    const rotated = rotatePiece(pieceRef.current.matrix);
-    const attempt = { ...pieceRef.current, matrix: rotated };
-    // Wall kicks: try offsets
-    const kicks = [0, -1, 1, -2, 2];
-    for (const dx of kicks) {
-      if (!collides(boardRef.current, attempt, dx, 0)) {
-        pieceRef.current = { ...attempt, x: attempt.x + dx };
-        return;
+  // Wall Kicks & Floor Kicks (Supports rotating against the floor and wall)
+  const KICK_OFFSETS = [
+    [0, 0],
+    [0, -1], // Floor kick: nudge up by 1 when touching ground
+    [-1, 0],
+    [1, 0],
+    [-1, -1],
+    [1, -1],
+    [0, -2], // Deep floor kick: nudge up by 2 (e.g. for I-piece or stacked floors)
+    [-2, 0],
+    [2, 0],
+    [-2, -1],
+    [2, -1],
+    [0, 1],
+    [-1, 1],
+    [1, 1],
+  ];
+
+  const tryRotate = useCallback((targetMatrix: number[][]) => {
+    const attempt = { ...pieceRef.current, matrix: targetMatrix };
+    for (const [dx, dy] of KICK_OFFSETS) {
+      if (!collides(boardRef.current, attempt, dx, dy)) {
+        pieceRef.current = {
+          ...attempt,
+          x: attempt.x + dx,
+          y: attempt.y + dy,
+        };
+        return true;
       }
     }
+    return false;
   }, []);
+
+  // Clockwise (CW)
+  const rotateCW = useCallback(() => {
+    tryRotate(rotatePiece(pieceRef.current.matrix));
+  }, [tryRotate]);
+
+  // Counter-Clockwise (CCW)
+  const rotateCCW = useCallback(() => {
+    tryRotate(rotatePieceCCW(pieceRef.current.matrix));
+  }, [tryRotate]);
+
+  // 180-degree Rotation
+  const rotate180 = useCallback(() => {
+    tryRotate(rotatePiece180(pieceRef.current.matrix));
+  }, [tryRotate]);
 
   const holdPiece = useCallback(() => {
     if (holdUsedRef.current) return;
@@ -512,24 +582,39 @@ export default function TetrisPage() {
 
       switch (e.code) {
         case "ArrowLeft":
-        case "KeyA":
+        case "KeyJ":
           e.preventDefault();
           moveLeft();
           break;
         case "ArrowRight":
-        case "KeyD":
+        case "KeyL":
           e.preventDefault();
           moveRight();
           break;
         case "ArrowDown":
+        case "KeyK":
         case "KeyS":
           e.preventDefault();
           moveDown();
           break;
+        // Clockwise (CW)
         case "ArrowUp":
+        case "KeyX":
         case "KeyW":
           e.preventDefault();
-          rotate();
+          rotateCW();
+          break;
+        // Counter-Clockwise (CCW)
+        case "KeyZ":
+        case "ControlLeft":
+        case "ControlRight":
+          e.preventDefault();
+          rotateCCW();
+          break;
+        // 180-Degree Rotation
+        case "KeyA":
+          e.preventDefault();
+          rotate180();
           break;
         case "Space":
           e.preventDefault();
@@ -552,7 +637,7 @@ export default function TetrisPage() {
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [started, moveLeft, moveRight, moveDown, rotate, hardDrop, holdPiece]);
+  }, [started, moveLeft, moveRight, moveDown, rotateCW, rotateCCW, rotate180, hardDrop, holdPiece]);
 
   useEffect(() => {
     return () => cancelAnimationFrame(animIdRef.current);
@@ -610,6 +695,13 @@ export default function TetrisPage() {
                   <div className="text-[10px] font-bold text-yellow-400">COMBO ×{combo}!</div>
                 </div>
               )}
+              {b2b > 1 && (
+                <div className="text-center animate-pulse">
+                  <div className="text-[10px] font-black tracking-wider text-pink-300 bg-gradient-to-r from-pink-900/80 to-purple-900/80 border border-pink-400/60 rounded-full px-2 py-0.5 shadow-md shadow-pink-500/30">
+                    🔥 B2B ×{b2b - 1}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Controls help */}
@@ -619,7 +711,9 @@ export default function TetrisPage() {
               </div>
               <div className="space-y-1 text-[10px] text-purple-300/60 font-mono">
                 <div>← → Move</div>
-                <div>↑ / W  Rotate</div>
+                <div>↑ / X  CW Rotate</div>
+                <div>Z / Ctrl CCW Rotate</div>
+                <div>A  180° Rotate</div>
                 <div>↓ / S  Soft Drop</div>
                 <div>SPACE Hard Drop</div>
                 <div>C / Shift Hold</div>
@@ -706,12 +800,29 @@ export default function TetrisPage() {
 
             {/* Mobile buttons */}
             <div className="flex flex-col gap-2 mt-2 lg:hidden">
-              <button
-                onPointerDown={rotate}
-                className="py-3 rounded-2xl bg-purple-700/60 text-white font-bold text-sm cursor-pointer"
-              >
-                ↻ 회전
-              </button>
+              <div className="grid grid-cols-3 gap-1">
+                <button
+                  onPointerDown={rotateCCW}
+                  className="py-2.5 rounded-xl bg-purple-700/60 text-white font-bold text-xs cursor-pointer"
+                  title="반시계 회전 (Z)"
+                >
+                  ↺ Z
+                </button>
+                <button
+                  onPointerDown={rotateCW}
+                  className="py-2.5 rounded-xl bg-purple-700/60 text-white font-bold text-xs cursor-pointer"
+                  title="시계 회전 (X/↑)"
+                >
+                  ↻ X
+                </button>
+                <button
+                  onPointerDown={rotate180}
+                  className="py-2.5 rounded-xl bg-pink-700/60 text-white font-bold text-xs cursor-pointer"
+                  title="180도 회전 (A)"
+                >
+                  🔄 180°
+                </button>
+              </div>
               <div className="flex gap-2">
                 <button
                   onPointerDown={moveLeft}
