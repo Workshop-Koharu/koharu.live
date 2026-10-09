@@ -4,8 +4,10 @@ import {
   Calendar,
   Camera,
   FolderGit2,
+  Gamepad2,
   Home,
   Mail,
+  Palette,
   UserCheck,
   Users,
 } from "lucide-react";
@@ -46,6 +48,8 @@ export default function SiteNav({ active }: SiteNavProps) {
     { href: "/partners", label: "파트너", icon: Users },
     { href: "/person", label: "지인", icon: UserCheck },
     { href: "/instagram", label: "인스타그램", icon: Camera },
+    { href: "/tetris", label: "테트리스", icon: Gamepad2 },
+    { href: "/pixel", label: "픽셀보드", icon: Palette },
   ];
 
   return (
@@ -79,6 +83,8 @@ export default function SiteNav({ active }: SiteNavProps) {
                 currentPath === `${item.href}.html` ||
                 (item.href === "/profile" && (currentPath === "/" || currentPath === "/profile" || currentPath === "/profile.html" || currentPath === "/index.html")) ||
                 (item.href === "/projects" && currentPath.startsWith("/project")) ||
+                (item.href === "/tetris" && currentPath.startsWith("/tetris")) ||
+                (item.href === "/pixel" && currentPath.startsWith("/pixel")) ||
                 (item.href === "/instagram" && (currentPath.startsWith("/instagram") || currentPath.startsWith("/@") || currentPath.startsWith("/blog") || currentPath.startsWith("/board")));
 
               return (

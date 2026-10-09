@@ -15,6 +15,10 @@ import PeoplePage from "./pages/PeoplePage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import SkillsPage from "./pages/SkillsPage";
+import TetrisPage from "./pages/TetrisPage";
+import PixelBoardPage from "./pages/PixelBoardPage";
+import CherryBlossomParticles from "./components/CherryBlossomParticles";
+import FloatingControls from "./components/FloatingControls";
 
 function HandleRoute({ params }: { params: { handle?: string } }) {
   const raw = params?.handle || "";
@@ -47,6 +51,8 @@ function HandleRoute({ params }: { params: { handle?: string } }) {
     "ai",
     "admin",
     "contact",
+    "tetris",
+    "pixel",
     "404",
     "api",
     "index",
@@ -139,6 +145,12 @@ function Router() {
       <Route path="/contact" component={ContactPage} />
       <Route path="/contact.html" component={ContactPage} />
 
+      {/* Mini-Games & Interactive */}
+      <Route path="/tetris" component={TetrisPage} />
+      <Route path="/tetris.html" component={TetrisPage} />
+      <Route path="/pixel" component={PixelBoardPage} />
+      <Route path="/pixel.html" component={PixelBoardPage} />
+
       {/* Explicit Handle & Profile Routes (Prevents regexparam failures) */}
       <Route path="/@koharu.live" component={BlogPage} />
       <Route path="/%40koharu.live" component={BlogPage} />
@@ -162,7 +174,9 @@ export default function App() {
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster position="top-center" richColors />
+          <CherryBlossomParticles />
           <Router />
+          <FloatingControls />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

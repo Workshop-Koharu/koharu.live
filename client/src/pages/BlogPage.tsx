@@ -34,6 +34,7 @@ import {
   addComment,
   fetchPostBySlugOrId,
 } from "@/lib/remoteDb";
+import { QRButton } from "@/components/QRCodeModal";
 
 interface Post {
   id: number;
@@ -734,6 +735,8 @@ export default function BlogPage() {
                 >
                   <Share2 className="w-4 h-4" /> 공유
                 </button>
+
+                <QRButton url={profileShareUrl} label={`@${cleanHandle}`} />
 
                 <button
                   onClick={() => setIsCreateOpen(true)}
@@ -1519,6 +1522,11 @@ export default function BlogPage() {
                     >
                       <Share2 className="w-5 h-5" />
                     </button>
+                    <QRButton
+                      url={`${window.location.origin}/instagram?post=${encodeURIComponent(selectedPost.slug)}`}
+                      label={selectedPost.title}
+                      buttonClassName="insta-icon-btn !p-2 !bg-transparent !shadow-none !border-none !text-[#7a6e8f] hover:!text-pink-600 cursor-pointer"
+                    />
                     {isMyPost(selectedPost) && (
                       <button
                         onClick={(e) => handleDeletePost(selectedPost.id, e)}
