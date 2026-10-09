@@ -1,8 +1,8 @@
 # Netlify deployment configuration for ! Koharu.
 # Netlify serves the Vite static site only; the Express/tRPC blog API needs full-stack hosting.
 [build]
-  command = "pnpm run build:netlify"
-  publish = "dist/public"
+  command = "pnpm run build"
+  publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
@@ -14,13 +14,7 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
 
-# Keep client-side routes working if more sections/routes are added later.
-[[redirects]]
-  from = "/api/*"
-  to = "/api-unavailable.json"
-  status = 404
-  force = true
-
+# Single Page App routing: fallback to /index.html with status 200
 [[redirects]]
   from = "/*"
   to = "/index.html"

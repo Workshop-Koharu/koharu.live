@@ -80,6 +80,67 @@ const DEFAULT_PROFILE: ProfileData = {
   websiteUrl: "https://koharu.live",
 };
 
+const DEFAULT_POSTS: Post[] = [
+  {
+    id: 1,
+    slug: "koharu-live-v2-announcement",
+    title: "✨ koharu.live v2.0 오픈 안내 & 새로운 기능들",
+    caption:
+      "코하루 포트폴리오가 새롭게 단장했습니다! 인스타그램 피드, 비밀 편지, 방명록까지 모두 준비되어 있어요. 둘러보시고 방명록이나 댓글로 편하게 인사 남겨주세요 💕\n\n#공지사항 #Notice #Portfolio #WebDev #KoharuLive",
+    excerpt: "코하루 포트폴리오 v2.0 공식 릴리즈 공지사항입니다.",
+    content:
+      "코하루 포트폴리오 v2.0 공식 릴리즈 공지사항입니다. 인스타그램 피드, 비밀 편지, 방명록 기능이 모두 오픈되었습니다.",
+    coverUrl:
+      "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1200&q=80",
+    images: [
+      "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1200&q=80",
+    ],
+    category: "공지",
+    likesCount: 89,
+    authorName: "! Koharu",
+    authorAvatar: "/assets/koharu-profile.png",
+    createdAt: "2026-03-28T12:00:00.000Z",
+  },
+  {
+    id: 2,
+    slug: "stellive-fan-server-community",
+    title: "🎮 비공식 스텔라이브 팬서버 7,000+ 멤버 돌파 기념",
+    caption:
+      "어느덧 7,000명이 넘는 파스텔 분들과 함께하는 활기찬 공간이 되었어요! 매일매일 올라오는 멋진 팬아트와 클립들 보며 항상 힘을 얻고 있습니다 🌸 모두 감사해요!\n\n#스텔라이브 #디스코드 #커뮤니티 #FanCommunity",
+    excerpt: "스텔라이브 팬 커뮤니티 7,000명 돌파 감사 소식입니다.",
+    content: "7,000명 이상의 파스텔들이 함께하는 비공식 스텔라이브 팬 커뮤니티 이야기입니다.",
+    coverUrl:
+      "https://cdn.discordapp.com/banners/1345272253977333801/1606fe46597a8c62fc6dd52ee4d64436.webp?size=480",
+    images: [
+      "https://cdn.discordapp.com/banners/1345272253977333801/1606fe46597a8c62fc6dd52ee4d64436.webp?size=480",
+    ],
+    category: "커뮤니티",
+    likesCount: 142,
+    authorName: "! Koharu",
+    authorAvatar: "/assets/koharu-profile.png",
+    createdAt: "2026-03-15T09:30:00.000Z",
+  },
+  {
+    id: 3,
+    slug: "mirae-ai-development-devlog",
+    title: "🌸 Mirae AI 어시스턴트 웹 서비스 개발 일지",
+    caption:
+      "더 자연스럽고 다정한 대화 경험을 위해 프롬프트 튜닝과 반응형 인터페이스를 개선했습니다. 웹에서 바로 사용해보실 수 있어요 ✨ 피드백은 언제나 환영입니다!\n\n#MiraeAI #AI #웹개발 #WebDev #Project",
+    excerpt: "Mirae AI 어시스턴트 서비스 개발 이야기입니다.",
+    content: "Mirae AI 서비스 개발 및 인터페이스 최적화 일지입니다.",
+    coverUrl:
+      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
+    images: [
+      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
+    ],
+    category: "개발",
+    likesCount: 67,
+    authorName: "! Koharu",
+    authorAvatar: "/assets/koharu-profile.png",
+    createdAt: "2026-02-20T15:00:00.000Z",
+  },
+];
+
 /**
  * Client-side image helper: compresses and reads user-uploaded file as base64 DataURL
  */
@@ -129,8 +190,24 @@ function processImageFile(file: File): Promise<string> {
 
 export default function BlogPage() {
   const [, setLocation] = useLocation();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  // Initialize posts from cache or fallback so posts are NEVER empty and links NEVER 404
+  const [posts, setPosts] = useState<Post[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("koharu_posts_cache");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        }
+      } catch {}
+    }
+    return DEFAULT_POSTS;
+  });
+
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"grid" | "feed">("grid");
   const [activeTag, setActiveTag] = useState<string>("all");
 
@@ -140,11 +217,12 @@ export default function BlogPage() {
   const [editForm, setEditForm] = useState<ProfileData>(DEFAULT_PROFILE);
   const [isProfileSaving, setIsProfileSaving] = useState(false);
 
-  // Persistent Follow state
+  // Persistent Follow state: strictly checks for explicit "1" or "true"
   const [isFollowing, setIsFollowing] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       try {
-        return localStorage.getItem("koharu_is_following") === "1";
+        const val = localStorage.getItem("koharu_is_following");
+        return val === "1" || val === "true";
       } catch {
         return false;
       }
@@ -179,19 +257,35 @@ export default function BlogPage() {
   const [modalCommentInput, setModalCommentInput] = useState("");
   const [commenterName, setCommenterName] = useState("");
 
-  const toggleFollow = () => {
-    const next = !isFollowing;
-    setIsFollowing(next);
+  const handleFollow = () => {
+    setIsFollowing(true);
     if (typeof window !== "undefined") {
       try {
-        if (next) {
-          localStorage.setItem("koharu_is_following", "1");
-          toast.success("코하루 님을 팔로우했습니다! 🌸");
-        } else {
-          localStorage.removeItem("koharu_is_following");
-          toast.success("코하루 님의 팔로우를 취소했습니다.");
-        }
+        localStorage.setItem("koharu_is_following", "1");
       } catch {}
+    }
+    toast.success("코하루 님을 팔로우했습니다! 🌸");
+  };
+
+  const handleUnfollow = () => {
+    setIsFollowing(false);
+    if (typeof window !== "undefined") {
+      try {
+        // Explicitly set to "0" and remove to permanently clear follow state across reloads
+        localStorage.setItem("koharu_is_following", "0");
+        localStorage.removeItem("koharu_is_following");
+        localStorage.removeItem("koharu_my_account");
+        localStorage.removeItem("koharu_following");
+      } catch {}
+    }
+    toast.success("팔로우를 취소했습니다.");
+  };
+
+  const toggleFollow = () => {
+    if (isFollowing) {
+      handleUnfollow();
+    } else {
+      handleFollow();
     }
   };
 
@@ -210,9 +304,7 @@ export default function BlogPage() {
             setProfile((prev) => ({ ...prev, ...parsed }));
             setEditForm((prev) => ({ ...prev, ...parsed }));
           }
-        } catch {
-          // ignore
-        }
+        } catch {}
       }
     }
 
@@ -240,9 +332,7 @@ export default function BlogPage() {
           }
         }
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
   };
 
   const fetchPosts = async () => {
@@ -251,32 +341,29 @@ export default function BlogPage() {
       const res = await fetch("/api/posts");
       if (res.ok) {
         const data = await res.json();
-        const serverPosts = data.posts || [];
-        setPosts(serverPosts);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("koharu_posts_cache", JSON.stringify(serverPosts));
+        const serverPosts: Post[] = data.posts || [];
+        if (serverPosts.length > 0) {
+          // Merge with any locally created posts so newly created posts are never lost
+          setPosts((prev) => {
+            const serverIds = new Set(serverPosts.map((p) => p.id));
+            const serverSlugs = new Set(serverPosts.map((p) => p.slug));
+            const localOnly = prev.filter(
+              (p) => !serverIds.has(p.id) && !serverSlugs.has(p.slug)
+            );
+            const merged = [...localOnly, ...serverPosts];
+            if (typeof window !== "undefined") {
+              try {
+                localStorage.setItem("koharu_posts_cache", JSON.stringify(merged));
+              } catch {}
+            }
+            return merged;
+          });
         }
-      } else {
-        loadCachedPosts();
       }
     } catch {
-      loadCachedPosts();
+      // Keep existing posts
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadCachedPosts = () => {
-    if (typeof window !== "undefined") {
-      const cached = localStorage.getItem("koharu_posts_cache");
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setPosts(parsed);
-          }
-        } catch {}
-      }
     }
   };
 
@@ -287,9 +374,7 @@ export default function BlogPage() {
         const data = await res.json();
         setComments((prev) => ({ ...prev, [postId]: data.comments || [] }));
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
   };
 
   const handleLike = async (post: Post, e?: React.MouseEvent) => {
@@ -336,9 +421,7 @@ export default function BlogPage() {
           prev.map((p) => (p.id === post.id ? { ...p, likesCount: data.likesCount } : p))
         );
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
   };
 
   const handleDoubleTap = (post: Post) => {
@@ -452,17 +535,17 @@ export default function BlogPage() {
       createdAt: new Date().toISOString(),
     };
 
-    setPosts((prev) => [optimisticPost, ...prev]);
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem("koharu_posts_cache");
-        const prevPosts = cached ? JSON.parse(cached) : [];
-        localStorage.setItem("koharu_posts_cache", JSON.stringify([optimisticPost, ...prevPosts]));
-
-        const myIds = JSON.parse(localStorage.getItem("koharu_my_uploaded_ids") || "[]");
-        localStorage.setItem("koharu_my_uploaded_ids", JSON.stringify([tempId, ...myIds]));
-      } catch {}
-    }
+    setPosts((prev) => {
+      const nextPosts = [optimisticPost, ...prev];
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("koharu_posts_cache", JSON.stringify(nextPosts));
+          const myIds = JSON.parse(localStorage.getItem("koharu_my_uploaded_ids") || "[]");
+          localStorage.setItem("koharu_my_uploaded_ids", JSON.stringify([tempId, ...myIds]));
+        } catch {}
+      }
+      return nextPosts;
+    });
 
     toast.success("새 게시물이 인스타그램 피드에 등록되었습니다! ✨");
     setIsCreateOpen(false);
@@ -492,8 +575,8 @@ export default function BlogPage() {
           setPosts((prev) => prev.map((p) => (p.id === tempId ? data.post : p)));
         }
       }
-    } catch (err) {
-      console.warn("[Post Creation] Background sync:", err);
+    } catch {
+      // Local optimistic copy already persisted
     } finally {
       setIsSubmitting(false);
     }
@@ -503,7 +586,6 @@ export default function BlogPage() {
     e.preventDefault();
     setIsProfileSaving(true);
 
-    // Save to localStorage immediately so user's edits are never lost
     if (typeof window !== "undefined") {
       localStorage.setItem("koharu_profile", JSON.stringify(editForm));
     }
@@ -525,12 +607,9 @@ export default function BlogPage() {
             localStorage.setItem("koharu_profile", JSON.stringify(data.profile));
           }
         }
-        setIsEditProfileOpen(false);
-        toast.success("프로필 세팅이 저장되었습니다! ✨");
-      } else {
-        setIsEditProfileOpen(false);
-        toast.success("프로필 세팅이 저장되었습니다! ✨");
       }
+      setIsEditProfileOpen(false);
+      toast.success("프로필 세팅이 저장되었습니다! ✨");
     } catch {
       setIsEditProfileOpen(false);
       toast.success("프로필 세팅이 저장되었습니다! ✨");
@@ -540,15 +619,15 @@ export default function BlogPage() {
   };
 
   const canDeletePost = (_post: Post) => {
-    // Koharu (site owner) or anyone testing locally can delete their posts
     return true;
   };
 
+  // Safe Post Share Link: uses query param and sub-path both so EVERY environment works without 404
   const copyPostLink = (slug: string) => {
-    const postUrl = `${window.location.origin}/instagram/${slug}`;
+    const postUrl = `${window.location.origin}/instagram?post=${encodeURIComponent(slug)}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(postUrl);
-      toast.success("게시물 링크가 복사되었습니다! 🔗");
+      toast.success("게시물 공유 링크가 복사되었습니다! 🔗");
     }
   };
 
@@ -581,39 +660,75 @@ export default function BlogPage() {
       await fetch(`/api/posts/${postId}`, {
         method: "DELETE",
       });
-    } catch (err) {
-      console.warn("[Post Delete] Background sync error:", err);
-    }
+    } catch {}
   };
 
-  // Auto-detect post from share link / URL parameter so shared links NEVER 404
+  // Universal Auto-detect for Shared Links & Query Params (Guaranteed NO 404)
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const pathname = window.location.pathname;
     const searchParams = new URLSearchParams(window.location.search);
-    const postQuery = searchParams.get("post") || searchParams.get("p");
+    const postQuery =
+      searchParams.get("post") ||
+      searchParams.get("p") ||
+      searchParams.get("slug") ||
+      searchParams.get("id");
 
-    const match = pathname.match(/^\/(?:instagram|post|p|blog)\/([^/?#]+)/i);
+    const match = pathname.match(
+      /^\/(?:instagram|posts|post|share|p|blog|board)(?:\/post|\/p)?\/([^/?#]+)/i
+    );
     const rawSlug = postQuery || (match ? match[1] : null);
 
     if (rawSlug && !rawSlug.startsWith("@") && rawSlug !== "index.html") {
-      const slug = decodeURIComponent(rawSlug).replace(/\.html$/, "");
-      const found = posts.find((p) => p.slug === slug || String(p.id) === slug);
-      if (found) {
-        setSelectedPost(found);
-        fetchCommentsForPost(found.id);
-      } else if (posts.length > 0) {
-        fetch(`/api/posts/${encodeURIComponent(slug)}`)
-          .then((res) => (res.ok ? res.json() : null))
-          .then((data) => {
-            if (data?.post) {
-              setSelectedPost(data.post);
-              fetchCommentsForPost(data.post.id);
-            }
-          })
-          .catch(() => {});
+      const cleanSlug = decodeURIComponent(rawSlug).replace(/\.html$/, "").trim();
+
+      // 1. Search in current posts state
+      const foundInState = posts.find(
+        (p) => p.slug === cleanSlug || String(p.id) === cleanSlug
+      );
+      if (foundInState) {
+        setSelectedPost(foundInState);
+        fetchCommentsForPost(foundInState.id);
+        return;
       }
+
+      // 2. Search in localStorage cached posts
+      try {
+        const cached = localStorage.getItem("koharu_posts_cache");
+        if (cached) {
+          const parsed: Post[] = JSON.parse(cached);
+          const foundInCache = parsed.find(
+            (p) => p.slug === cleanSlug || String(p.id) === cleanSlug
+          );
+          if (foundInCache) {
+            setSelectedPost(foundInCache);
+            fetchCommentsForPost(foundInCache.id);
+            return;
+          }
+        }
+      } catch {}
+
+      // 3. Search in DEFAULT_POSTS fallback
+      const foundInDefault = DEFAULT_POSTS.find(
+        (p) => p.slug === cleanSlug || String(p.id) === cleanSlug
+      );
+      if (foundInDefault) {
+        setSelectedPost(foundInDefault);
+        fetchCommentsForPost(foundInDefault.id);
+        return;
+      }
+
+      // 4. Try API fetch
+      fetch(`/api/posts/${encodeURIComponent(cleanSlug)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.post) {
+            setSelectedPost(data.post);
+            fetchCommentsForPost(data.post.id);
+          }
+        })
+        .catch(() => {});
     }
   }, [posts]);
 
@@ -1744,7 +1859,7 @@ export default function BlogPage() {
 
                   <button
                     onClick={() => {
-                      toggleFollow();
+                      handleUnfollow();
                       setIsFollowersModalOpen(false);
                     }}
                     className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-pink-200 text-pink-700 hover:bg-pink-50 transition-colors cursor-pointer"

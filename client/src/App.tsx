@@ -5,7 +5,6 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import BlogAdminPage from "./pages/BlogAdminPage";
 import BlogPage from "./pages/BlogPage";
-import BlogPostPage from "./pages/BlogPostPage";
 import ContactPage from "./pages/ContactPage";
 import HistoryPage from "./pages/HistoryPage";
 import Home from "./pages/Home";
@@ -21,8 +20,13 @@ function HandleRoute({ params }: { params: { handle?: string } }) {
   const raw = params?.handle || "";
   const decoded = decodeURIComponent(raw).trim();
 
-  // If handle starts with @ or %40 (e.g. /@koharu.live, /%40koharu.live)
-  if (decoded.startsWith("@") || raw.startsWith("%40")) {
+  // If handle starts with @ or %40 (e.g. /@koharu.live, /%40koharu.live) or is koharu
+  if (
+    decoded.startsWith("@") ||
+    raw.startsWith("%40") ||
+    decoded.toLowerCase() === "koharu.live" ||
+    decoded.toLowerCase() === "koharu"
+  ) {
     return <BlogPage />;
   }
 
@@ -57,10 +61,6 @@ function HandleRoute({ params }: { params: { handle?: string } }) {
   return <NotFound />;
 }
 
-function InstagramSlugRoute() {
-  return <BlogPage />;
-}
-
 function Router() {
   return (
     <Switch>
@@ -80,6 +80,8 @@ function Router() {
       <Route path="/project.html" component={ProjectsPage} />
       <Route path="/project/:slug" component={ProjectDetailPage} />
       <Route path="/project/:slug.html" component={ProjectDetailPage} />
+      <Route path="/projects/:slug" component={ProjectDetailPage} />
+      <Route path="/projects/:slug.html" component={ProjectDetailPage} />
 
       {/* History Timeline */}
       <Route path="/history" component={HistoryPage} />
@@ -102,12 +104,18 @@ function Router() {
       {/* Instagram (Feed & Gallery, replacing board & blog) */}
       <Route path="/instagram" component={BlogPage} />
       <Route path="/instagram.html" component={BlogPage} />
-      <Route path="/instagram/:slug" component={InstagramSlugRoute} />
-      <Route path="/instagram/:slug.html" component={InstagramSlugRoute} />
+      <Route path="/instagram/:slug" component={BlogPage} />
+      <Route path="/instagram/:slug.html" component={BlogPage} />
+      <Route path="/instagram/post/:slug" component={BlogPage} />
+      <Route path="/instagram/p/:slug" component={BlogPage} />
       <Route path="/post/:slug" component={BlogPage} />
       <Route path="/post/:slug.html" component={BlogPage} />
+      <Route path="/posts/:slug" component={BlogPage} />
+      <Route path="/posts/:slug.html" component={BlogPage} />
       <Route path="/share/:slug" component={BlogPage} />
       <Route path="/share/:slug.html" component={BlogPage} />
+      <Route path="/p/:slug" component={BlogPage} />
+      <Route path="/p/:slug.html" component={BlogPage} />
 
       {/* Aliases for Board & Blog */}
       <Route path="/blog" component={BlogPage} />
@@ -131,12 +139,14 @@ function Router() {
       <Route path="/contact" component={ContactPage} />
       <Route path="/contact.html" component={ContactPage} />
 
-      {/* Handle-based Profile Sharing (e.g. /@koharu.live, /u/koharu.live, /p/...) */}
+      {/* Explicit Handle & Profile Routes (Prevents regexparam failures) */}
+      <Route path="/@koharu.live" component={BlogPage} />
+      <Route path="/%40koharu.live" component={BlogPage} />
+      <Route path="/koharu.live" component={BlogPage} />
+      <Route path="/koharu" component={BlogPage} />
       <Route path="/u/:handle" component={BlogPage} />
       <Route path="/user/:handle" component={BlogPage} />
       <Route path="/profile/:handle" component={BlogPage} />
-      <Route path="/p/:handle" component={BlogPage} />
-      <Route path="/@:handle" component={BlogPage} />
       <Route path="/:handle" component={HandleRoute} />
 
       {/* Fallback */}
