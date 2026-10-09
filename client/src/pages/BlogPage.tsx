@@ -8,6 +8,7 @@ import {
   Copy,
   Edit3,
   ExternalLink,
+  Eye,
   Globe,
   Grid,
   Heart,
@@ -217,10 +218,32 @@ export default function BlogPage() {
   const [editForm, setEditForm] = useState<ProfileData>(DEFAULT_PROFILE);
   const [isProfileSaving, setIsProfileSaving] = useState(false);
 
-  // Persistent Follow state: strictly checks for explicit "1" or "true"
+  // Owner identity: Koharu is the profile owner. Default true.
+  const [isOwner, setIsOwner] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get("view") === "visitor") return false;
+        if (urlParams.get("view") === "owner") return true;
+        const stored = localStorage.getItem("koharu_is_owner");
+        if (stored !== null) return stored === "1";
+      } catch {}
+    }
+    return true;
+  });
+
+  // Persistent Follow state:
+  // Strictly prevented for the owner (oneself can NEVER follow oneself).
   const [isFollowing, setIsFollowing] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
       try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isVisitorParam = urlParams.get("view") === "visitor";
+        const storedOwner = localStorage.getItem("koharu_is_owner");
+        const effectiveOwner = !isVisitorParam && (storedOwner === null || storedOwner === "1");
+        if (effectiveOwner) {
+          return false;
+        }
         const val = localStorage.getItem("koharu_is_following");
         return val === "1" || val === "true";
       } catch {
@@ -258,6 +281,10 @@ export default function BlogPage() {
   const [commenterName, setCommenterName] = useState("");
 
   const handleFollow = () => {
+    if (isOwner) {
+      toast.error("자신은 자신을 팔로우할 수 없습니다 🙅");
+      return;
+    }
     setIsFollowing(true);
     if (typeof window !== "undefined") {
       try {
@@ -282,12 +309,30 @@ export default function BlogPage() {
   };
 
   const toggleFollow = () => {
+    if (isOwner) {
+      toast.error("자신은 자신을 팔로우할 수 없습니다 🙅");
+      return;
+    }
     if (isFollowing) {
       handleUnfollow();
     } else {
       handleFollow();
     }
   };
+
+  useEffect(() => {
+    // If owner, strictly prevent self-follow and clear any stored self-following record
+    if (isOwner) {
+      setIsFollowing(false);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.removeItem("koharu_is_following");
+          localStorage.removeItem("koharu_following");
+          localStorage.setItem("koharu_is_following", "0");
+        } catch {}
+      }
+    }
+  }, [isOwner]);
 
   useEffect(() => {
     fetchProfile();
@@ -815,47 +860,92 @@ export default function BlogPage() {
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-                <button
-                  onClick={toggleFollow}
-                  className={`insta-action-btn cursor-pointer ${
-                    isFollowing
-                      ? "insta-btn-secondary"
-                      : "insta-btn-primary !bg-gradient-to-r !from-pink-500 !to-purple-500 text-white"
-                  }`}
-                >
-                  {isFollowing ? (
-                    <>
-                      <Check className="w-4 h-4 text-emerald-600" /> 팔로잉
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="w-4 h-4" /> 팔로우
-                    </>
-                  )}
-                </button>
+                {isOwner ? (
+                  <>
+                    <button
+                      onClick={() => setIsEditProfileOpen(true)}
+                      className="insta-action-btn insta-btn-secondary cursor-pointer"
+                      title="프로필 세팅 변경"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" /> 프로필 세팅
+                    </button>
 
-                <button
-                  onClick={() => setIsEditProfileOpen(true)}
-                  className="insta-action-btn insta-btn-secondary cursor-pointer"
-                  title="프로필 세팅 변경"
-                >
-                  <Edit3 className="w-3.5 h-3.5" /> 세팅
-                </button>
+                    <button
+                      onClick={handleShareProfile}
+                      className="insta-action-btn insta-btn-secondary cursor-pointer"
+                      title="프로필 공유하기"
+                    >
+                      <Share2 className="w-4 h-4" /> 공유
+                    </button>
 
-                <button
-                  onClick={handleShareProfile}
-                  className="insta-action-btn insta-btn-secondary cursor-pointer"
-                  title="프로필 공유하기"
-                >
-                  <Share2 className="w-4 h-4" /> 공유
-                </button>
+                    <button
+                      onClick={() => setIsCreateOpen(true)}
+                      className="insta-action-btn insta-btn-primary !bg-gradient-to-r !from-purple-500 !to-pink-500 cursor-pointer"
+                    >
+                      <PlusCircle className="w-4 h-4" /> 새 글
+                    </button>
 
-                <button
-                  onClick={() => setIsCreateOpen(true)}
-                  className="insta-action-btn insta-btn-primary !bg-gradient-to-r !from-purple-500 !to-pink-500 cursor-pointer"
-                >
-                  <PlusCircle className="w-4 h-4" /> 새 글
-                </button>
+                    <button
+                      onClick={() => {
+                        setIsOwner(false);
+                        try {
+                          localStorage.setItem("koharu_is_owner", "0");
+                        } catch {}
+                        toast.info("방문자 시점으로 전환되었습니다 👀");
+                      }}
+                      className="insta-action-btn insta-btn-secondary text-xs !text-[#7a6e8f] hover:!text-pink-600 cursor-pointer"
+                      title="방문자 시점 미리보기 (팔로우 버튼 확인 등)"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> 방문자 시점
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={toggleFollow}
+                      className={`insta-action-btn cursor-pointer ${
+                        isFollowing
+                          ? "insta-btn-secondary"
+                          : "insta-btn-primary !bg-gradient-to-r !from-pink-500 !to-purple-500 text-white"
+                      }`}
+                    >
+                      {isFollowing ? (
+                        <>
+                          <Check className="w-4 h-4 text-emerald-600" /> 팔로잉
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-4 h-4" /> 팔로우
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={handleShareProfile}
+                      className="insta-action-btn insta-btn-secondary cursor-pointer"
+                      title="프로필 공유하기"
+                    >
+                      <Share2 className="w-4 h-4" /> 공유
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setIsOwner(true);
+                        setIsFollowing(false);
+                        try {
+                          localStorage.setItem("koharu_is_owner", "1");
+                          localStorage.setItem("koharu_is_following", "0");
+                          localStorage.removeItem("koharu_is_following");
+                        } catch {}
+                        toast.success("내 프로필(관리자) 모드로 돌아왔습니다 🌸");
+                      }}
+                      className="insta-action-btn insta-btn-secondary text-xs !text-pink-600 font-bold cursor-pointer"
+                      title="내 프로필 모드로 복귀"
+                    >
+                      🌸 내 프로필 모드
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -896,7 +986,7 @@ export default function BlogPage() {
                 >
                   팔로워{" "}
                   <strong className="text-[#38314a] font-bold hover:text-pink-600">
-                    {isFollowing ? 1 : 0}
+                    {!isOwner && isFollowing ? 1 : 0}
                   </strong>
                 </button>
                 <button
@@ -907,7 +997,7 @@ export default function BlogPage() {
                 >
                   팔로잉{" "}
                   <strong className="text-[#38314a] font-bold hover:text-pink-600">
-                    0
+                    {!isOwner && isFollowing ? 1 : 0}
                   </strong>
                 </button>
               </div>
@@ -1834,7 +1924,7 @@ export default function BlogPage() {
 
             {/* List */}
             <div className="max-h-80 overflow-y-auto divide-y divide-pink-50/80 p-3">
-              {!isFollowing ? (
+              {isOwner || !isFollowing ? (
                 <div className="text-center py-10 text-xs sm:text-sm text-gray-400">
                   아직 팔로워가 없습니다.
                 </div>
@@ -1898,9 +1988,41 @@ export default function BlogPage() {
 
             {/* List */}
             <div className="max-h-80 overflow-y-auto p-4">
-              <div className="text-center py-10 text-xs sm:text-sm text-gray-400">
-                아직 팔로잉 중인 계정이 없습니다.
-              </div>
+              {!isOwner && isFollowing ? (
+                <div className="flex items-center justify-between p-2.5 hover:bg-pink-50/40 rounded-xl transition-colors">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={profile.avatarUrl || "/assets/koharu-profile.png"}
+                      alt={profile.name}
+                      className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm flex-shrink-0"
+                    />
+                    <div>
+                      <div className="font-bold text-xs text-[#38314a] flex items-center gap-1">
+                        {profile.name}
+                        <svg className="w-3.5 h-3.5 text-pink-500 fill-current" viewBox="0 0 24 24">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                        </svg>
+                      </div>
+                      <div className="text-[11px] text-[#7a6e8f] font-mono">
+                        @{cleanHandle}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleUnfollow();
+                      setIsFollowingModalOpen(false);
+                    }}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-pink-200 text-pink-700 hover:bg-pink-50 transition-colors cursor-pointer"
+                  >
+                    팔로우 취소
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-10 text-xs sm:text-sm text-gray-400">
+                  아직 팔로잉 중인 계정이 없습니다.
+                </div>
+              )}
             </div>
           </div>
         </div>
