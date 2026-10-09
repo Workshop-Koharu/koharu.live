@@ -16,6 +16,7 @@ import {
   Mail,
   MessageCircle,
   PlusCircle,
+  RefreshCw,
   Share2,
   Sparkles,
   Trash2,
@@ -97,66 +98,7 @@ const STORAGE_KEY_BOOKMARKED = "koharu_bookmarked_posts";
 const STORAGE_KEY_FOLLOWING = "koharu_following_list"; // JSON array of {name, username, avatar}
 const STORAGE_KEY_DELETED = "koharu_deleted_post_ids"; // JSON array of deleted post IDs
 
-const DEFAULT_POSTS: Post[] = [
-  {
-    id: 1,
-    slug: "koharu-live-v2-announcement",
-    title: "✨ koharu.live v2.0 오픈 안내 & 새로운 기능들",
-    caption:
-      "코하루 포트폴리오가 새롭게 단장했습니다! 인스타그램 피드, 비밀 편지, 방명록까지 모두 준비되어 있어요. 둘러보시고 방명록이나 댓글로 편하게 인사 남겨주세요 💕\n\n#공지사항 #Notice #Portfolio #WebDev #KoharuLive",
-    excerpt: "코하루 포트폴리오 v2.0 공식 릴리즈 공지사항입니다.",
-    content:
-      "코하루 포트폴리오 v2.0 공식 릴리즈 공지사항입니다. 인스타그램 피드, 비밀 편지, 방명록 기능이 모두 오픈되었습니다.",
-    coverUrl:
-      "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1200&q=80",
-    images: [
-      "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1200&q=80",
-    ],
-    category: "공지",
-    likesCount: 89,
-    authorName: "! Koharu",
-    authorAvatar: "/assets/koharu-profile.png",
-    createdAt: "2026-03-28T12:00:00.000Z",
-  },
-  {
-    id: 2,
-    slug: "stellive-fan-server-community",
-    title: "🎮 비공식 스텔라이브 팬서버 7,000+ 멤버 돌파 기념",
-    caption:
-      "어느덧 7,000명이 넘는 파스텔 분들과 함께하는 활기찬 공간이 되었어요! 매일매일 올라오는 멋진 팬아트와 클립들 보며 항상 힘을 얻고 있습니다 🌸 모두 감사해요!\n\n#스텔라이브 #디스코드 #커뮤니티 #FanCommunity",
-    excerpt: "스텔라이브 팬 커뮤니티 7,000명 돌파 감사 소식입니다.",
-    content: "7,000명 이상의 파스텔들이 함께하는 비공식 스텔라이브 팬 커뮤니티 이야기입니다.",
-    coverUrl:
-      "https://cdn.discordapp.com/banners/1345272253977333801/1606fe46597a8c62fc6dd52ee4d64436.webp?size=480",
-    images: [
-      "https://cdn.discordapp.com/banners/1345272253977333801/1606fe46597a8c62fc6dd52ee4d64436.webp?size=480",
-    ],
-    category: "커뮤니티",
-    likesCount: 142,
-    authorName: "! Koharu",
-    authorAvatar: "/assets/koharu-profile.png",
-    createdAt: "2026-03-15T09:30:00.000Z",
-  },
-  {
-    id: 3,
-    slug: "mirae-ai-development-devlog",
-    title: "🌸 Mirae AI 어시스턴트 웹 서비스 개발 일지",
-    caption:
-      "더 자연스럽고 다정한 대화 경험을 위해 프롬프트 튜닝과 반응형 인터페이스를 개선했습니다. 웹에서 바로 사용해보실 수 있어요 ✨ 피드백은 언제나 환영입니다!\n\n#MiraeAI #AI #웹개발 #WebDev #Project",
-    excerpt: "Mirae AI 어시스턴트 서비스 개발 이야기입니다.",
-    content: "Mirae AI 서비스 개발 및 인터페이스 최적화 일지입니다.",
-    coverUrl:
-      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
-    images: [
-      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
-    ],
-    category: "개발",
-    likesCount: 67,
-    authorName: "! Koharu",
-    authorAvatar: "/assets/koharu-profile.png",
-    createdAt: "2026-02-20T15:00:00.000Z",
-  },
-];
+const DEFAULT_POSTS: Post[] = [];
 
 /** Compress and read an image file as base64 DataURL */
 function processImageFile(file: File): Promise<string> {
@@ -231,8 +173,13 @@ export default function BlogPage() {
   const [posts, setPosts] = useState<Post[]>(() => {
     const deletedIds = new Set(ls<number[]>(STORAGE_KEY_DELETED, []));
     const cached = ls<Post[]>(STORAGE_KEY_POSTS, []);
-    const source = cached.length > 0 ? cached : DEFAULT_POSTS;
-    return source.filter((p) => !deletedIds.has(p.id));
+    return cached.filter(
+      (p) =>
+        !deletedIds.has(p.id) &&
+        p.slug !== "koharu-live-v2-announcement" &&
+        p.slug !== "stellive-fan-server-community" &&
+        p.slug !== "mirae-ai-development-devlog"
+    );
   });
   const [loading, setLoading] = useState(false);
 
@@ -280,6 +227,7 @@ export default function BlogPage() {
   const [newCaption, setNewCaption] = useState("");
   const [newCoverUrl, setNewCoverUrl] = useState("");
   const [newTag, setNewTag] = useState("");
+  const [newAuthorName, setNewAuthorName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Comment inputs
@@ -302,9 +250,23 @@ export default function BlogPage() {
     return p.category === activeTag;
   });
 
-  // ── Init: fetch remote posts ──────────────────────────────────────────────
+  // ── Init: fetch remote posts + polling for other users' posts ─────────────
   useEffect(() => {
     fetchPosts();
+
+    // Auto-refresh when window gains focus so new posts from others show up
+    const onFocus = () => fetchPosts();
+    window.addEventListener("focus", onFocus);
+
+    // Periodic live sync every 12 seconds
+    const interval = setInterval(() => {
+      fetchPosts();
+    }, 12000);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      clearInterval(interval);
+    };
   }, []);
 
   // ── Auto-open post from URL ───────────────────────────────────────────────
@@ -364,25 +326,34 @@ export default function BlogPage() {
       const dbPosts = await fetchAllPosts();
       const deletedIds = new Set(ls<number[]>(STORAGE_KEY_DELETED, []));
 
-      if (Array.isArray(dbPosts) && dbPosts.length > 0) {
-        // Exclude any posts that were locally marked deleted
-        const activeDbPosts = dbPosts.filter((p) => !deletedIds.has(p.id));
+      if (Array.isArray(dbPosts)) {
+        // Exclude any posts that were locally marked deleted, and old mock slugs
+        const activeDbPosts = dbPosts.filter(
+          (p) =>
+            !deletedIds.has(p.id) &&
+            p.slug !== "koharu-live-v2-announcement" &&
+            p.slug !== "stellive-fan-server-community" &&
+            p.slug !== "mirae-ai-development-devlog"
+        );
 
         setPosts((prev) => {
           const serverIds = new Set(activeDbPosts.map((p) => p.id));
           const serverSlugs = new Set(activeDbPosts.map((p) => p.slug));
-          // Keep only local optimistic posts that are not yet on the server and not deleted
+          // Keep only local optimistic posts that are genuinely new (not mock posts)
           const localOnly = prev.filter(
-            (p) => !serverIds.has(p.id) && !serverSlugs.has(p.slug) && !deletedIds.has(p.id)
+            (p) =>
+              !serverIds.has(p.id) &&
+              !serverSlugs.has(p.slug) &&
+              !deletedIds.has(p.id) &&
+              p.slug !== "koharu-live-v2-announcement" &&
+              p.slug !== "stellive-fan-server-community" &&
+              p.slug !== "mirae-ai-development-devlog"
           );
           // Combine: local-only first, then all remote posts (so posts from other users are fully visible)
           const merged = [...localOnly, ...activeDbPosts];
           lsSet(STORAGE_KEY_POSTS, merged);
           return merged;
         });
-      } else {
-        // If DB returned empty, ensure local cached posts don't include deleted ones
-        setPosts((prev) => prev.filter((p) => !deletedIds.has(p.id)));
       }
     } catch (err) {
       console.warn("fetchPosts error:", err);
@@ -518,7 +489,7 @@ export default function BlogPage() {
     const slug = "post-" + Date.now().toString(36);
     const title = newTitle.trim() || newCaption.slice(0, 40) + "...";
     const category = newTag.trim() || "일상";
-    const authorName = profile.name || "! Koharu";
+    const authorName = (newAuthorName.trim() || profile.name || "! Koharu").slice(0, 100);
     const authorAvatar = profile.avatarUrl || "/assets/koharu-profile.png";
 
     const tempId = Date.now();
@@ -552,6 +523,7 @@ export default function BlogPage() {
     setNewCaption("");
     setNewCoverUrl("");
     setNewTag("");
+    setNewAuthorName("");
 
     try {
       const created = await createNewPost({
@@ -568,6 +540,10 @@ export default function BlogPage() {
         setPosts((prev) => prev.map((p) => (p.id === tempId ? created : p)));
         const myIds = ls<number[]>(STORAGE_KEY_MY_IDS, []);
         lsSet(STORAGE_KEY_MY_IDS, [created.id, ...myIds]);
+        // Immediately fetch to ensure server state is fully aligned
+        fetchPosts();
+      } else {
+        toast.error("서버에 저장하지 못했습니다. 네트워크 상태를 확인해주세요.");
       }
     } catch {
       // keep optimistic
@@ -909,19 +885,32 @@ export default function BlogPage() {
           </div>
         )}
 
-        {/* ── View Tabs ──────────────────────────────────────────────────── */}
-        <div className="insta-tabs">
+        {/* ── View Tabs & Refresh ────────────────────────────────────────── */}
+        <div className="flex items-center justify-between gap-2 mb-6">
+          <div className="insta-tabs !mb-0 flex-1">
+            <button
+              onClick={() => setActiveTab("grid")}
+              className={`insta-tab-btn cursor-pointer ${activeTab === "grid" ? "active" : ""}`}
+            >
+              <Grid className="w-4 h-4" /> 게시물 그리드
+            </button>
+            <button
+              onClick={() => setActiveTab("feed")}
+              className={`insta-tab-btn cursor-pointer ${activeTab === "feed" ? "active" : ""}`}
+            >
+              <Layers className="w-4 h-4" /> 피드 스트림
+            </button>
+          </div>
           <button
-            onClick={() => setActiveTab("grid")}
-            className={`insta-tab-btn cursor-pointer ${activeTab === "grid" ? "active" : ""}`}
+            onClick={() => {
+              fetchPosts();
+              toast.success("최신 피드를 불러왔습니다! 🔄");
+            }}
+            disabled={loading}
+            className="p-2.5 rounded-2xl bg-white/80 hover:bg-white border border-pink-200 text-pink-500 hover:text-pink-600 shadow-sm transition-all cursor-pointer flex-shrink-0 disabled:opacity-50"
+            title="새로고침 (다른 사람 글 실시간 확인)"
           >
-            <Grid className="w-4 h-4" /> 게시물 그리드
-          </button>
-          <button
-            onClick={() => setActiveTab("feed")}
-            className={`insta-tab-btn cursor-pointer ${activeTab === "feed" ? "active" : ""}`}
-          >
-            <Layers className="w-4 h-4" /> 피드 스트림
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
 
@@ -1673,6 +1662,19 @@ export default function BlogPage() {
                   placeholder="예: 오늘 완성한 작은 작업물!"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
+                  className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-pink-200 focus:border-pink-500 outline-none bg-pink-50/30"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#7a6e8f] mb-1">
+                  작성자 닉네임 (선택)
+                </label>
+                <input
+                  type="text"
+                  placeholder={profile.name || "익명 방문자"}
+                  value={newAuthorName}
+                  onChange={(e) => setNewAuthorName(e.target.value)}
                   className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-pink-200 focus:border-pink-500 outline-none bg-pink-50/30"
                 />
               </div>

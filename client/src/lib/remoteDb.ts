@@ -60,7 +60,7 @@ export async function fetchAllPosts(): Promise<Post[]> {
     const contentType = res.headers.get("content-type") || "";
     if (res.ok && contentType.includes("application/json")) {
       const data = await res.json();
-      if (Array.isArray(data.posts) && data.posts.length > 0) {
+      if (Array.isArray(data.posts)) {
         return data.posts;
       }
     }
@@ -73,7 +73,7 @@ export async function fetchAllPosts(): Promise<Post[]> {
     const rows = await sql.query(
       `SELECT id, slug, title, caption, excerpt, content, cover_url as "coverUrl", images, category, likes_count as "likesCount", author_name as "authorName", author_avatar as "authorAvatar", created_at as "createdAt" FROM blog_posts ORDER BY created_at DESC`
     );
-    if (Array.isArray(rows) && rows.length > 0) {
+    if (Array.isArray(rows)) {
       return rows.map((r: any) => ({
         id: Number(r.id),
         slug: String(r.slug),

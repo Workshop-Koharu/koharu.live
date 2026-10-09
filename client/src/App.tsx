@@ -16,7 +16,6 @@ import PeoplePage from "./pages/PeoplePage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import SkillsPage from "./pages/SkillsPage";
-import TetrisPage from "./pages/TetrisPage";
 import UrlShortenerPage from "./pages/UrlShortenerPage";
 import CherryBlossomParticles from "./components/CherryBlossomParticles";
 import FloatingControls from "./components/FloatingControls";
@@ -99,7 +98,6 @@ function HandleRoute({ params }: { params: { handle?: string } }) {
     "ai",
     "admin",
     "contact",
-    "tetris",
     "shorten",
     "s",
     "404",
@@ -192,10 +190,6 @@ function Router() {
       {/* Contact */}
       <Route path="/contact" component={ContactPage} />
       <Route path="/contact.html" component={ContactPage} />
-
-      {/* Mini-Games & Interactive */}
-      <Route path="/tetris" component={TetrisPage} />
-      <Route path="/tetris.html" component={TetrisPage} />
 
       {/* URL Shortener */}
       <Route path="/shorten" component={UrlShortenerPage} />

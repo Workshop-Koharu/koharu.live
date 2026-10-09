@@ -4,7 +4,6 @@ import {
   Calendar,
   Camera,
   FolderGit2,
-  Gamepad2,
   Home,
   Link2,
   Mail,
@@ -48,7 +47,6 @@ export default function SiteNav({ active }: SiteNavProps) {
     { href: "/partners", label: "파트너", icon: Users },
     { href: "/person", label: "지인", icon: UserCheck },
     { href: "/instagram", label: "인스타그램", icon: Camera },
-    { href: "/tetris", label: "테트리스", icon: Gamepad2 },
     { href: "/shorten", label: "단축", icon: Link2 },
   ];
 
@@ -83,7 +81,6 @@ export default function SiteNav({ active }: SiteNavProps) {
                 currentPath === `${item.href}.html` ||
                 (item.href === "/profile" && (currentPath === "/" || currentPath === "/profile" || currentPath === "/profile.html" || currentPath === "/index.html")) ||
                 (item.href === "/projects" && currentPath.startsWith("/project")) ||
-                (item.href === "/tetris" && currentPath.startsWith("/tetris")) ||
                 (item.href === "/shorten" && (currentPath.startsWith("/shorten") || currentPath.startsWith("/s"))) ||
                 (item.href === "/instagram" && (currentPath.startsWith("/instagram") || currentPath.startsWith("/@") || currentPath.startsWith("/blog") || currentPath.startsWith("/board")));
 

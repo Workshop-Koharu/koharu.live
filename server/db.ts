@@ -95,7 +95,6 @@ export async function getPublishedBlogPosts(): Promise<BlogPost[]> {
   return db
     .select()
     .from(blogPosts)
-    .where(isNotNull(blogPosts.publishedAt))
     .orderBy(desc(blogPosts.createdAt));
 }
 
