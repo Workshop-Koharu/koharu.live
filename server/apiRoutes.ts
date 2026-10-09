@@ -138,30 +138,36 @@ apiRouter.get("/posts/:identifier", async (req: Request, res: Response) => {
 // Create new post
 apiRouter.post("/posts", async (req: Request, res: Response) => {
   try {
-    const { slug, title, caption, coverUrl, category } = req.body;
+    const { slug, title, caption, coverUrl, category, authorName, authorAvatar } = req.body;
     if (!caption || !coverUrl) {
       return res.status(400).json({ error: "Caption and coverUrl are required" });
     }
 
+    const safeSlug = (slug || "post-" + Date.now().toString(36)).slice(0, 200);
+    const safeTitle = (title || caption.slice(0, 40) + "...").slice(0, 250);
+    const safeCategory = (category || "일상").slice(0, 60);
+    const safeAuthorName = (authorName || "! Koharu").slice(0, 100);
+    const safeAuthorAvatar = authorAvatar || "/assets/koharu-profile.png";
+
     const post = await createBlogPost({
-      slug: slug || "post-" + Date.now().toString(36),
-      title: title || caption.slice(0, 40) + "...",
+      slug: safeSlug,
+      title: safeTitle,
       caption,
       excerpt: caption.slice(0, 150),
       content: caption,
       coverUrl,
       images: [coverUrl],
-      category: category || "devlog",
-      authorName: "! Koharu",
-      authorAvatar: "/assets/koharu-profile.png",
+      category: safeCategory,
+      authorName: safeAuthorName,
+      authorAvatar: safeAuthorAvatar,
       authorOpenId: "koharu-owner",
       publishedAt: new Date(),
     });
 
     res.status(201).json({ post });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[API] Error creating post:", error);
-    res.status(500).json({ error: "Failed to create post" });
+    res.status(500).json({ error: error?.message || "Failed to create post" });
   }
 });
 

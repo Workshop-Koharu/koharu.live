@@ -17,10 +17,43 @@ import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import SkillsPage from "./pages/SkillsPage";
 
-function HandleRoute({ params }: { params: { handle: string } }) {
-  if (params.handle && params.handle.startsWith("@")) {
+function HandleRoute({ params }: { params: { handle?: string } }) {
+  const raw = params?.handle || "";
+  const decoded = decodeURIComponent(raw).trim();
+
+  // If handle starts with @ or %40 (e.g. /@koharu.live, /%40koharu.live)
+  if (decoded.startsWith("@") || raw.startsWith("%40")) {
     return <BlogPage />;
   }
+
+  // Known static/system routes that are not user profile handles
+  const knownStaticPages = [
+    "skills",
+    "projects",
+    "project",
+    "history",
+    "letter",
+    "partners",
+    "partner",
+    "person",
+    "people",
+    "instagram",
+    "blog",
+    "board",
+    "ai",
+    "admin",
+    "contact",
+    "404",
+    "api",
+    "index",
+  ];
+  const clean = decoded.toLowerCase().replace(/\.html$/, "");
+
+  // If not a known static system page, route to BlogPage profile!
+  if (clean && !knownStaticPages.includes(clean)) {
+    return <BlogPage />;
+  }
+
   return <NotFound />;
 }
 
@@ -97,7 +130,10 @@ function Router() {
       <Route path="/contact" component={ContactPage} />
       <Route path="/contact.html" component={ContactPage} />
 
-      {/* Handle-based Profile Sharing (e.g. /@koharu.live) */}
+      {/* Handle-based Profile Sharing (e.g. /@koharu.live, /u/koharu.live) */}
+      <Route path="/u/:handle" component={BlogPage} />
+      <Route path="/user/:handle" component={BlogPage} />
+      <Route path="/p/:handle" component={BlogPage} />
       <Route path="/:handle" component={HandleRoute} />
 
       {/* Fallback */}
