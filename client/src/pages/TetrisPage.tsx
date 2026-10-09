@@ -100,7 +100,7 @@ export default function TetrisPage() {
                 </button>
 
                 <a
-                  href="https://ch.tetr.io/"
+                  href="https://tetr.io/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="insta-action-btn insta-btn-primary !text-xs !py-1.5 !px-3 cursor-pointer inline-flex items-center gap-1"
@@ -113,15 +113,15 @@ export default function TetrisPage() {
             {/* TETR.IO iframe viewport */}
             <div
               className={`w-full rounded-2xl overflow-hidden bg-[#070114] border border-pink-900/40 shadow-inner relative ${
-                isFullscreen ? "h-[calc(100vh-60px)]" : "h-[620px] sm:h-[720px]"
+                isFullscreen ? "h-[calc(100vh-60px)]" : "h-[620px] sm:h-[750px]"
               }`}
             >
               <iframe
                 key={iframeKey}
-                src="https://ch.tetr.io/"
+                src="https://tetr.io/"
                 title="TETR.IO Game Client"
                 className="w-full h-full border-0 block"
-                allow="autoplay; fullscreen; clipboard-read; clipboard-write"
+                allow="autoplay; fullscreen; microphone; camera; midi; encrypted-media; clipboard-read; clipboard-write; web-share; payment"
                 loading="lazy"
               />
             </div>
