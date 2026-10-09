@@ -8,8 +8,8 @@ import {
   Copy,
   FolderGit2,
   Gamepad2,
+  Link2,
   Mail,
-  Palette,
   Sparkles,
   UserCheck,
   Users,
@@ -254,18 +254,18 @@ export default function Home() {
               <ArrowUpRight className="w-4 h-4 text-cyan-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </Link>
 
-            {/* Pixel Board (r/place) Link */}
+            {/* URL Shortener Link */}
             <Link
-              href="/pixel"
+              href="/shorten"
               className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-pink-400 to-rose-500 flex items-center justify-center text-white shadow-sm">
-                  <Palette className="w-5 h-5" />
+                  <Link2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="font-bold text-sm text-[#38314a]">픽셀 방명록</div>
-                  <div className="text-xs text-[#7a6e8f]">r/place 실시간 캔버스</div>
+                  <div className="font-bold text-sm text-[#38314a]">URL 단축기</div>
+                  <div className="text-xs text-[#7a6e8f]">koharu.live/&#123;코드&#125; 단축 링크</div>
                 </div>
               </div>
               <ArrowUpRight className="w-4 h-4 text-pink-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />

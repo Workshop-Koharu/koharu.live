@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
@@ -16,13 +17,60 @@ import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import SkillsPage from "./pages/SkillsPage";
 import TetrisPage from "./pages/TetrisPage";
-import PixelBoardPage from "./pages/PixelBoardPage";
+import UrlShortenerPage from "./pages/UrlShortenerPage";
 import CherryBlossomParticles from "./components/CherryBlossomParticles";
 import FloatingControls from "./components/FloatingControls";
+import { fetchShortUrl, incrementShortUrlClicks } from "./lib/remoteDb";
 
 function HandleRoute({ params }: { params: { handle?: string } }) {
   const raw = params?.handle || "";
   const decoded = decodeURIComponent(raw).trim();
+  const clean = decoded.toLowerCase().replace(/\.html$/, "");
+  const [checking, setChecking] = useState(true);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!clean) {
+      setChecking(false);
+      return;
+    }
+
+    // Check if clean matches a short URL
+    fetchShortUrl(clean).then((target) => {
+      if (!active) return;
+      if (target) {
+        setIsRedirecting(true);
+        incrementShortUrlClicks(clean);
+        window.location.replace(target);
+      } else {
+        setChecking(false);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [clean]);
+
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <div className="w-10 h-10 border-4 border-pink-300 border-t-pink-600 rounded-full animate-spin mb-4" />
+        <p className="text-sm font-bold text-[#c93b77]">
+          단축 링크로 연결하는 중입니다... 🚀
+        </p>
+      </div>
+    );
+  }
+
+  if (checking) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <div className="w-8 h-8 border-3 border-pink-200 border-t-pink-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   // If handle starts with @ or %40 (e.g. /@koharu.live, /%40koharu.live) or is koharu
   if (
@@ -52,12 +100,12 @@ function HandleRoute({ params }: { params: { handle?: string } }) {
     "admin",
     "contact",
     "tetris",
-    "pixel",
+    "shorten",
+    "s",
     "404",
     "api",
     "index",
   ];
-  const clean = decoded.toLowerCase().replace(/\.html$/, "");
 
   // If not a known static system page, route to BlogPage profile!
   if (clean && !knownStaticPages.includes(clean)) {
@@ -148,8 +196,12 @@ function Router() {
       {/* Mini-Games & Interactive */}
       <Route path="/tetris" component={TetrisPage} />
       <Route path="/tetris.html" component={TetrisPage} />
-      <Route path="/pixel" component={PixelBoardPage} />
-      <Route path="/pixel.html" component={PixelBoardPage} />
+
+      {/* URL Shortener */}
+      <Route path="/shorten" component={UrlShortenerPage} />
+      <Route path="/shorten.html" component={UrlShortenerPage} />
+      <Route path="/s" component={UrlShortenerPage} />
+      <Route path="/s.html" component={UrlShortenerPage} />
 
       {/* Explicit Handle & Profile Routes (Prevents regexparam failures) */}
       <Route path="/@koharu.live" component={BlogPage} />

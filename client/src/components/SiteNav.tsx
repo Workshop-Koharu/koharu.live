@@ -6,8 +6,8 @@ import {
   FolderGit2,
   Gamepad2,
   Home,
+  Link2,
   Mail,
-  Palette,
   UserCheck,
   Users,
 } from "lucide-react";
@@ -49,7 +49,7 @@ export default function SiteNav({ active }: SiteNavProps) {
     { href: "/person", label: "지인", icon: UserCheck },
     { href: "/instagram", label: "인스타그램", icon: Camera },
     { href: "/tetris", label: "테트리스", icon: Gamepad2 },
-    { href: "/pixel", label: "픽셀보드", icon: Palette },
+    { href: "/shorten", label: "단축", icon: Link2 },
   ];
 
   return (
@@ -84,7 +84,7 @@ export default function SiteNav({ active }: SiteNavProps) {
                 (item.href === "/profile" && (currentPath === "/" || currentPath === "/profile" || currentPath === "/profile.html" || currentPath === "/index.html")) ||
                 (item.href === "/projects" && currentPath.startsWith("/project")) ||
                 (item.href === "/tetris" && currentPath.startsWith("/tetris")) ||
-                (item.href === "/pixel" && currentPath.startsWith("/pixel")) ||
+                (item.href === "/shorten" && (currentPath.startsWith("/shorten") || currentPath.startsWith("/s"))) ||
                 (item.href === "/instagram" && (currentPath.startsWith("/instagram") || currentPath.startsWith("/@") || currentPath.startsWith("/blog") || currentPath.startsWith("/board")));
 
               return (

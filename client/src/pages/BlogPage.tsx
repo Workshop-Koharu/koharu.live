@@ -33,6 +33,7 @@ import {
   fetchComments,
   addComment,
   fetchPostBySlugOrId,
+  deletePost,
 } from "@/lib/remoteDb";
 import { QRButton } from "@/components/QRCodeModal";
 
@@ -94,6 +95,7 @@ const STORAGE_KEY_MY_IDS = "koharu_my_uploaded_ids";
 const STORAGE_KEY_LIKED = "koharu_liked_posts";
 const STORAGE_KEY_BOOKMARKED = "koharu_bookmarked_posts";
 const STORAGE_KEY_FOLLOWING = "koharu_following_list"; // JSON array of {name, username, avatar}
+const STORAGE_KEY_DELETED = "koharu_deleted_post_ids"; // JSON array of deleted post IDs
 
 const DEFAULT_POSTS: Post[] = [
   {
@@ -226,8 +228,10 @@ export default function BlogPage() {
 
   // ── Posts ─────────────────────────────────────────────────────────────────
   const [posts, setPosts] = useState<Post[]>(() => {
+    const deletedIds = new Set(ls<number[]>(STORAGE_KEY_DELETED, []));
     const cached = ls<Post[]>(STORAGE_KEY_POSTS, []);
-    return cached.length > 0 ? cached : DEFAULT_POSTS;
+    const source = cached.length > 0 ? cached : DEFAULT_POSTS;
+    return source.filter((p) => !deletedIds.has(p.id));
   });
   const [loading, setLoading] = useState(false);
 
@@ -357,17 +361,27 @@ export default function BlogPage() {
     try {
       setLoading(true);
       const dbPosts = await fetchAllPosts();
+      const deletedIds = new Set(ls<number[]>(STORAGE_KEY_DELETED, []));
+
       if (Array.isArray(dbPosts) && dbPosts.length > 0) {
+        // Exclude any posts that were locally marked deleted
+        const activeDbPosts = dbPosts.filter((p) => !deletedIds.has(p.id));
+
         setPosts((prev) => {
-          const serverIds = new Set(dbPosts.map((p) => p.id));
-          const serverSlugs = new Set(dbPosts.map((p) => p.slug));
+          const serverIds = new Set(activeDbPosts.map((p) => p.id));
+          const serverSlugs = new Set(activeDbPosts.map((p) => p.slug));
+          // Keep only local optimistic posts that are not yet on the server and not deleted
           const localOnly = prev.filter(
-            (p) => !serverIds.has(p.id) && !serverSlugs.has(p.slug)
+            (p) => !serverIds.has(p.id) && !serverSlugs.has(p.slug) && !deletedIds.has(p.id)
           );
-          const merged = [...localOnly, ...dbPosts];
+          // Combine: local-only first, then all remote posts (so posts from other users are fully visible)
+          const merged = [...localOnly, ...activeDbPosts];
           lsSet(STORAGE_KEY_POSTS, merged);
           return merged;
         });
+      } else {
+        // If DB returned empty, ensure local cached posts don't include deleted ones
+        setPosts((prev) => prev.filter((p) => !deletedIds.has(p.id)));
       }
     } catch (err) {
       console.warn("fetchPosts error:", err);
@@ -566,16 +580,28 @@ export default function BlogPage() {
     if (e) e.stopPropagation();
     if (!window.confirm("이 게시물을 정말 삭제하시겠습니까?")) return;
 
+    // 1. Add to permanent deleted blacklist in localStorage
+    const deletedIds = ls<number[]>(STORAGE_KEY_DELETED, []);
+    if (!deletedIds.includes(postId)) {
+      lsSet(STORAGE_KEY_DELETED, [postId, ...deletedIds]);
+    }
+
+    // 2. Remove from state and cache
     setPosts((prev) => {
       const updated = prev.filter((p) => p.id !== postId);
       lsSet(STORAGE_KEY_POSTS, updated);
       return updated;
     });
+
     if (selectedPost && selectedPost.id === postId) setSelectedPost(null);
     toast.success("게시물이 삭제되었습니다! 🗑️");
+
+    // 3. Delete from remote database
     try {
-      await fetch(`/api/posts/${postId}`, { method: "DELETE" });
-    } catch {}
+      await deletePost(postId);
+    } catch (err) {
+      console.warn("deletePost remote error:", err);
+    }
   };
 
   // ── Save Profile ──────────────────────────────────────────────────────────

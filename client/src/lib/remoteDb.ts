@@ -296,3 +296,198 @@ export async function addComment(
 
   return null;
 }
+
+/**
+ * Permanently delete a post from database.
+ */
+export async function deletePost(postId: number): Promise<boolean> {
+  let success = false;
+  try {
+    const res = await fetch(`/api/posts/${postId}`, { method: "DELETE" });
+    if (res.ok) success = true;
+  } catch {}
+
+  try {
+    const sql = getSql();
+    // Delete comments first, then post
+    await sql.query(`DELETE FROM post_comments WHERE post_id = $1`, [postId]);
+    await sql.query(`DELETE FROM blog_posts WHERE id = $1`, [postId]);
+    success = true;
+  } catch (err) {
+    console.error("[RemoteDB] Direct delete post error:", err);
+  }
+
+  return success;
+}
+
+// ─── Short URL Database Functions ─────────────────────────────────────────────
+export interface ShortUrlItem {
+  id?: number;
+  code: string;
+  originalUrl: string;
+  clicks: number;
+  createdAt: string;
+}
+
+const STORAGE_KEY_SHORT_URLS = "koharu_short_urls_cache";
+
+function getLocalShortUrls(): ShortUrlItem[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SHORT_URLS);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return [];
+}
+
+function saveLocalShortUrls(items: ShortUrlItem[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY_SHORT_URLS, JSON.stringify(items));
+  } catch {}
+}
+
+let tableEnsured = false;
+async function ensureShortUrlsTable() {
+  if (tableEnsured) return;
+  try {
+    const sql = getSql();
+    await sql.query(`
+      CREATE TABLE IF NOT EXISTS short_urls (
+        id SERIAL PRIMARY KEY,
+        code VARCHAR(32) UNIQUE NOT NULL,
+        original_url TEXT NOT NULL,
+        clicks INT DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    tableEnsured = true;
+  } catch (err) {
+    console.warn("[RemoteDB] Table short_urls ensure warning:", err);
+  }
+}
+
+export async function fetchAllShortUrls(): Promise<ShortUrlItem[]> {
+  await ensureShortUrlsTable();
+  try {
+    const sql = getSql();
+    const rows: any = await sql.query(
+      `SELECT id, code, original_url as "originalUrl", clicks, created_at as "createdAt" FROM short_urls ORDER BY created_at DESC LIMIT 100`
+    );
+    if (Array.isArray(rows) && rows.length > 0) {
+      const items = rows.map((r: any) => ({
+        id: Number(r.id),
+        code: String(r.code),
+        originalUrl: String(r.originalUrl),
+        clicks: Number(r.clicks || 0),
+        createdAt: new Date(r.createdAt).toISOString(),
+      }));
+      saveLocalShortUrls(items);
+      return items;
+    }
+  } catch (err) {
+    console.warn("[RemoteDB] Fetch short urls error:", err);
+  }
+  return getLocalShortUrls();
+}
+
+export async function fetchShortUrl(code: string): Promise<string | null> {
+  const cleanCode = code.trim().toLowerCase();
+  // Check local cache first for speed
+  const local = getLocalShortUrls().find((i) => i.code.toLowerCase() === cleanCode);
+  if (local?.originalUrl) return local.originalUrl;
+
+  await ensureShortUrlsTable();
+  try {
+    const sql = getSql();
+    const rows: any = await sql.query(
+      `SELECT original_url as "originalUrl" FROM short_urls WHERE LOWER(code) = $1 LIMIT 1`,
+      [cleanCode]
+    );
+    if (Array.isArray(rows) && rows.length > 0) {
+      return String(rows[0].originalUrl);
+    }
+  } catch (err) {
+    console.warn("[RemoteDB] Fetch short url by code error:", err);
+  }
+  return null;
+}
+
+export async function createShortUrl(
+  originalUrl: string,
+  customCode?: string
+): Promise<ShortUrlItem | null> {
+  await ensureShortUrlsTable();
+
+  // Generate 6-char random alphanumeric code if not specified
+  let code = (customCode || "").trim().toLowerCase();
+  if (!code) {
+    code = Math.random().toString(36).substring(2, 8);
+  }
+  // Sanitize code (only alphanumeric, hyphens, underscores)
+  code = code.replace(/[^a-zA-Z0-9_-]/g, "");
+  if (!code) code = Math.random().toString(36).substring(2, 8);
+
+  let formattedUrl = originalUrl.trim();
+  if (!/^https?:\/\//i.test(formattedUrl)) {
+    formattedUrl = "https://" + formattedUrl;
+  }
+
+  const newItem: ShortUrlItem = {
+    code,
+    originalUrl: formattedUrl,
+    clicks: 0,
+    createdAt: new Date().toISOString(),
+  };
+
+  try {
+    const sql = getSql();
+    const rows: any = await sql.query(
+      `INSERT INTO short_urls (code, original_url, clicks, created_at)
+       VALUES ($1, $2, 0, NOW())
+       ON CONFLICT (code) DO UPDATE SET original_url = $2
+       RETURNING id, code, original_url as "originalUrl", clicks, created_at as "createdAt"`,
+      [code, formattedUrl]
+    );
+    if (Array.isArray(rows) && rows.length > 0) {
+      const saved: ShortUrlItem = {
+        id: Number(rows[0].id),
+        code: String(rows[0].code),
+        originalUrl: String(rows[0].originalUrl),
+        clicks: Number(rows[0].clicks || 0),
+        createdAt: new Date(rows[0].createdAt).toISOString(),
+      };
+      const existing = getLocalShortUrls().filter((i) => i.code !== code);
+      saveLocalShortUrls([saved, ...existing]);
+      return saved;
+    }
+  } catch (err) {
+    console.error("[RemoteDB] Create short url error:", err);
+  }
+
+  // Local fallback
+  const existing = getLocalShortUrls().filter((i) => i.code !== code);
+  saveLocalShortUrls([newItem, ...existing]);
+  return newItem;
+}
+
+export async function incrementShortUrlClicks(code: string): Promise<void> {
+  const cleanCode = code.trim().toLowerCase();
+  try {
+    const sql = getSql();
+    await sql.query(
+      `UPDATE short_urls SET clicks = clicks + 1 WHERE LOWER(code) = $1`,
+      [cleanCode]
+    );
+  } catch {}
+}
+
+export async function deleteShortUrl(code: string): Promise<boolean> {
+  const cleanCode = code.trim().toLowerCase();
+  try {
+    const sql = getSql();
+    await sql.query(`DELETE FROM short_urls WHERE LOWER(code) = $1`, [cleanCode]);
+  } catch {}
+  const filtered = getLocalShortUrls().filter((i) => i.code.toLowerCase() !== cleanCode);
+  saveLocalShortUrls(filtered);
+  return true;
+}
+
