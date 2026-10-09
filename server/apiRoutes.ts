@@ -152,6 +152,8 @@ apiRouter.post("/posts", async (req: Request, res: Response) => {
       coverUrl,
       images: [coverUrl],
       category: category || "devlog",
+      authorName: "! Koharu",
+      authorAvatar: "/assets/koharu-profile.png",
       authorOpenId: "koharu-owner",
       publishedAt: new Date(),
     });

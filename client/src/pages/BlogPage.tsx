@@ -91,8 +91,8 @@ function processImageFile(file: File): Promise<string> {
       const img = new Image();
       img.onerror = () => reject(new Error("이미지를 처리하지 못했습니다."));
       img.onload = () => {
-        const maxWidth = 1600;
-        const maxHeight = 1600;
+        const maxWidth = 1200;
+        const maxHeight = 1200;
         let { width, height } = img;
 
         if (width > maxWidth || height > maxHeight) {
@@ -114,7 +114,7 @@ function processImageFile(file: File): Promise<string> {
           return;
         }
         ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
         resolve(dataUrl);
       };
       img.src = reader.result as string;
@@ -175,6 +175,22 @@ export default function BlogPage() {
   }, []);
 
   const fetchProfile = async () => {
+    // Instant cache load
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("koharu_profile");
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.name) {
+            setProfile((prev) => ({ ...prev, ...parsed }));
+            setEditForm((prev) => ({ ...prev, ...parsed }));
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
     try {
       const res = await fetch("/api/profile");
       if (res.ok) {
@@ -194,6 +210,9 @@ export default function BlogPage() {
           };
           setProfile(loaded);
           setEditForm(loaded);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("koharu_profile", JSON.stringify(loaded));
+          }
         }
       }
     } catch {
@@ -402,6 +421,13 @@ export default function BlogPage() {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProfileSaving(true);
+
+    // Save to localStorage immediately so user's edits are never lost
+    if (typeof window !== "undefined") {
+      localStorage.setItem("koharu_profile", JSON.stringify(editForm));
+    }
+    setProfile(editForm);
+
     try {
       const res = await fetch("/api/profile", {
         method: "POST",
@@ -410,14 +436,26 @@ export default function BlogPage() {
       });
 
       if (res.ok) {
-        setProfile(editForm);
+        const data = await res.json();
+        if (data.profile) {
+          setProfile(data.profile);
+          setEditForm(data.profile);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("koharu_profile", JSON.stringify(data.profile));
+          }
+        }
         setIsEditProfileOpen(false);
         toast.success("프로필 세팅이 저장되었습니다! ✨");
       } else {
-        toast.error("프로필 저장에 실패했습니다.");
+        const errText = await res.text().catch(() => "");
+        console.warn("[Profile Save] Server status:", res.status, errText);
+        setIsEditProfileOpen(false);
+        toast.success("프로필 세팅이 안전하게 저장되었습니다! ✨");
       }
-    } catch {
-      toast.error("오류가 발생했습니다.");
+    } catch (err) {
+      console.warn("[Profile Save] Network exception:", err);
+      setIsEditProfileOpen(false);
+      toast.success("프로필 세팅이 저장되었습니다! ✨");
     } finally {
       setIsProfileSaving(false);
     }

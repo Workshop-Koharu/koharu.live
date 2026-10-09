@@ -1,7 +1,20 @@
-import { ArrowUpRight, Bot, FolderGit2, Gamepad2, Globe, Sparkles } from "lucide-react";
+import { ArrowUpRight, Bot, Gamepad2, Globe, Sparkles, Users } from "lucide-react";
 import SiteNav from "@/components/SiteNav";
 
-const PROJECTS = [
+interface Project {
+  title: string;
+  category: string;
+  desc: string;
+  tags: string[];
+  image: string;
+  demoUrl: string;
+  githubUrl?: string;
+  icon: typeof Bot;
+  featured?: boolean;
+  actionLabel?: string;
+}
+
+const PROJECTS: Project[] = [
   {
     title: "Mirae AI (미래 AI)",
     category: "AI Service",
@@ -18,14 +31,41 @@ const PROJECTS = [
     category: "Community / Fan Discord",
     desc: "7,000명 이상의 파스텔(팬)들이 함께 교류하고 소통하는 비공식 스텔라이브 팬 디스코드 커뮤니티 서버입니다 🌸 팬아트, 클립 공유, 정기 이벤트 등 활발한 커뮤니티 활동이 이루어지고 있습니다.",
     tags: ["스텔라이브", "디스코드", "7000+ Members", "팬서버"],
-    image: "/images/stellive-banner.png",
+    image: "https://cdn.discordapp.com/banners/1345272253977333801/1606fe46597a8c62fc6dd52ee4d64436.webp?size=480",
     demoUrl: "https://discord.gg/pwRZEZ4zmt",
     githubUrl: "",
     icon: Gamepad2,
     featured: true,
     actionLabel: "디스코드 참여하기",
   },
+  {
+    title: "Team Light",
+    category: "Development Team & Web",
+    desc: "더 안전하고 편리한 디스코드 환경을 만들기 위해 봇 보호, 운영 자동화, 커뮤니티 관리 기능을 개발하고 연구하는 팀입니다 ✨",
+    tags: ["Team Light", "Discord", "Automation", "Web"],
+    image: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80",
+    demoUrl: "https://teamlight.pe.kr/",
+    githubUrl: "",
+    icon: Users,
+    featured: true,
+    actionLabel: "팀라이트 사이트",
+  },
 ];
+
+/**
+ * Automatically determine icon: Discord server icon for Discord servers, or site favicon for websites
+ */
+function getProjectAutoIcon(demoUrl: string): string | null {
+  if (demoUrl.includes("discord.gg") || demoUrl.includes("discordapp") || demoUrl.includes("1345272253977333801")) {
+    return "https://cdn.discordapp.com/icons/1345272253977333801/71873c7a2aada58fe448e2c24e1fa07e.png?size=128";
+  }
+  try {
+    const url = new URL(demoUrl);
+    return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=128`;
+  } catch {
+    return null;
+  }
+}
 
 export default function ProjectsPage() {
   return (
@@ -42,13 +82,15 @@ export default function ProjectsPage() {
               프로젝트 🎮
             </h1>
             <p className="text-sm text-[#7a6e8f] mt-2">
-              코하루가 직접 제작하고 운영하는 대표 프로젝트들입니다.
+              코하루가 직접 제작거나 제작 도움을 준 대표 프로젝트들입니다.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {PROJECTS.map((proj) => {
               const Icon = proj.icon;
+              const autoIcon = getProjectAutoIcon(proj.demoUrl);
+
               return (
                 <div
                   key={proj.title}
@@ -77,9 +119,21 @@ export default function ProjectsPage() {
                   {/* Project Body */}
                   <div className="p-6 flex-1 flex flex-col justify-between">
                     <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-xl bg-pink-100 flex items-center justify-center text-pink-600 flex-shrink-0">
-                          <Icon className="w-4 h-4" />
+                      <div className="flex items-center gap-2.5 mb-2">
+                        {/* Auto Favicon / Server Icon */}
+                        <div className="w-8 h-8 rounded-xl bg-pink-100 flex items-center justify-center text-pink-600 flex-shrink-0 overflow-hidden border border-pink-200/60 p-1">
+                          {autoIcon ? (
+                            <img
+                              src={autoIcon}
+                              alt=""
+                              className="w-full h-full object-contain rounded-lg"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <Icon className="w-4 h-4" />
+                          )}
                         </div>
                         <h2 className="text-lg font-bold text-[#38314a]">
                           {proj.title}
@@ -110,7 +164,9 @@ export default function ProjectsPage() {
                           rel="noopener noreferrer"
                           className="insta-action-btn insta-btn-primary !text-xs !py-1.5 !px-3"
                         >
-                          {proj.demoUrl.includes("discord")
+                          {proj.actionLabel
+                            ? proj.actionLabel
+                            : proj.demoUrl.includes("discord")
                             ? "디스코드 참여하기"
                             : proj.demoUrl.includes("mirae")
                             ? "Mirae AI 바로가기"

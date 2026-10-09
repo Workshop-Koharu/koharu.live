@@ -269,13 +269,26 @@ export async function updateSiteProfile(data: any): Promise<SiteProfile> {
     if (typeof data?.username === "string" && data.username.trim()) cleanData.username = data.username.trim();
     if (typeof data?.name === "string" && data.name.trim()) cleanData.name = data.name.trim();
     if (typeof data?.bio === "string") cleanData.bio = data.bio;
-    if (typeof data?.avatarUrl === "string" && data.avatarUrl.trim()) cleanData.avatarUrl = data.avatarUrl.trim();
-    if (typeof data?.bannerUrl === "string" && data.bannerUrl.trim()) cleanData.bannerUrl = data.bannerUrl.trim();
-    if (typeof data?.birthdate === "string" && data.birthdate.trim()) cleanData.birthdate = data.birthdate.trim();
+
+    const avatar = data?.avatarUrl || data?.avatar_url;
+    if (typeof avatar === "string" && avatar.trim()) cleanData.avatarUrl = avatar.trim();
+
+    const banner = data?.bannerUrl || data?.banner_url;
+    if (typeof banner === "string" && banner.trim()) cleanData.bannerUrl = banner.trim();
+
+    const birthdate = data?.birthdate;
+    if (typeof birthdate === "string" && birthdate.trim()) cleanData.birthdate = birthdate.trim();
+
     if (typeof data?.githubUrl === "string") cleanData.githubUrl = data.githubUrl.trim();
+    else if (typeof data?.github_url === "string") cleanData.githubUrl = data.github_url.trim();
+
     if (typeof data?.instagramUrl === "string") cleanData.instagramUrl = data.instagramUrl.trim();
+    else if (typeof data?.instagram_url === "string") cleanData.instagramUrl = data.instagram_url.trim();
+
     if (typeof data?.email === "string") cleanData.email = data.email.trim();
     if (typeof data?.websiteUrl === "string") cleanData.websiteUrl = data.websiteUrl.trim();
+    else if (typeof data?.website_url === "string") cleanData.websiteUrl = data.website_url.trim();
+
     cleanData.updatedAt = new Date();
 
     const existingList = await db.select().from(siteProfile).limit(1);

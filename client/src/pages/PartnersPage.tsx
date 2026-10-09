@@ -3,20 +3,20 @@ import SiteNav from "@/components/SiteNav";
 
 const PARTNERS = [
   {
+    name: "선아",
+    tag: "Special Partner 🌸",
+    desc: "선아!!!!!",
+    avatar: "https://www.google.com/s2/favicons?domain=se01hxa.xyz&sz=128",
+    link: "https://se01hxa.xyz/",
+    badge: "Partner 💖",
+  },
+  {
     name: "Team Light",
     tag: "Creative Development Team",
     desc: "기술적인 도전과 웹 최적화, 공동 프로젝트를 함께 연구하며 시너지를 만들어가는 소중한 개발 팀입니다 ✨",
-    avatar: "/assets/team-light-logo.png",
+    avatar: "https://www.google.com/s2/favicons?domain=teamlight.pe.kr&sz=128",
     link: "https://teamlight.pe.kr",
     badge: "Development Partner",
-  },
-  {
-    name: "Workshop Koharu",
-    tag: "Creative Tech Lab",
-    desc: "인디 게임 프로그래밍, 커스텀 셰이더 및 다양한 차세대 인터랙티브 기술 연구를 함께하는 코하루의 기술 랩입니다 🌸",
-    avatar: "/assets/koharu-profile.png",
-    link: "https://github.com/Workshop-Koharu",
-    badge: "Official Lab",
   },
 ];
 
@@ -43,14 +43,17 @@ export default function PartnersPage() {
             {PARTNERS.map((partner) => (
               <div
                 key={partner.name}
-                className="glass-card !p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 hover:border-pink-300"
+                className="glass-card !p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 hover:border-pink-300 transition-all"
               >
                 <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 rounded-2xl overflow-hidden p-1 bg-gradient-to-tr from-pink-200 to-purple-200 flex-shrink-0 shadow-md">
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden p-2.5 bg-gradient-to-tr from-pink-200 to-purple-200 flex-shrink-0 shadow-md flex items-center justify-center">
                     <img
                       src={partner.avatar}
                       alt={partner.name}
-                      className="w-full h-full object-cover rounded-xl"
+                      className="w-full h-full object-contain rounded-xl"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/assets/koharu-profile.png";
+                      }}
                     />
                   </div>
 
