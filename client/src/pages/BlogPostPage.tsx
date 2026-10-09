@@ -32,6 +32,7 @@ interface Comment {
   id: number;
   postId: number;
   authorName: string;
+  authorAvatar?: string | null;
   content: string;
   createdAt: string;
 }
@@ -47,11 +48,47 @@ export default function BlogPostPage() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false);
-  const [commentName, setCommentName] = useState("");
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const [profile, setProfile] = useState<{ name: string; avatarUrl: string }>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("koharu_profile");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed?.name) return { name: parsed.name, avatarUrl: parsed.avatarUrl || "/assets/koharu-profile.png" };
+        }
+      } catch {}
+    }
+    return { name: "! Koharu · 코하루", avatarUrl: "/assets/koharu-profile.png" };
+  });
+
+  const isOwner = typeof window !== "undefined"
+    ? localStorage.getItem("koharu_is_owner") !== "0"
+    : true;
+
+  const isMyPost = Boolean(
+    isOwner ||
+    (typeof window !== "undefined" &&
+      JSON.parse(localStorage.getItem("koharu_my_uploaded_ids") || "[]").includes(post?.id))
+  );
+
   const userIdentifier = "visitor-" + (typeof window !== "undefined" ? window.localStorage.getItem("koharu_uid") || "guest" : "guest");
+
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.profile?.name) {
+          setProfile({
+            name: data.profile.name,
+            avatarUrl: data.profile.avatarUrl || "/assets/koharu-profile.png",
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!slug) return;
@@ -90,6 +127,12 @@ export default function BlogPostPage() {
 
   const handleLike = async () => {
     if (!post) return;
+
+    if (isMyPost) {
+      toast.error("자신의 게시물에는 좋아요를 누를 수 없습니다 🙅");
+      return;
+    }
+
     const isCurrentlyLiked = liked;
     setLiked(!isCurrentlyLiked);
     setPost({
@@ -101,7 +144,7 @@ export default function BlogPostPage() {
       const res = await fetch(`/api/posts/${post.id}/like`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userIdentifier }),
+        body: JSON.stringify({ userIdentifier, isOwner }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -117,7 +160,8 @@ export default function BlogPostPage() {
     if (!post || !commentText.trim()) return;
 
     setSubmitting(true);
-    const authorName = commentName.trim() || "익명 친구";
+    const authorName = isOwner ? profile.name : "방문자";
+    const authorAvatar = isOwner ? profile.avatarUrl : "/assets/koharu-profile.png";
 
     try {
       const res = await fetch(`/api/posts/${post.id}/comments`, {
@@ -125,6 +169,7 @@ export default function BlogPostPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           authorName,
+          authorAvatar,
           content: commentText.trim(),
         }),
       });
@@ -204,7 +249,10 @@ export default function BlogPostPage() {
                 <div className="insta-action-group">
                   <button
                     onClick={handleLike}
-                    className={`insta-icon-btn ${liked ? "is-liked" : ""}`}
+                    className={`insta-icon-btn ${liked ? "is-liked" : ""} ${
+                      isMyPost ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+                    }`}
+                    title={isMyPost ? "자신의 게시물에는 좋아요를 누를 수 없습니다" : "좋아요"}
                   >
                     <Heart
                       className={`w-6 h-6 ${liked ? "fill-[#ff3040] text-[#ff3040]" : ""}`}
@@ -217,7 +265,7 @@ export default function BlogPostPage() {
                         toast.success("게시물 링크를 복사했습니다! 🔗");
                       }
                     }}
-                    className="insta-icon-btn"
+                    className="insta-icon-btn cursor-pointer"
                   >
                     <Share2 className="w-6 h-6" />
                   </button>
@@ -254,12 +302,29 @@ export default function BlogPostPage() {
                   <div className="space-y-3 mb-6">
                     {comments.map((c) => (
                       <div key={c.id} className="flex gap-3 text-sm">
-                        <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center font-bold text-xs text-pink-600 flex-shrink-0">
-                          {c.authorName[0]}
-                        </div>
+                        <img
+                          src={
+                            c.authorAvatar ||
+                            (c.authorName === profile.name ||
+                            c.authorName === "! Koharu · 코하루" ||
+                            c.authorName === "코하루"
+                              ? profile.avatarUrl
+                              : null) ||
+                            "/assets/koharu-profile.png"
+                          }
+                          alt={c.authorName}
+                          className="w-8 h-8 rounded-full object-cover ring-1 ring-pink-200 flex-shrink-0"
+                        />
                         <div>
                           <div>
-                            <strong className="mr-2 text-[#38314a]">{c.authorName}</strong>
+                            <strong className="mr-1.5 text-[#38314a] font-bold">{c.authorName}</strong>
+                            {(c.authorName === profile.name ||
+                              c.authorName === "! Koharu · 코하루" ||
+                              c.authorName === "코하루") && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-pink-100 text-pink-700 mr-2">
+                                작성자
+                              </span>
+                            )}
                             <span className="text-[#4a3952]">{c.content}</span>
                           </div>
                           <div className="text-[11px] text-gray-400 mt-0.5">
@@ -272,13 +337,24 @@ export default function BlogPostPage() {
 
                   {/* Add comment form */}
                   <form onSubmit={handleAddComment} className="space-y-2">
-                    <input
-                      type="text"
-                      placeholder="닉네임 (기본: 익명 친구)"
-                      value={commentName}
-                      onChange={(e) => setCommentName(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 rounded-lg border border-pink-200 outline-none bg-pink-50/20"
-                    />
+                    {/* Active Profile Indicator */}
+                    <div className="flex items-center gap-2 text-xs text-[#7a6e8f] px-1 font-medium">
+                      <img
+                        src={isOwner ? profile.avatarUrl : "/assets/koharu-profile.png"}
+                        alt="profile"
+                        className="w-5 h-5 rounded-full object-cover ring-1 ring-pink-200"
+                      />
+                      <span>
+                        <strong className="text-[#38314a] font-bold">
+                          {isOwner ? profile.name : "방문자"}
+                        </strong>
+                        <span className="text-[10px] ml-1.5 px-1.5 py-0.2 rounded-full bg-pink-100 text-pink-700 font-bold">
+                          {isOwner ? "내 프로필" : "방문자"}
+                        </span>
+                        {" "}로 댓글 작성
+                      </span>
+                    </div>
+
                     <div className="flex gap-2">
                       <input
                         type="text"
@@ -291,7 +367,7 @@ export default function BlogPostPage() {
                       <button
                         type="submit"
                         disabled={submitting || !commentText.trim()}
-                        className="insta-action-btn insta-btn-primary"
+                        className="insta-action-btn insta-btn-primary cursor-pointer"
                       >
                         <Send className="w-4 h-4" />
                       </button>

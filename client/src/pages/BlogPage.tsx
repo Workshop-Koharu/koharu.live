@@ -278,7 +278,6 @@ export default function BlogPage() {
   // Comment input per post
   const [commentInputs, setCommentInputs] = useState<Record<number, string>>({});
   const [modalCommentInput, setModalCommentInput] = useState("");
-  const [commenterName, setCommenterName] = useState("");
 
   const handleFollow = () => {
     if (isOwner) {
@@ -422,8 +421,26 @@ export default function BlogPage() {
     } catch {}
   };
 
+  const isMyPost = (post: Post) => {
+    if (isOwner) return true;
+    try {
+      const myUploadedIds: number[] = JSON.parse(
+        localStorage.getItem("koharu_my_uploaded_ids") || "[]"
+      );
+      if (myUploadedIds.includes(post.id)) return true;
+    } catch {}
+    return false;
+  };
+
   const handleLike = async (post: Post, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+
+    // Prevent liking own posts
+    if (isMyPost(post)) {
+      toast.error("자신의 게시물에는 좋아요를 누를 수 없습니다 🙅");
+      return;
+    }
+
     const isCurrentlyLiked = likedPosts[post.id];
 
     // Optimistic UI update
@@ -458,7 +475,7 @@ export default function BlogPage() {
       const res = await fetch(`/api/posts/${post.id}/like`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userIdentifier: "guest-visitor" }),
+        body: JSON.stringify({ userIdentifier: "guest-visitor", isOwner }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -470,6 +487,10 @@ export default function BlogPage() {
   };
 
   const handleDoubleTap = (post: Post) => {
+    if (isMyPost(post)) {
+      toast.error("자신의 게시물에는 좋아요를 누를 수 없습니다 🙅");
+      return;
+    }
     setHeartBurst(post.id);
     if (!likedPosts[post.id]) {
       handleLike(post);
@@ -479,7 +500,10 @@ export default function BlogPage() {
 
   const handleAddComment = async (postId: number, content: string) => {
     if (!content.trim()) return;
-    const author = commenterName.trim() || "익명 친구";
+    const author = isOwner ? profile.name : "방문자";
+    const authorAvatar = isOwner
+      ? (profile.avatarUrl || "/assets/koharu-profile.png")
+      : "/assets/koharu-profile.png";
 
     try {
       const res = await fetch(`/api/posts/${postId}/comments`, {
@@ -487,6 +511,7 @@ export default function BlogPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           authorName: author,
+          authorAvatar: authorAvatar,
           content: content.trim(),
         }),
       });
@@ -1247,7 +1272,14 @@ export default function BlogPage() {
                     <div className="flex items-center gap-4">
                       <button
                         onClick={(e) => handleLike(post, e)}
-                        className={`insta-icon-btn ${isLiked ? "is-liked" : ""} cursor-pointer`}
+                        className={`insta-icon-btn ${isLiked ? "is-liked" : ""} ${
+                          isMyPost(post) ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+                        }`}
+                        title={
+                          isMyPost(post)
+                            ? "자신의 게시물에는 좋아요를 누를 수 없습니다"
+                            : "좋아요"
+                        }
                       >
                         <Heart
                           className={`w-6 h-6 ${
@@ -1327,6 +1359,12 @@ export default function BlogPage() {
                       }}
                       className="flex items-center gap-2"
                     >
+                      <img
+                        src={isOwner ? (profile.avatarUrl || "/assets/koharu-profile.png") : "/assets/koharu-profile.png"}
+                        alt="profile"
+                        className="w-6 h-6 rounded-full object-cover ring-1 ring-pink-200 flex-shrink-0"
+                        title={`${isOwner ? profile.name : "방문자"} 프로필로 작성`}
+                      />
                       <input
                         type="text"
                         placeholder="댓글 달기..."
@@ -1337,7 +1375,7 @@ export default function BlogPage() {
                             [post.id]: e.target.value,
                           }))
                         }
-                        className="insta-comment-input"
+                        className="insta-comment-input flex-1"
                       />
                       <button
                         type="submit"
@@ -1684,14 +1722,31 @@ export default function BlogPage() {
 
                 {(comments[selectedPost.id] || []).map((comment) => (
                   <div key={comment.id} className="flex gap-3 text-sm">
-                    <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center font-bold text-xs text-pink-600 flex-shrink-0">
-                      {comment.authorName[0]}
-                    </div>
+                    <img
+                      src={
+                        comment.authorAvatar ||
+                        (comment.authorName === profile.name ||
+                        comment.authorName === "! Koharu · 코하루" ||
+                        comment.authorName === "코하루"
+                          ? profile.avatarUrl
+                          : null) ||
+                        "/assets/koharu-profile.png"
+                      }
+                      alt={comment.authorName}
+                      className="w-8 h-8 rounded-full object-cover ring-1 ring-pink-200 flex-shrink-0"
+                    />
                     <div>
                       <div>
-                        <strong className="mr-2 text-[#38314a]">
+                        <strong className="mr-1.5 text-[#38314a] font-bold">
                           {comment.authorName}
                         </strong>
+                        {(comment.authorName === profile.name ||
+                          comment.authorName === "! Koharu · 코하루" ||
+                          comment.authorName === "코하루") && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-pink-100 text-pink-700 mr-2">
+                            작성자
+                          </span>
+                        )}
                         <span>{comment.content}</span>
                       </div>
                       <div className="text-[11px] text-gray-400 mt-0.5">
@@ -1712,7 +1767,14 @@ export default function BlogPage() {
                       onClick={() => handleLike(selectedPost)}
                       className={`insta-icon-btn ${
                         likedPosts[selectedPost.id] ? "is-liked" : ""
-                      } cursor-pointer`}
+                      } ${
+                        isMyPost(selectedPost) ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+                      }`}
+                      title={
+                        isMyPost(selectedPost)
+                          ? "자신의 게시물에는 좋아요를 누를 수 없습니다"
+                          : "좋아요"
+                      }
                     >
                       <Heart
                         className={`w-6 h-6 ${
@@ -1745,13 +1807,24 @@ export default function BlogPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="작성자 닉네임 (기본: 익명 친구)"
-                    value={commenterName}
-                    onChange={(e) => setCommenterName(e.target.value)}
-                    className="w-full text-xs px-2.5 py-1.5 rounded-lg bg-pink-50/50 border border-pink-100 outline-none"
-                  />
+                  {/* Current Active Profile Indicator */}
+                  <div className="flex items-center gap-2 text-xs text-[#7a6e8f] px-1 font-medium">
+                    <img
+                      src={isOwner ? (profile.avatarUrl || "/assets/koharu-profile.png") : "/assets/koharu-profile.png"}
+                      alt="profile"
+                      className="w-5 h-5 rounded-full object-cover ring-1 ring-pink-200"
+                    />
+                    <span>
+                      <strong className="text-[#38314a] font-bold">
+                        {isOwner ? profile.name : "방문자"}
+                      </strong>
+                      <span className="text-[10px] ml-1.5 px-1.5 py-0.2 rounded-full bg-pink-100 text-pink-700 font-bold">
+                        {isOwner ? "내 프로필" : "방문자"}
+                      </span>
+                      {" "}로 댓글 작성
+                    </span>
+                  </div>
+
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();

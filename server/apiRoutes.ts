@@ -191,9 +191,18 @@ apiRouter.delete("/posts/:id", async (req: Request, res: Response) => {
 apiRouter.post("/posts/:id/like", async (req: Request, res: Response) => {
   try {
     const postId = parseInt(req.params.id, 10);
-    const userIdentifier = req.body.userIdentifier || "visitor-anonymous";
+    const { userIdentifier, isOwner } = req.body;
 
-    const result = await togglePostLike(postId, userIdentifier);
+    if (isOwner) {
+      return res.status(400).json({ error: "자신의 게시물에는 좋아요를 누를 수 없습니다" });
+    }
+
+    const post = await getBlogPostById(postId);
+    if (post && (post.authorOpenId === userIdentifier || userIdentifier === "koharu-owner")) {
+      return res.status(400).json({ error: "자신의 게시물에는 좋아요를 누를 수 없습니다" });
+    }
+
+    const result = await togglePostLike(postId, userIdentifier || "visitor-anonymous");
     res.json(result);
   } catch (error) {
     console.error("[API] Error toggling like:", error);
@@ -217,7 +226,7 @@ apiRouter.get("/posts/:id/comments", async (req: Request, res: Response) => {
 apiRouter.post("/posts/:id/comments", async (req: Request, res: Response) => {
   try {
     const postId = parseInt(req.params.id, 10);
-    const { authorName, content } = req.body;
+    const { authorName, authorAvatar, content } = req.body;
 
     if (!content) {
       return res.status(400).json({ error: "Content is required" });
@@ -225,8 +234,8 @@ apiRouter.post("/posts/:id/comments", async (req: Request, res: Response) => {
 
     const comment = await createPostComment({
       postId,
-      authorName: authorName || "익명 친구",
-      authorAvatar: null,
+      authorName: authorName || "코하루",
+      authorAvatar: authorAvatar || null,
       content,
     });
 
