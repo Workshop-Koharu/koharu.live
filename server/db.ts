@@ -17,6 +17,7 @@ import {
   blogPosts,
   postComments,
   postLikes,
+  postReactions,
   guestbookMessages,
   siteProfile,
   sitePeople,
@@ -151,39 +152,98 @@ export async function deleteBlogPost(id: number): Promise<boolean> {
   return true;
 }
 
-export async function togglePostLike(postId: number, userIdentifier: string): Promise<{ liked: boolean; likesCount: number }> {
+export async function togglePostLike(postId: number, userIdentifier: string): Promise<{ liked: boolean; likesCount: number; dislikesCount: number }> {
+  return togglePostReaction(postId, userIdentifier, "like");
+}
+
+export async function togglePostReaction(
+  postId: number,
+  userIdentifier: string,
+  reaction: "like" | "dislike"
+): Promise<{ liked: boolean; disliked: boolean; likesCount: number; dislikesCount: number }> {
   const db = getDb();
-  if (!db) return { liked: false, likesCount: 0 };
+  if (!db) return { liked: false, disliked: false, likesCount: 0, dislikesCount: 0 };
 
-  const existing = await db
-    .select()
-    .from(postLikes)
-    .where(sql`${postLikes.postId} = ${postId} AND ${postLikes.userIdentifier} = ${userIdentifier}`)
-    .limit(1);
+  try {
+    // Check existing reactions in postLikes or fallback query
+    const existing = await db
+      .select()
+      .from(postLikes)
+      .where(sql`${postLikes.postId} = ${postId} AND ${postLikes.userIdentifier} = ${userIdentifier}`)
+      .limit(1);
 
-  let liked = false;
-  if (existing.length > 0) {
-    // Unlike
-    await db
-      .delete(postLikes)
-      .where(sql`${postLikes.postId} = ${postId} AND ${postLikes.userIdentifier} = ${userIdentifier}`);
-    await db
-      .update(blogPosts)
-      .set({ likesCount: sql`GREATEST(0, ${blogPosts.likesCount} - 1)` })
-      .where(eq(blogPosts.id, postId));
-    liked = false;
-  } else {
-    // Like
-    await db.insert(postLikes).values({ postId, userIdentifier });
-    await db
-      .update(blogPosts)
-      .set({ likesCount: sql`${blogPosts.likesCount} + 1` })
-      .where(eq(blogPosts.id, postId));
-    liked = true;
+    let liked = false;
+    let disliked = false;
+
+    if (reaction === "like") {
+      if (existing.length > 0) {
+        // Remove like
+        await db
+          .delete(postLikes)
+          .where(sql`${postLikes.postId} = ${postId} AND ${postLikes.userIdentifier} = ${userIdentifier}`);
+        await db
+          .update(blogPosts)
+          .set({ likesCount: sql`GREATEST(0, ${blogPosts.likesCount} - 1)` })
+          .where(eq(blogPosts.id, postId));
+        liked = false;
+      } else {
+        // Add like
+        await db.insert(postLikes).values({ postId, userIdentifier });
+        await db
+          .update(blogPosts)
+          .set({ likesCount: sql`${blogPosts.likesCount} + 1` })
+          .where(eq(blogPosts.id, postId));
+        liked = true;
+      }
+    } else {
+      // Dislike toggle
+      // If disliked, toggle it
+      const existingDislike = await db
+        .select()
+        .from(postLikes)
+        .where(sql`${postLikes.postId} = ${postId} AND ${postLikes.userIdentifier} = ${userIdentifier + ':dislike'}`)
+        .limit(1);
+
+      if (existingDislike.length > 0) {
+        await db
+          .delete(postLikes)
+          .where(sql`${postLikes.postId} = ${postId} AND ${postLikes.userIdentifier} = ${userIdentifier + ':dislike'}`);
+        try {
+          await db
+            .update(blogPosts)
+            .set({ dislikesCount: sql`GREATEST(0, ${blogPosts.dislikesCount} - 1)` })
+            .where(eq(blogPosts.id, postId));
+        } catch {}
+        disliked = false;
+      } else {
+        await db.insert(postLikes).values({ postId, userIdentifier: userIdentifier + ":dislike" });
+        try {
+          await db
+            .update(blogPosts)
+            .set({ dislikesCount: sql`${blogPosts.dislikesCount} + 1` })
+            .where(eq(blogPosts.id, postId));
+        } catch {}
+        disliked = true;
+      }
+    }
+
+    const post = await getBlogPostById(postId);
+    return {
+      liked,
+      disliked,
+      likesCount: post?.likesCount ?? 0,
+      dislikesCount: (post as any)?.dislikesCount ?? 0,
+    };
+  } catch (error) {
+    console.error("[Database] Error in togglePostReaction:", error);
+    const post = await getBlogPostById(postId);
+    return {
+      liked: false,
+      disliked: false,
+      likesCount: post?.likesCount ?? 0,
+      dislikesCount: (post as any)?.dislikesCount ?? 0,
+    };
   }
-
-  const post = await getBlogPostById(postId);
-  return { liked, likesCount: post?.likesCount ?? 0 };
 }
 
 export async function getPostComments(postId: number): Promise<PostComment[]> {
@@ -197,12 +257,40 @@ export async function getPostComments(postId: number): Promise<PostComment[]> {
     .orderBy(desc(postComments.createdAt));
 }
 
+export async function getPostCommentById(id: number): Promise<PostComment | undefined> {
+  const db = getDb();
+  if (!db) return undefined;
+
+  const result = await db.select().from(postComments).where(eq(postComments.id, id)).limit(1);
+  return result[0];
+}
+
 export async function createPostComment(comment: InsertPostComment): Promise<PostComment | undefined> {
   const db = getDb();
   if (!db) return undefined;
 
   const result = await db.insert(postComments).values(comment).returning();
   return result[0];
+}
+
+export async function updatePostComment(id: number, content: string): Promise<PostComment | undefined> {
+  const db = getDb();
+  if (!db) return undefined;
+
+  const result = await db
+    .update(postComments)
+    .set({ content, updatedAt: new Date() })
+    .where(eq(postComments.id, id))
+    .returning();
+  return result[0];
+}
+
+export async function deletePostComment(id: number): Promise<boolean> {
+  const db = getDb();
+  if (!db) return false;
+
+  await db.delete(postComments).where(eq(postComments.id, id));
+  return true;
 }
 
 export async function getGuestbookMessages(): Promise<GuestbookMessage[]> {

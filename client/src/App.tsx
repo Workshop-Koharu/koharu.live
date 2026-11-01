@@ -4,8 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import BlogAdminPage from "./pages/BlogAdminPage";
-import BlogPage from "./pages/BlogPage";
+import { AuthProvider } from "./contexts/AuthContext";
+import MomentsPage from "./pages/MomentsPage";
+import TechBlogPage from "./pages/TechBlogPage";
+import DiscordCallbackPage from "./pages/DiscordCallbackPage";
 import ContactPage from "./pages/ContactPage";
 import HistoryPage from "./pages/HistoryPage";
 import Home from "./pages/Home";
@@ -78,7 +80,7 @@ function HandleRoute({ params }: { params: { handle?: string } }) {
     decoded.toLowerCase() === "koharu.live" ||
     decoded.toLowerCase() === "koharu"
   ) {
-    return <BlogPage />;
+    return <MomentsPage />;
   }
 
   // Known static/system routes that are not user profile handles
@@ -92,6 +94,7 @@ function HandleRoute({ params }: { params: { handle?: string } }) {
     "partner",
     "person",
     "people",
+    "moments",
     "instagram",
     "blog",
     "board",
@@ -103,11 +106,12 @@ function HandleRoute({ params }: { params: { handle?: string } }) {
     "404",
     "api",
     "index",
+    "auth",
   ];
 
-  // If not a known static system page, route to BlogPage profile!
+  // If not a known static system page, route to Moments profile!
   if (clean && !knownStaticPages.includes(clean)) {
-    return <BlogPage />;
+    return <MomentsPage />;
   }
 
   return <NotFound />;
@@ -121,6 +125,37 @@ function Router() {
       <Route path="/profile" component={Home} />
       <Route path="/index.html" component={Home} />
       <Route path="/profile.html" component={Home} />
+
+      {/* Koharu Moments (Formerly Instagram Feed) */}
+      <Route path="/moments" component={MomentsPage} />
+      <Route path="/moments.html" component={MomentsPage} />
+      <Route path="/moments/:slug" component={MomentsPage} />
+      <Route path="/moments/:slug.html" component={MomentsPage} />
+
+      {/* Instagram Aliases (Backward-Compatibility) */}
+      <Route path="/instagram" component={MomentsPage} />
+      <Route path="/instagram.html" component={MomentsPage} />
+      <Route path="/instagram/:slug" component={MomentsPage} />
+      <Route path="/instagram/:slug.html" component={MomentsPage} />
+      <Route path="/instagram/post/:slug" component={MomentsPage} />
+      <Route path="/instagram/p/:slug" component={MomentsPage} />
+      <Route path="/post/:slug" component={MomentsPage} />
+      <Route path="/post/:slug.html" component={MomentsPage} />
+      <Route path="/posts/:slug" component={MomentsPage} />
+      <Route path="/posts/:slug.html" component={MomentsPage} />
+      <Route path="/p/:slug" component={MomentsPage} />
+      <Route path="/p/:slug.html" component={MomentsPage} />
+
+      {/* Dedicated Tech Blog */}
+      <Route path="/blog" component={TechBlogPage} />
+      <Route path="/blog.html" component={TechBlogPage} />
+      <Route path="/blog/:slug" component={TechBlogPage} />
+      <Route path="/blog/:slug.html" component={TechBlogPage} />
+      <Route path="/board" component={TechBlogPage} />
+      <Route path="/board.html" component={TechBlogPage} />
+
+      {/* Discord OAuth Callback */}
+      <Route path="/auth/discord/callback" component={DiscordCallbackPage} />
 
       {/* Skills */}
       <Route path="/skills" component={SkillsPage} />
@@ -153,39 +188,9 @@ function Router() {
       <Route path="/person.html" component={PeoplePage} />
       <Route path="/people" component={PeoplePage} />
 
-      {/* Instagram (Feed & Gallery, replacing board & blog) */}
-      <Route path="/instagram" component={BlogPage} />
-      <Route path="/instagram.html" component={BlogPage} />
-      <Route path="/instagram/:slug" component={BlogPage} />
-      <Route path="/instagram/:slug.html" component={BlogPage} />
-      <Route path="/instagram/post/:slug" component={BlogPage} />
-      <Route path="/instagram/p/:slug" component={BlogPage} />
-      <Route path="/post/:slug" component={BlogPage} />
-      <Route path="/post/:slug.html" component={BlogPage} />
-      <Route path="/posts/:slug" component={BlogPage} />
-      <Route path="/posts/:slug.html" component={BlogPage} />
-      <Route path="/share/:slug" component={BlogPage} />
-      <Route path="/share/:slug.html" component={BlogPage} />
-      <Route path="/p/:slug" component={BlogPage} />
-      <Route path="/p/:slug.html" component={BlogPage} />
-
-      {/* Aliases for Board & Blog */}
-      <Route path="/blog" component={BlogPage} />
-      <Route path="/blog.html" component={BlogPage} />
-      <Route path="/blog/:slug" component={BlogPage} />
-      <Route path="/blog/:slug.html" component={BlogPage} />
-      <Route path="/board" component={BlogPage} />
-      <Route path="/board.html" component={BlogPage} />
-
-      {/* AI Category Removed: Redirects to Home */}
-      <Route path="/ai" component={Home} />
-      <Route path="/ai.html" component={Home} />
-      <Route path="/AI.html" component={Home} />
-
       {/* Admin */}
-      <Route path="/admin" component={BlogAdminPage} />
-      <Route path="/admin.html" component={BlogAdminPage} />
-      <Route path="/admin/blog.html" component={BlogAdminPage} />
+      <Route path="/admin" component={TechBlogPage} />
+      <Route path="/admin.html" component={TechBlogPage} />
 
       {/* Contact */}
       <Route path="/contact" component={ContactPage} />
@@ -197,14 +202,14 @@ function Router() {
       <Route path="/s" component={UrlShortenerPage} />
       <Route path="/s.html" component={UrlShortenerPage} />
 
-      {/* Explicit Handle & Profile Routes (Prevents regexparam failures) */}
-      <Route path="/@koharu.live" component={BlogPage} />
-      <Route path="/%40koharu.live" component={BlogPage} />
-      <Route path="/koharu.live" component={BlogPage} />
-      <Route path="/koharu" component={BlogPage} />
-      <Route path="/u/:handle" component={BlogPage} />
-      <Route path="/user/:handle" component={BlogPage} />
-      <Route path="/profile/:handle" component={BlogPage} />
+      {/* Explicit Handle & Profile Routes */}
+      <Route path="/@koharu.live" component={MomentsPage} />
+      <Route path="/%40koharu.live" component={MomentsPage} />
+      <Route path="/koharu.live" component={MomentsPage} />
+      <Route path="/koharu" component={MomentsPage} />
+      <Route path="/u/:handle" component={MomentsPage} />
+      <Route path="/user/:handle" component={MomentsPage} />
+      <Route path="/profile/:handle" component={MomentsPage} />
       <Route path="/:handle" component={HandleRoute} />
 
       {/* Fallback */}
@@ -218,12 +223,14 @@ export default function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
-        <TooltipProvider>
-          <Toaster position="top-center" richColors />
-          <CherryBlossomParticles />
-          <Router />
-          <FloatingControls />
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster position="top-center" richColors />
+            <CherryBlossomParticles />
+            <Router />
+            <FloatingControls />
+          </TooltipProvider>
+        </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

@@ -32,6 +32,8 @@ export const blogPosts = pgTable("blog_posts", {
   images: jsonb("images").$type<string[]>(),
   category: varchar("category", { length: 64 }).default("devlog").notNull(),
   likesCount: integer("likes_count").default(0).notNull(),
+  dislikesCount: integer("dislikes_count").default(0).notNull(),
+  postType: varchar("post_type", { length: 32 }).default("moment").notNull(),
   authorName: varchar("author_name", { length: 100 }).default("! Koharu").notNull(),
   authorAvatar: text("author_avatar").default("/assets/koharu-profile.png").notNull(),
   authorOpenId: varchar("author_open_id", { length: 64 }).default("koharu-owner"),
@@ -44,19 +46,35 @@ export type BlogPost = typeof blogPosts.$inferSelect;
 export type InsertBlogPost = typeof blogPosts.$inferInsert;
 
 /**
- * Post comments table (Instagram comments)
+ * Post comments table (Instagram & Blog comments)
  */
 export const postComments = pgTable("post_comments", {
   id: serial("id").primaryKey(),
   postId: integer("post_id").notNull(),
   authorName: varchar("author_name", { length: 100 }).notNull(),
   authorAvatar: text("author_avatar"),
+  authorOpenId: varchar("author_open_id", { length: 128 }),
   content: text("content").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
 export type PostComment = typeof postComments.$inferSelect;
 export type InsertPostComment = typeof postComments.$inferInsert;
+
+/**
+ * Post reactions tracking table (Likes and Dislikes)
+ */
+export const postReactions = pgTable("post_reactions", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").notNull(),
+  userIdentifier: varchar("user_identifier", { length: 255 }).notNull(),
+  reactionType: varchar("reaction_type", { length: 16 }).default("like").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type PostReaction = typeof postReactions.$inferSelect;
+export type InsertPostReaction = typeof postReactions.$inferInsert;
 
 /**
  * Post likes tracking table

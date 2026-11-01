@@ -1,15 +1,20 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
+  BookOpen,
   Calendar,
   Camera,
   FolderGit2,
   Home,
   Link2,
   Mail,
+  Menu,
+  Sparkles,
   UserCheck,
   Users,
+  X,
 } from "lucide-react";
+import { useAppAuth } from "@/contexts/AuthContext";
 
 interface SiteNavProps {
   active?: string;
@@ -18,7 +23,9 @@ interface SiteNavProps {
 export default function SiteNav({ active }: SiteNavProps) {
   const [location] = useLocation();
   const currentPath = active || location;
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [latestPost, setLatestPost] = useState<{ title: string; slug: string; category: string } | null>(null);
+  const { user } = useAppAuth();
 
   useEffect(() => {
     // Fetch latest post for notice bar
@@ -30,29 +37,34 @@ export default function SiteNav({ active }: SiteNavProps) {
         }
       })
       .catch(() => {
-        // Fallback default notice
         setLatestPost({
-          title: "✨ koharu.live 인스타그램 피드에 오신 것을 환영합니다! 🌸",
+          title: "✨ 코하루 모먼트 & 개발 블로그에 오신 것을 환영합니다! 🌸",
           slug: "",
-          category: "instagram",
+          category: "moments",
         });
       });
   }, []);
 
+  // Close mobile menu on path change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location]);
+
   const navLinks = [
     { href: "/profile", label: "메인", icon: Home },
+    { href: "/moments", label: "모먼트", icon: Camera },
+    { href: "/blog", label: "블로그", icon: BookOpen },
     { href: "/projects", label: "프로젝트", icon: FolderGit2 },
     { href: "/history", label: "히스토리", icon: Calendar },
     { href: "/letter", label: "편지", icon: Mail },
     { href: "/partners", label: "파트너", icon: Users },
     { href: "/person", label: "지인", icon: UserCheck },
-    { href: "/instagram", label: "인스타그램", icon: Camera },
     { href: "/shorten", label: "단축", icon: Link2 },
   ];
 
   return (
     <>
-      {/* Ambient glowing background with orbs and sparkles */}
+      {/* Ambient background with orbs and sparkles */}
       <div className="ambient-background" aria-hidden="true">
         <span className="ambient-orb ambient-orb-one" />
         <span className="ambient-orb ambient-orb-two" />
@@ -62,7 +74,7 @@ export default function SiteNav({ active }: SiteNavProps) {
         <span className="ambient-spark spark-three">·</span>
       </div>
 
-      {/* Topbar */}
+      {/* Topbar Wrapper */}
       <div className="topbar-wrapper">
         <header className="topbar">
           <Link href="/profile" className="brand" aria-label="! Koharu 홈으로">
@@ -73,16 +85,18 @@ export default function SiteNav({ active }: SiteNavProps) {
             </div>
           </Link>
 
-          <nav className="main-nav" aria-label="주요 메뉴">
+          {/* Desktop Navigation */}
+          <nav className="main-nav hidden lg:flex" aria-label="주요 메뉴">
             {navLinks.map((item) => {
               const Icon = item.icon;
               const isActive =
                 currentPath === item.href ||
                 currentPath === `${item.href}.html` ||
                 (item.href === "/profile" && (currentPath === "/" || currentPath === "/profile" || currentPath === "/profile.html" || currentPath === "/index.html")) ||
+                (item.href === "/moments" && (currentPath.startsWith("/moments") || currentPath.startsWith("/instagram") || currentPath.startsWith("/@"))) ||
+                (item.href === "/blog" && currentPath.startsWith("/blog")) ||
                 (item.href === "/projects" && currentPath.startsWith("/project")) ||
-                (item.href === "/shorten" && (currentPath.startsWith("/shorten") || currentPath.startsWith("/s"))) ||
-                (item.href === "/instagram" && (currentPath.startsWith("/instagram") || currentPath.startsWith("/@") || currentPath.startsWith("/blog") || currentPath.startsWith("/board")));
+                (item.href === "/shorten" && (currentPath.startsWith("/shorten") || currentPath.startsWith("/s")));
 
               return (
                 <Link
@@ -96,20 +110,132 @@ export default function SiteNav({ active }: SiteNavProps) {
               );
             })}
           </nav>
+
+          {/* Right Header Controls & Mobile Toggle */}
+          <div className="flex items-center gap-2">
+            {user ? (
+              <div className="flex items-center gap-2 pl-2">
+                <img
+                  src={user.avatar || "/assets/koharu-profile.png"}
+                  alt={user.name}
+                  className="w-7 h-7 rounded-full object-cover border border-pink-300"
+                />
+                <span className="text-xs font-bold text-[#38314a] hidden sm:inline max-w-[90px] truncate">
+                  {user.name}
+                </span>
+                {user.isAdmin && (
+                  <span className="text-[10px] bg-gradient-to-r from-pink-500 to-purple-500 text-white font-extrabold px-1.5 py-0.5 rounded-full shadow-xs">
+                    Admin
+                  </span>
+                )}
+              </div>
+            ) : null}
+
+            {/* Mobile Hamburger Button */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 rounded-xl text-[#38314a] hover:bg-pink-100/60 transition cursor-pointer"
+              aria-label="모바일 메뉴 열기"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </header>
+
+        {/* Mobile Dropdown Menu Drawer */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden px-4 pt-2 pb-4 bg-white/95 backdrop-blur-xl border-b border-pink-200/80 shadow-xl animate-in slide-in-from-top-4 duration-200">
+            <nav className="grid grid-cols-3 gap-2">
+              {navLinks.map((item) => {
+                const Icon = item.icon;
+                const isActive =
+                  currentPath === item.href ||
+                  (item.href === "/profile" && currentPath === "/") ||
+                  (item.href === "/moments" && (currentPath.startsWith("/moments") || currentPath.startsWith("/instagram"))) ||
+                  (item.href === "/blog" && currentPath.startsWith("/blog"));
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex flex-col items-center justify-center p-3 rounded-2xl text-xs font-bold transition ${
+                      isActive
+                        ? "bg-pink-500 text-white shadow-md shadow-pink-500/20"
+                        : "bg-pink-50/50 text-[#38314a] hover:bg-pink-100/70"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 mb-1" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        )}
 
         {/* Floating Notice Bar */}
         <Link
-          href={latestPost && latestPost.slug ? `/instagram/${latestPost.slug}` : "/instagram"}
+          href={latestPost && latestPost.slug ? `/moments?post=${latestPost.slug}` : "/moments"}
           className="notice-bar"
         >
-          <span className="notice-badge">인스타그램</span>
+          <span className="notice-badge">소식</span>
           <span className="notice-text">
             {latestPost ? latestPost.title : "새 소식을 확인해보세요 🌸"}
           </span>
           <span className="notice-more">
             피드 보기 →
           </span>
+        </Link>
+      </div>
+
+      {/* Mobile Floating Bottom Bar for quick navigation on phone */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-t border-pink-100 px-4 py-2 flex items-center justify-around shadow-lg">
+        <Link
+          href="/profile"
+          className={`flex flex-col items-center gap-0.5 text-[11px] font-bold ${
+            currentPath === "/" || currentPath.startsWith("/profile") ? "text-pink-600" : "text-gray-500"
+          }`}
+        >
+          <Home className="w-4 h-4" />
+          <span>홈</span>
+        </Link>
+        <Link
+          href="/moments"
+          className={`flex flex-col items-center gap-0.5 text-[11px] font-bold ${
+            currentPath.startsWith("/moments") || currentPath.startsWith("/instagram") ? "text-pink-600" : "text-gray-500"
+          }`}
+        >
+          <Camera className="w-4 h-4" />
+          <span>모먼트</span>
+        </Link>
+        <Link
+          href="/blog"
+          className={`flex flex-col items-center gap-0.5 text-[11px] font-bold ${
+            currentPath.startsWith("/blog") ? "text-pink-600" : "text-gray-500"
+          }`}
+        >
+          <BookOpen className="w-4 h-4" />
+          <span>블로그</span>
+        </Link>
+        <Link
+          href="/projects"
+          className={`flex flex-col items-center gap-0.5 text-[11px] font-bold ${
+            currentPath.startsWith("/projects") ? "text-pink-600" : "text-gray-500"
+          }`}
+        >
+          <FolderGit2 className="w-4 h-4" />
+          <span>프로젝트</span>
+        </Link>
+        <Link
+          href="/shorten"
+          className={`flex flex-col items-center gap-0.5 text-[11px] font-bold ${
+            currentPath.startsWith("/shorten") ? "text-pink-600" : "text-gray-500"
+          }`}
+        >
+          <Link2 className="w-4 h-4" />
+          <span>단축</span>
         </Link>
       </div>
     </>

@@ -1,47 +1,43 @@
-# ! Koharu (코하루) · Personal Portfolio v2.0 🌸
+# ! Koharu (코하루) · Personal Portfolio & Moments / Tech Blog 🌸
 
 > **코드로 세상을 플레이어블하게 만드는 중**  
-> 감성적인 파스텔 비주얼 & 인터랙티브 기능과 코하루의 게임 프로그래밍 포트폴리오를 결합하고, 인스타그램 스타일의 피드 시스템과 Neon PostgreSQL을 연동한 프로젝트입니다.
+> 감성적인 파스텔 비주얼 & 인터랙티브 기능과 코하루의 게임 프로그래밍 포트폴리오를 결합하고, 새로 개편된 **코하루 모먼트(Moments)**와 **전용 마크다운 개발 블로그(Tech Blog)**, 디스코드/구글 인증 시스템 및 Neon PostgreSQL을 연동한 프로젝트입니다.
 
 ---
 
-## ✨ 주요 기능 및 특징
+## ✨ 2026 주요 전면 개편 및 신규 기능
 
-### 1. 🎨 감성적인 인터랙티브 비주얼 디자인
-- **Ambient Dreamy Background**: 은은하게 부유하는 빛의 궤도 오르브(Floating Orbs)와 반짝이는 별무리(Sparkles `✦`, `✧`, `·`)
-- **Site Navigation Topbar**: 부드럽게 펼쳐지는 호버 라벨 애니메이션 메뉴바 및 실시간 인스타그램 공지 티커(Notice Bar)
-- **Visual Identity**: `EF Diary` 감성 폰트와 파스텔톤 글래스모피즘(Glassmorphism) 카드 UI
-- **Secret Letter (비밀 편지)**: 4자리 패스코드 키패드로 봉인을 해제하는 인터랙티브 편지 시스템
-- **History Timeline (히스토리)**: 2024 ~ 2026 개발 발자취와 마일스톤 타임라인
-- **Partners & People (파트너 & 지인)**: Team Light 등 소중한 인연과 협업 프로젝트 카드
-- **Guestbook Board (방명록 게시판)**: 방문자가 직접 응원 메시지와 비밀글을 남길 수 있는 실시간 게시판
-- **AI Chat**: 코하루의 게임 개발 및 엔진 지식이 담긴 대화형 AI 어시스턴트 (v1/v2 모델, 코딩/디자인 모드)
+### 1. 📸 코하루 모먼트 (Koharu Moments · 피드 & 갤러리)
+- **전면 개편된 UI/UX**: AI 템플릿 느낌을 벗어나 트렌디한 인스타그램 스타일 스토리 하이라이트 링과 미니멀 그리드/피드 뷰 탑재
+- **Google 로그인 연동**: 구글 계정으로 로그인한 사용자만 모먼트 피드를 이용하고 사진/댓글을 남길 수 있도록 보호
+- **철저한 보안 및 삭제 권한 검증**: 본인이 작성한 게시글이나 댓글만 수정/삭제할 수 있도록 백엔드 및 프론트엔드 권한 체크 완벽 구현
+- **QR 코드 & 공유**: 모달 스크롤 락 및 안티 지터(Anti-jitter) 엔진 적용으로 마우스 휠 조작 시에도 화면 떨림 없는 안정적인 QR 코드 생성
 
-### 2. 📸 인스타그램 스타일 블로그 시스템
-- **Instagram Profile Header**: 무지개빛 스토리 링 그라데이션 아바타, `koharu.live` 인증 배지, 팔로우/메시지 토글, 게시물/팔로워 통계 및 스토리 하이라이트
-- **3-Column Square Photo Grid (게시물 그리드)**: 인스타그램 고유의 정사각형 3열 그리드 레이아웃과 호버 시 나타나는 좋아요(❤️) 및 댓글(💬) 카운터
-- **Vertical Feed Stream (피드 스트림)**: 게시물별 사진 더블클릭 하트 팝업(Double-tap Heart Burst), 좋아요/북마크 토글, 실시간 댓글 목록 및 댓글 작성
-- **Detail Modal (게시물 상세 모달)**: 좌측 사진 / 우측 작성자 캡션 및 댓글 스크롤 스레드로 구성된 인스타그램 웹 뷰
-- **새 게시물 만들기 (Create Post)**: 이미지 URL, 캡션(#해시태그), 카테고리 선택을 지원하는 인스타그램 스타일 업로드 다이얼로그
+### 2. 📝 코하루 전용 개발 블로그 (Tech Blog)
+- **마크다운 문법 지원**: 제목, 코드 하이라이트, 인용구, 이미지, 리스트 등 완벽 렌더링
+- **Discord OAuth2 관리자 인증**:
+  - 관리자 조건: 디스코드 이메일 `codingexpertleon@gmail.com`, 닉네임 `koharu_81s`, ID `1339604814631534667`
+  - 관리자는 실시간 마크다운 에디터로 글 작성, 수정, 삭제의 모든 권한 보유
+- **방문자 인터랙션**:
+  - 일반 로그인 사용자는 게시글에 좋아요(Like 👍) 및 싫어요(Dislike 👎) 클릭 가능
+  - 댓글 작성 및 본인이 작성한 댓글 수정/삭제 가능
 
-### 3. 🐘 Neon PostgreSQL Database
-- **Host**: Neon Cloud PostgreSQL Serverless
-- **ORM**: Drizzle ORM (`drizzle-orm/neon-http`)
-- **Tables**:
-  - `blog_posts`: 인스타그램 게시물 (슬러그, 제목, 캡션, 사진, 카테고리, 좋아요 수)
-  - `post_comments`: 게시물별 실시간 방문자 댓글
-  - `post_likes`: 게시물 좋아요 토글 추적
-  - `guestbook_messages`: 방명록 메시지
-  - `users`: 관리자 및 유저
+### 3. 📱 완벽한 모바일 반응형 지원
+- **스마트폰 맞춤 네비게이션**: 상단 헤더 햄버거 메뉴 및 하단 플로팅 탭바(Floating Dock) 제공
+- **반응형 그리드**: 스마트폰/태블릿/데스크탑 화면 폭에 따라 1열/2열/3열 그리드 자동 전환
+
+### 4. 🔗 URL 단축기 (`koharu.live/{code}`)
+- 긴 웹 링크를 `https://koharu.live/{코드}` 로 단축하여 관리 및 클릭수 통계 제공
 
 ---
 
 ## 🛠️ 기술 스택 (Tech Stack)
 
-- **Frontend**: React 19, Vite, Tailwind CSS v4, Lucide Icons, Sonner Toast
-- **Backend / API**: Express, tRPC, Neon Serverless HTTP Driver
+- **Frontend**: React 19, Vite, Tailwind CSS v4, Lucide Icons, Sonner Toast, Wouter
+- **Backend / API**: Express, Vercel Serverless Function, Neon Serverless HTTP Driver
+- **Authentication**: Discord OAuth2, Google Identity Services
 - **Database**: PostgreSQL (Neon Cloud), Drizzle ORM
-- **Deployment & Hosting**: Vercel Serverless
+- **Deployment**: Vercel
 
 ---
 
@@ -55,33 +51,16 @@ npm install
 ### 2. 환경 변수 설정 (`.env`)
 ```env
 DATABASE_URL=postgresql://neondb_owner:npg_NJhT4IV8bDrx@ep-rough-voice-b4xapbff-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+DISCORD_CLIENT_ID=1523139211228741784
+DISCORD_CLIENT_SECRET=tUGuQO8qivi42N0HFKFPOOtV_kdRg3HR
+VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 PORT=3000
 ```
 
-### 3. 데이터베이스 초기화 (최초 1회 실행)
-```bash
-npm run db:init
-```
-
-### 4. 로컬 개발 서버 실행
+### 3. 로컬 개발 서버 실행
 ```bash
 npm run dev
 ```
-브라우저에서 `http://localhost:3000` 접속
-
----
-
-## ☁️ Vercel 배포 가이드 (Vercel Deployment)
-
-1. Vercel 대시보드에서 `Import Project` 클릭 후 본 깃허브 저장소(`https://github.com/Workshop-Koharu/koharu.live.git`) 연결
-2. **Build and Output Settings**:
-   - **Framework Preset**: `Vite`
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-3. **Environment Variables**:
-   - `DATABASE_URL`: `postgresql://neondb_owner:npg_NJhT4IV8bDrx@ep-rough-voice-b4xapbff-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require`
-4. **Deploy** 버튼 클릭!
-   - 정적 프론트엔드는 `dist`에서 즉시 전 세계 CDN으로 호스팅되고, `/api/*` 요청은 `api/index.ts` Vercel Serverless Function을 통해 Neon PostgreSQL과 직접 통신합니다.
 
 ---
 

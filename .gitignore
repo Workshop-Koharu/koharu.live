@@ -59,6 +59,11 @@ jspm_packages/
 # TypeScript cache
 *.tsbuildinfo
 
+# Ignore all markdown files except README.md
+*.md
+!README.md
+
+
 # Optional npm cache directory
 .npm
 

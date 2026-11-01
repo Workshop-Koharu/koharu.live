@@ -11,8 +11,11 @@ export interface Post {
   images?: string[] | null;
   category: string;
   likesCount: number;
+  dislikesCount?: number;
+  postType?: "moment" | "blog";
   authorName: string;
   authorAvatar: string;
+  authorOpenId?: string;
   createdAt: string;
 }
 
@@ -21,8 +24,10 @@ export interface Comment {
   postId: number;
   authorName: string;
   authorAvatar?: string | null;
+  authorOpenId?: string | null;
   content: string;
   createdAt: string;
+  updatedAt?: string | null;
 }
 
 export interface ProfileData {
@@ -54,9 +59,10 @@ function getSql() {
  * Fetch all published posts.
  * Tries local /api/posts first; if API is missing or returns HTML (e.g. Netlify static), falls back to Neon DB.
  */
-export async function fetchAllPosts(): Promise<Post[]> {
+export async function fetchAllPosts(type?: "moment" | "blog"): Promise<Post[]> {
   try {
-    const res = await fetch("/api/posts");
+    const url = type ? `/api/posts?type=${type}` : "/api/posts";
+    const res = await fetch(url);
     const contentType = res.headers.get("content-type") || "";
     if (res.ok && contentType.includes("application/json")) {
       const data = await res.json();
@@ -71,7 +77,7 @@ export async function fetchAllPosts(): Promise<Post[]> {
   try {
     const sql = getSql();
     const rows = await sql.query(
-      `SELECT id, slug, title, caption, excerpt, content, cover_url as "coverUrl", images, category, likes_count as "likesCount", author_name as "authorName", author_avatar as "authorAvatar", created_at as "createdAt" FROM blog_posts ORDER BY created_at DESC`
+      `SELECT id, slug, title, caption, excerpt, content, cover_url as "coverUrl", images, category, likes_count as "likesCount", author_name as "authorName", author_avatar as "authorAvatar", author_open_id as "authorOpenId", created_at as "createdAt" FROM blog_posts ORDER BY created_at DESC`
     );
     if (Array.isArray(rows)) {
       return rows.map((r: any) => ({
@@ -85,8 +91,11 @@ export async function fetchAllPosts(): Promise<Post[]> {
         images: Array.isArray(r.images) ? r.images : [String(r.coverUrl || "")],
         category: String(r.category || "일상"),
         likesCount: Number(r.likesCount || 0),
+        dislikesCount: Number(r.dislikesCount || 0),
+        postType: (r.postType || "moment") as "moment" | "blog",
         authorName: String(r.authorName || "! Koharu"),
         authorAvatar: String(r.authorAvatar || "/assets/koharu-profile.png"),
+        authorOpenId: r.authorOpenId ? String(r.authorOpenId) : undefined,
         createdAt: new Date(r.createdAt).toISOString(),
       }));
     }
@@ -256,13 +265,14 @@ export async function addComment(
   postId: number,
   authorName: string,
   authorAvatar: string,
-  content: string
+  content: string,
+  authorOpenId?: string | null
 ): Promise<Comment | null> {
   try {
     const res = await fetch(`/api/posts/${postId}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ authorName, authorAvatar, content }),
+      body: JSON.stringify({ authorName, authorAvatar, content, authorOpenId }),
     });
     const contentType = res.headers.get("content-type") || "";
     if (res.ok && contentType.includes("application/json")) {
@@ -274,10 +284,10 @@ export async function addComment(
   try {
     const sql = getSql();
     const rows = await sql.query(
-      `INSERT INTO post_comments (post_id, author_name, author_avatar, content, created_at)
-       VALUES ($1, $2, $3, $4, NOW())
-       RETURNING id, post_id as "postId", author_name as "authorName", author_avatar as "authorAvatar", content, created_at as "createdAt"`,
-      [postId, authorName, authorAvatar || null, content]
+      `INSERT INTO post_comments (post_id, author_name, author_avatar, author_open_id, content, created_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       RETURNING id, post_id as "postId", author_name as "authorName", author_avatar as "authorAvatar", author_open_id as "authorOpenId", content, created_at as "createdAt"`,
+      [postId, authorName, authorAvatar || null, authorOpenId || null, content]
     );
     if (Array.isArray(rows) && rows.length > 0) {
       const r: any = rows[0];
@@ -286,6 +296,7 @@ export async function addComment(
         postId: Number(r.postId),
         authorName: String(r.authorName),
         authorAvatar: r.authorAvatar ? String(r.authorAvatar) : null,
+        authorOpenId: r.authorOpenId ? String(r.authorOpenId) : null,
         content: String(r.content),
         createdAt: new Date(r.createdAt).toISOString(),
       };
@@ -298,26 +309,102 @@ export async function addComment(
 }
 
 /**
- * Permanently delete a post from database.
+ * Update an existing comment (Author or Admin only).
  */
-export async function deletePost(postId: number): Promise<boolean> {
-  let success = false;
+export async function updateComment(
+  commentId: number,
+  content: string,
+  options?: { userOpenId?: string; isAdmin?: boolean }
+): Promise<Comment | null> {
   try {
-    const res = await fetch(`/api/posts/${postId}`, { method: "DELETE" });
-    if (res.ok) success = true;
+    const res = await fetch(`/api/comments/${commentId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content, userOpenId: options?.userOpenId, isAdmin: options?.isAdmin }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data?.comment || null;
+    }
   } catch {}
 
+  return null;
+}
+
+/**
+ * Delete a comment (Author or Admin only).
+ */
+export async function deleteComment(
+  commentId: number,
+  options?: { userOpenId?: string; isAdmin?: boolean }
+): Promise<boolean> {
   try {
-    const sql = getSql();
-    // Delete comments first, then post
-    await sql.query(`DELETE FROM post_comments WHERE post_id = $1`, [postId]);
-    await sql.query(`DELETE FROM blog_posts WHERE id = $1`, [postId]);
-    success = true;
-  } catch (err) {
-    console.error("[RemoteDB] Direct delete post error:", err);
+    const res = await fetch(`/api/comments/${commentId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userOpenId: options?.userOpenId, isAdmin: options?.isAdmin }),
+    });
+    if (res.ok) return true;
+  } catch {}
+
+  return false;
+}
+
+/**
+ * Permanently delete a post from database (Owner or Admin only).
+ */
+export async function deletePost(
+  postId: number,
+  options?: { userOpenId?: string; isAdmin?: boolean }
+): Promise<boolean> {
+  let success = false;
+  try {
+    const res = await fetch(`/api/posts/${postId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userOpenId: options?.userOpenId, isAdmin: options?.isAdmin }),
+    });
+    if (res.ok) {
+      success = true;
+      return true;
+    }
+  } catch {}
+
+  // If user is admin or verified author, fallback direct delete
+  if (options?.isAdmin) {
+    try {
+      const sql = getSql();
+      await sql.query(`DELETE FROM post_comments WHERE post_id = $1`, [postId]);
+      await sql.query(`DELETE FROM blog_posts WHERE id = $1`, [postId]);
+      success = true;
+    } catch (err) {
+      console.error("[RemoteDB] Direct delete post error:", err);
+    }
   }
 
   return success;
+}
+
+/**
+ * Toggle post reaction (Like or Dislike).
+ */
+export async function togglePostReaction(
+  postId: number,
+  userIdentifier: string,
+  reaction: "like" | "dislike" = "like"
+): Promise<{ liked: boolean; disliked?: boolean; likesCount: number; dislikesCount?: number }> {
+  try {
+    const res = await fetch(`/api/posts/${postId}/reaction`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userIdentifier, reaction }),
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {}
+
+  return { liked: false, disliked: false, likesCount: 0, dislikesCount: 0 };
 }
 
 // ─── Short URL Database Functions ─────────────────────────────────────────────

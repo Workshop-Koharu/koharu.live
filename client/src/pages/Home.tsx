@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Link } from "wouter";
 import {
   ArrowUpRight,
+  BookOpen,
   Calendar,
   Camera,
   Check,
   Copy,
   FolderGit2,
+  Heart,
   Link2,
   Mail,
   Sparkles,
@@ -15,7 +17,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import SiteNav from "@/components/SiteNav";
-import VisitorCounter from "@/components/VisitorCounter";
 
 const skills = [
   { name: "Unity / C#", icon: "https://cdn.simpleicons.org/unity/E48CDC", level: 85 },
@@ -47,22 +48,23 @@ export default function Home() {
       <main className="page-container" id="main">
         {/* Centered Profile Card */}
         <div className="max-w-2xl mx-auto mb-12">
-          <section className="glass-card text-center !p-10" aria-labelledby="profile-name">
-            <div className="relative w-[136px] h-[136px] mx-auto mb-6">
-              <div className="w-full h-full rounded-[32px] overflow-hidden p-1.5 bg-gradient-to-tr from-pink-400 via-purple-300 to-sky-300 shadow-xl shadow-pink-500/20">
+          <section className="glass-card text-center !p-8 sm:!p-10 relative overflow-hidden" aria-labelledby="profile-name">
+            <div className="relative w-[130px] h-[130px] mx-auto mb-5">
+              <div className="w-full h-full rounded-[30px] overflow-hidden p-1.5 bg-gradient-to-tr from-pink-400 via-purple-300 to-sky-300 shadow-xl shadow-pink-500/20">
                 <img
                   src="/assets/koharu-profile.png"
                   alt="! Koharu 프로필 사진"
-                  className="w-full h-full object-cover rounded-[26px]"
+                  className="w-full h-full object-cover rounded-[24px]"
                 />
               </div>
-              <span className="absolute -bottom-2 -right-2 bg-white/95 text-pink-600 text-xs font-bold px-3 py-1 rounded-full shadow-md border border-pink-200">
-                Online ✨
+              <span className="absolute -bottom-2 -right-1 bg-white/95 text-pink-600 text-xs font-bold px-3 py-0.5 rounded-full shadow-md border border-pink-200 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Online
               </span>
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-2 mb-2">
-              <h1 id="profile-name" className="text-3xl sm:text-4xl font-extrabold text-[#c93b77]">
+              <h1 id="profile-name" className="text-3xl sm:text-4xl font-extrabold text-[#38314a] tracking-tight">
                 ! Koharu · 코하루
               </h1>
             </div>
@@ -76,18 +78,18 @@ export default function Home() {
             <div className="text-left text-xs uppercase tracking-wider font-bold text-pink-600 mb-2">
               소개
             </div>
-            <p className="text-left text-[15px] leading-relaxed text-[#4a3952]">
+            <p className="text-left text-[14.5px] leading-relaxed text-[#4a3952] break-keep">
               안녕하세요! 게임 프로그래머 <strong>코하루</strong>입니다 ⁽⁽ (˶&gt; ᎑ &lt;˶) ⁾⁾<br />
               코드로 생동감 있는 움직임을 구현하고, 머릿속 아이디어를 플레이 가능한 장면으로 만들어가요.<br />
-              Unity C#, 커스텀 셰이더, 경량 스크립트 엔진부터 웹 기술까지 호기심을 갖고 깊이 탐구하고 있습니다 ✨
+              Unity C#, 커스텀 셰이더, 경량 스크립트 엔진부터 현대적인 웹 기술까지 호기심을 갖고 깊이 탐구하고 있습니다 ✨
             </p>
           </section>
         </div>
 
         {/* Skills Section */}
         <section className="max-w-4xl mx-auto mb-14" aria-labelledby="skills-title">
-          <div className="flex items-center justify-between mb-6">
-            <h2 id="skills-title" className="text-2xl font-bold text-[#c93b77] flex items-center gap-2">
+          <div className="flex items-center justify-between mb-6 px-1">
+            <h2 id="skills-title" className="text-2xl font-bold text-[#38314a] flex items-center gap-2">
               <Sparkles className="w-6 h-6 text-pink-500" />
               스킬 & 역량
             </h2>
@@ -98,7 +100,7 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {skills.map((skill) => (
-              <div key={skill.name} className="glass-card !p-5 flex items-center gap-4">
+              <div key={skill.name} className="glass-card !p-5 flex items-center gap-4 hover:border-pink-300 transition">
                 <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-pink-100 to-purple-100 flex items-center justify-center flex-shrink-0 border border-pink-200/50">
                   <img src={skill.icon} alt={skill.name} className="w-5 h-5 object-contain" />
                 </div>
@@ -119,42 +121,62 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Contact and Links Section */}
-        <section className="glass-card max-w-4xl mx-auto mb-12" id="contact" aria-labelledby="contact-title">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        {/* Explore & Connect Section */}
+        <section className="glass-card max-w-4xl mx-auto mb-12 !p-6 sm:!p-8" id="contact" aria-labelledby="contact-title">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-2">
             <div>
               <span className="text-xs uppercase tracking-wider font-bold text-pink-600">Explore & Connect</span>
-              <h2 id="contact-title" className="text-2xl font-bold text-[#c93b77] mt-1">
+              <h2 id="contact-title" className="text-2xl font-bold text-[#38314a] mt-1">
                 주요 페이지 & 바로가기
               </h2>
             </div>
             <p className="text-xs text-[#7a6e8f] max-w-xs">
-              인스타그램 피드와 프로젝트, 히스토리 등 코하루 포트폴리오의 다양한 공간을 탐색해보세요.
+              모먼트 피드, 개발 블로그, 프로젝트와 히스토리까지 둘러보세요.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-            {/* Instagram Feed Link */}
+            {/* Koharu Moments (Formerly Instagram Feed) */}
             <Link
-              href="/instagram"
-              className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300"
+              href="/moments"
+              className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300 hover:shadow-md transition"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-yellow-400 via-rose-500 to-purple-600 flex items-center justify-center text-white shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-pink-500 via-rose-500 to-purple-600 flex items-center justify-center text-white shadow-sm">
                   <Camera className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="font-bold text-sm text-[#38314a]">인스타그램 피드</div>
-                  <div className="text-xs text-[#7a6e8f]">소식 & 사진 피드</div>
+                  <div className="font-bold text-sm text-[#38314a] flex items-center gap-1.5">
+                    코하루 모먼트
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-pink-100 text-pink-600 font-bold">인스타</span>
+                  </div>
+                  <div className="text-xs text-[#7a6e8f]">일상 & 소식 갤러리 피드</div>
                 </div>
               </div>
               <ArrowUpRight className="w-4 h-4 text-pink-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </Link>
 
+            {/* Dedicated Tech Blog */}
+            <Link
+              href="/blog"
+              className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300 hover:shadow-md transition"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-sm">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-bold text-sm text-[#38314a]">개발 블로그</div>
+                  <div className="text-xs text-[#7a6e8f]">마크다운 아티클 & 일지</div>
+                </div>
+              </div>
+              <ArrowUpRight className="w-4 h-4 text-purple-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            </Link>
+
             {/* Projects Link */}
             <Link
               href="/projects"
-              className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300"
+              className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300 hover:shadow-md transition"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-pink-100 flex items-center justify-center text-pink-600">
@@ -171,7 +193,7 @@ export default function Home() {
             {/* History Link */}
             <Link
               href="/history"
-              className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300"
+              className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300 hover:shadow-md transition"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
@@ -188,7 +210,7 @@ export default function Home() {
             {/* Secret Letter Link */}
             <Link
               href="/letter"
-              className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300"
+              className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300 hover:shadow-md transition"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-pink-100 flex items-center justify-center text-pink-600">
@@ -205,7 +227,7 @@ export default function Home() {
             {/* Partners Link */}
             <Link
               href="/partners"
-              className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300"
+              className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300 hover:shadow-md transition"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
@@ -222,7 +244,7 @@ export default function Home() {
             {/* People Link */}
             <Link
               href="/person"
-              className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300"
+              className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300 hover:shadow-md transition"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center text-sky-600">
@@ -236,12 +258,10 @@ export default function Home() {
               <ArrowUpRight className="w-4 h-4 text-sky-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </Link>
 
-
-
             {/* URL Shortener Link */}
             <Link
               href="/shorten"
-              className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300"
+              className="glass-card !p-4 flex items-center justify-between group hover:border-pink-300 hover:shadow-md transition"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-pink-400 to-rose-500 flex items-center justify-center text-white shadow-sm">
@@ -257,34 +277,19 @@ export default function Home() {
           </div>
 
           {/* Quick Copy Email Box */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-2xl bg-white/60 border border-white/90">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-2xl bg-white/70 border border-white/90">
             <div>
               <div className="font-bold text-sm text-[#38314a]">이메일 문의 & 협업 제안</div>
               <div className="text-xs text-[#7a6e8f]">admin@koharu.live · 언제든 편하게 연락주세요!</div>
             </div>
             <button
               onClick={copyEmail}
-              className="insta-action-btn insta-btn-primary"
+              className="insta-action-btn insta-btn-primary cursor-pointer"
             >
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               {copied ? "복사완료!" : "이메일 복사하기"}
             </button>
           </div>
-        </section>
-
-        {/* Live Visitor Counter (Odometer) */}
-        <section className="glass-card max-w-xl mx-auto mb-12 !p-8 text-center" aria-label="방문자 통계">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-pink-500 animate-spin-slow" />
-            <h3 className="text-lg font-bold text-[#c93b77]">
-              실시간 방문자 카운터
-            </h3>
-            <Sparkles className="w-5 h-5 text-purple-500 animate-spin-slow" />
-          </div>
-          <p className="text-xs text-[#7a6e8f] mb-6">
-            코하루의 공간에 찾아와주신 소중한 분들의 발자국이에요 ✨
-          </p>
-          <VisitorCounter />
         </section>
 
         {/* Footer */}
