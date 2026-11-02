@@ -70,10 +70,6 @@
   ],
   "rewrites": [
     {
-      "source": "/api/auth/discord/token",
-      "destination": "/api/auth/discord/token"
-    },
-    {
       "source": "/api/(.*)",
       "destination": "/api"
     },

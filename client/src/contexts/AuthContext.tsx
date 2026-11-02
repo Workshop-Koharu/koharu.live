@@ -94,12 +94,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
+    let resolvedAvatar = payload.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(payload.name || "User")}`;
+    let resolvedName = payload.name || payload.email?.split("@")[0] || "Google User";
+    try {
+      const savedSettings = localStorage.getItem("koharu_profile_settings");
+      if (savedSettings) {
+        const parsed = JSON.parse(savedSettings);
+        if (parsed.avatarUrl && parsed.avatarUrl.trim()) {
+          resolvedAvatar = parsed.avatarUrl.trim();
+        }
+        if (parsed.name && parsed.name.trim()) {
+          resolvedName = parsed.name.trim();
+        }
+      }
+    } catch {}
+
     const newUser: AppUser = {
       id: payload.sub,
       openId: `google:${payload.sub}`,
-      name: payload.name || payload.email?.split("@")[0] || "Google User",
+      name: resolvedName,
       email: payload.email,
-      avatar: payload.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(payload.name || "User")}`,
+      avatar: resolvedAvatar,
       provider: "google",
       role: "user",
       isAdmin: false,

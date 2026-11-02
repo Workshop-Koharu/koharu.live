@@ -208,6 +208,7 @@ function Router() {
       <Route path="/shorten.html" component={UrlShortenerPage} />
       <Route path="/s" component={UrlShortenerPage} />
       <Route path="/s.html" component={UrlShortenerPage} />
+      <Route path="/s/:handle" component={HandleRoute} />
 
       {/* Explicit Handle & Profile Routes */}
       <Route path="/@:handle" component={ProfilePage} />

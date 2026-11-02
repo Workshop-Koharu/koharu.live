@@ -47,7 +47,7 @@ export default function SiteNav({ active }: SiteNavProps) {
   }, [location]);
 
   const navLinks = [
-    { href: "/profile", label: "메인", icon: Home },
+    { href: "/", label: "메인", icon: Home },
     { href: "/moments", label: "모먼트", icon: Camera },
     { href: "/blog", label: "블로그", icon: BookOpen },
     { href: "/projects", label: "프로젝트", icon: FolderGit2 },
@@ -88,7 +88,7 @@ export default function SiteNav({ active }: SiteNavProps) {
               const isActive =
                 currentPath === item.href ||
                 currentPath === `${item.href}.html` ||
-                (item.href === "/profile" && (currentPath === "/" || currentPath === "/profile" || currentPath === "/profile.html" || currentPath === "/index.html")) ||
+                (item.href === "/" && (currentPath === "/" || currentPath === "/index.html")) ||
                 (item.href === "/moments" && (currentPath.startsWith("/moments") || currentPath.startsWith("/instagram") || currentPath.startsWith("/@"))) ||
                 (item.href === "/blog" && currentPath.startsWith("/blog")) ||
                 (item.href === "/projects" && currentPath.startsWith("/project")) ||

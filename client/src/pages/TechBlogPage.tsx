@@ -45,22 +45,54 @@ import {
   Comment,
 } from "@/lib/remoteDb";
 
-// Simple lightweight Markdown renderer without heavy dependencies
+import { compressImageFile } from "@/lib/imageCompressor";
+
+// Clean plain text extractor for post card excerpts (removes raw markdown syntax)
+function cleanMarkdownForExcerpt(md: string): string {
+  if (!md) return "";
+  return md
+    .replace(/^#+\s+/gm, "")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1")
+    .replace(/!\[.*?\]\(.*?\)/g, "")
+    .replace(/\[(.*?)\]\(.*?\)/g, "$1")
+    .replace(/^>\s+/gm, "")
+    .replace(/^[-*]\s+/gm, "· ")
+    .replace(/\n+/g, " ")
+    .trim();
+}
+
+// Generate clean, readable slug from post title without ugly random codes
+function generateCleanSlug(title: string): string {
+  const clean = title
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\s\uAC00-\uD7A3-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 50);
+  return clean || `post-${Date.now()}`;
+}
+
+// Enhanced Markdown renderer with responsive non-distorted images and clean styling
 function renderSimpleMarkdown(markdown: string) {
   if (!markdown) return "";
-  const lines = markdown.split("\n");
+  const normalized = markdown.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const lines = normalized.split("\n");
   const htmlLines: string[] = [];
   let inCodeBlock = false;
   let codeLang = "";
   let codeBuffer: string[] = [];
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    const rawLine = lines[i];
+    const line = rawLine.trimEnd();
 
     // Code block toggle
     if (line.startsWith("```")) {
       if (inCodeBlock) {
-        // Close code block
         inCodeBlock = false;
         const codeContent = codeBuffer
           .join("\n")
@@ -70,7 +102,7 @@ function renderSimpleMarkdown(markdown: string) {
         htmlLines.push(
           `<div class="my-4 rounded-2xl bg-[#1e1e2e] text-[#cdd6f4] p-4 text-xs sm:text-sm font-mono overflow-x-auto shadow-lg border border-purple-900/30">
             ${codeLang ? `<div class="text-[10px] text-pink-400 font-bold mb-2 uppercase tracking-widest">${codeLang}</div>` : ""}
-            <pre><code>${codeContent}</code></pre>
+            <pre class="m-0"><code class="leading-relaxed">${codeContent}</code></pre>
           </div>`
         );
         codeBuffer = [];
@@ -84,21 +116,27 @@ function renderSimpleMarkdown(markdown: string) {
     }
 
     if (inCodeBlock) {
-      codeBuffer.push(line);
+      codeBuffer.push(rawLine);
       continue;
     }
 
     // Headings
     if (line.startsWith("### ")) {
-      htmlLines.push(`<h3 class="text-lg font-bold text-[#38314a] mt-6 mb-2">${line.slice(4)}</h3>`);
+      htmlLines.push(`<h3 class="text-base sm:text-lg font-bold text-[#38314a] mt-6 mb-2">${line.slice(4)}</h3>`);
       continue;
     }
     if (line.startsWith("## ")) {
-      htmlLines.push(`<h2 class="text-xl font-extrabold text-[#38314a] mt-8 mb-3 pb-1 border-b border-pink-100">${line.slice(3)}</h2>`);
+      htmlLines.push(`<h2 class="text-lg sm:text-xl font-extrabold text-[#38314a] mt-8 mb-3 pb-1 border-b border-pink-100">${line.slice(3)}</h2>`);
       continue;
     }
     if (line.startsWith("# ")) {
-      htmlLines.push(`<h1 class="text-2xl font-black text-[#38314a] mt-10 mb-4 pb-2 border-b-2 border-pink-200">${line.slice(2)}</h1>`);
+      htmlLines.push(`<h1 class="text-xl sm:text-2xl font-black text-[#38314a] mt-10 mb-4 pb-2 border-b-2 border-pink-200">${line.slice(2)}</h1>`);
+      continue;
+    }
+
+    // Horizontal Rule
+    if (line === "---" || line === "***" || line === "___") {
+      htmlLines.push(`<hr class="my-6 border-pink-200" />`);
       continue;
     }
 
@@ -116,13 +154,20 @@ function renderSimpleMarkdown(markdown: string) {
       continue;
     }
 
-    // Images
+    // Numbered lists
+    const numMatch = line.match(/^(\d+)\.\s+(.*)$/);
+    if (numMatch) {
+      htmlLines.push(`<li class="ml-5 list-decimal text-xs sm:text-sm text-[#4a3952] my-1"><span class="font-bold text-[#38314a]">${numMatch[1]}.</span> ${numMatch[2]}</li>`);
+      continue;
+    }
+
+    // Images: Fixed aspect ratio, zero distortion, never cut off at bottom, max height balanced
     const imgMatch = line.match(/^!\[(.*?)\]\((.*?)\)$/);
     if (imgMatch) {
       htmlLines.push(
-        `<div class="my-5 rounded-2xl overflow-hidden shadow-md border border-pink-100 max-w-2xl mx-auto">
-          <img src="${imgMatch[2]}" alt="${imgMatch[1]}" class="w-full object-cover" />
-          ${imgMatch[1] ? `<div class="text-center text-[11px] text-gray-500 py-1.5 bg-gray-50">${imgMatch[1]}</div>` : ""}
+        `<div class="my-5 rounded-2xl overflow-hidden shadow-sm border border-pink-100 max-w-xl mx-auto bg-gray-50 flex flex-col items-center p-2">
+          <img src="${imgMatch[2]}" alt="${imgMatch[1]}" class="max-h-[380px] w-auto max-w-full rounded-xl object-contain shadow-xs" />
+          ${imgMatch[1] ? `<div class="text-center text-[11px] text-gray-500 pt-2 font-medium">${imgMatch[1]}</div>` : ""}
         </div>`
       );
       continue;
@@ -290,33 +335,57 @@ export default function TechBlogPage() {
   const [isSaving, setIsSaving] = useState(false);
   const blogCoverFileRef = useRef<HTMLInputElement>(null);
 
-  const handleBlogCoverFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [editorSlug, setEditorSlug] = useState("");
+
+  const handleBlogCoverFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      if (evt.target?.result) {
-        setEditorCoverUrl(evt.target.result as string);
+    try {
+      // Compress with high fidelity (max 1600px, 90% quality)
+      const compressed = await compressImageFile(file, 1600, 0.90);
+      if (compressed) {
+        setEditorCoverUrl(compressed);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+    }
+    e.target.value = "";
   };
 
   useEffect(() => {
     loadBlogPosts();
   }, []);
 
-  // Sync route
+  // Sync route on direct entry or back/forward navigation
   useEffect(() => {
     if (blogDetailRoute?.slug && posts.length > 0) {
+      const targetSlug = decodeURIComponent(blogDetailRoute.slug);
       const match = posts.find(
-        (p) => p.slug === blogDetailRoute.slug || String(p.id) === blogDetailRoute.slug
+        (p) => p.slug === targetSlug || p.slug === blogDetailRoute.slug || String(p.id) === targetSlug
       );
       if (match) {
-        selectPostToRead(match);
+        selectPostToRead(match, false);
       }
     }
   }, [blogDetailRoute?.slug, posts]);
+
+  // Handle browser back/forward buttons smoothly
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      if (path === "/blog" || path === "/blog/") {
+        setReadingPost(null);
+      } else if (path.startsWith("/blog/")) {
+        const slug = decodeURIComponent(path.replace(/^\/blog\//, ""));
+        const match = posts.find((p) => p.slug === slug || String(p.id) === slug);
+        if (match) {
+          selectPostToRead(match, false);
+        }
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [posts]);
 
   const loadBlogPosts = async () => {
     setLoading(true);
@@ -335,8 +404,11 @@ export default function TechBlogPage() {
     }
   };
 
-  const selectPostToRead = async (post: Post) => {
+  const selectPostToRead = async (post: Post, updateHistory = true) => {
     setReadingPost(post);
+    if (updateHistory) {
+      window.history.pushState({}, "", `/blog/${encodeURIComponent(post.slug)}`);
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
     try {
       const list = await fetchComments(post.id);
@@ -344,6 +416,11 @@ export default function TechBlogPage() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const handleBackToList = () => {
+    setReadingPost(null);
+    window.history.pushState({}, "", "/blog");
   };
 
   // Reactions (Like & Dislike) with instant optimistic UI and persistent cache sync
@@ -540,6 +617,7 @@ export default function TechBlogPage() {
     }
     setEditingPostId(null);
     setEditorTitle("");
+    setEditorSlug("");
     setEditorCategory("개발");
     setEditorTags("");
     setEditorCoverUrl("");
@@ -556,6 +634,7 @@ export default function TechBlogPage() {
     const tags = getPostTags(post);
     setEditingPostId(post.id);
     setEditorTitle(post.title);
+    setEditorSlug(post.slug);
     setEditorCategory(tags[0] || "개발");
     setEditorTags(tags.slice(1).join(", "));
     setEditorCoverUrl(post.coverUrl);
@@ -583,6 +662,8 @@ export default function TechBlogPage() {
       ? `${editorCategory.trim()} · ${tagTokens.join(" · ")}`
       : editorCategory.trim();
 
+    const cleanSlug = (editorSlug.trim() || generateCleanSlug(editorTitle.trim())).replace(/\s+/g, "-");
+
     setIsSaving(true);
     try {
       if (editingPostId) {
@@ -591,6 +672,7 @@ export default function TechBlogPage() {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            slug: cleanSlug,
             title: editorTitle.trim(),
             content: editorContent.trim(),
             coverUrl: editorCoverUrl.trim() || "/assets/koharu-profile.png",
@@ -610,7 +692,7 @@ export default function TechBlogPage() {
       } else {
         // Create new post
         const newPost = await createNewPost({
-          slug: `blog-${Date.now()}`,
+          slug: cleanSlug,
           title: editorTitle.trim(),
           caption: editorContent.trim(),
           coverUrl: editorCoverUrl.trim() || "/assets/koharu-profile.png",
@@ -845,11 +927,11 @@ export default function TechBlogPage() {
 
             {/* Cover image if available */}
             {readingPost.coverUrl && readingPost.coverUrl !== "/assets/koharu-profile.png" && (
-              <div className="mb-8 rounded-2xl overflow-hidden shadow-lg border border-pink-100 max-h-[450px]">
+              <div className="mb-8 rounded-2xl overflow-hidden shadow-sm border border-pink-100 bg-gray-50/70 flex items-center justify-center max-h-[380px] p-2">
                 <img
                   src={readingPost.coverUrl}
                   alt={readingPost.title}
-                  className="w-full h-full object-cover"
+                  className="max-h-[360px] w-auto max-w-full rounded-xl object-contain shadow-xs"
                 />
               </div>
             )}
@@ -1140,7 +1222,7 @@ export default function TechBlogPage() {
 
                       {/* Excerpt */}
                       <p className="text-xs text-[#4a3952] line-clamp-3 leading-relaxed mb-3">
-                        {post.excerpt || post.caption || post.content}
+                        {cleanMarkdownForExcerpt(post.excerpt || post.caption || post.content)}
                       </p>
 
                       {/* Tags */}
@@ -1288,6 +1370,19 @@ export default function TechBlogPage() {
 
                 <div>
                   <label className="block text-xs font-bold text-[#38314a] mb-1">
+                    URL 슬러그 (선택사항, 비워둘 시 제목 기반 영문/숫자 슬러그 자동 생성)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="예: unreal5-combat-system"
+                    value={editorSlug}
+                    onChange={(e) => setEditorSlug(e.target.value)}
+                    className="w-full text-xs p-2.5 rounded-xl border border-purple-200 focus:outline-hidden font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#38314a] mb-1">
                     커버 이미지 (파일 관리자에서 선택)
                   </label>
                   <input
@@ -1316,8 +1411,8 @@ export default function TechBlogPage() {
                     )}
                   </div>
                   {editorCoverUrl && (
-                    <div className="mt-2.5 h-28 w-44 rounded-xl overflow-hidden border border-purple-200 shadow-xs">
-                      <img src={editorCoverUrl} alt="Cover Preview" className="w-full h-full object-cover" />
+                    <div className="mt-2.5 h-32 w-auto max-w-xs rounded-xl overflow-hidden border border-purple-200 shadow-xs bg-gray-50 flex items-center justify-center p-1">
+                      <img src={editorCoverUrl} alt="Cover Preview" className="max-h-28 w-auto max-w-full object-contain rounded-lg" />
                     </div>
                   )}
                 </div>
@@ -1328,13 +1423,17 @@ export default function TechBlogPage() {
                     마크다운 본문 내용 (#, ##, ```코드, &gt;인용구, - 리스트, **볼드**)
                   </label>
                   {isPreviewMode ? (
-                    <div className="flex-1 p-4 rounded-2xl bg-gray-50 border border-purple-200 overflow-y-auto max-h-[400px]">
-                      <div
-                        className="prose max-w-none text-[#38314a]"
-                        dangerouslySetInnerHTML={{
-                          __html: renderSimpleMarkdown(editorContent),
-                        }}
-                      />
+                    <div className="flex-1 p-5 rounded-2xl bg-white border border-purple-200 overflow-y-auto max-h-[420px] shadow-inner">
+                      {editorContent.trim() ? (
+                        <div
+                          className="blog-content-body prose max-w-none text-[#38314a]"
+                          dangerouslySetInnerHTML={{
+                            __html: renderSimpleMarkdown(editorContent),
+                          }}
+                        />
+                      ) : (
+                        <p className="text-xs text-gray-400">작성된 내용이 없습니다. 먼저 마크다운을 입력해주세요.</p>
+                      )}
                     </div>
                   ) : (
                     <textarea

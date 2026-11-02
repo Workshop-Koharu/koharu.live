@@ -57,7 +57,21 @@ function getCachedPosts(): Post[] {
 function saveCachedPosts(posts: Post[]) {
   try {
     localStorage.setItem(STORAGE_KEY_POSTS, JSON.stringify(posts));
-  } catch {}
+  } catch {
+    // Quota fallback: preserve newest posts with trimmed preview cache
+    try {
+      const trimmed = posts.slice(0, 20).map((p) => {
+        const parts = (p.coverUrl || "").split("|||");
+        const safeCover = parts.slice(0, 3).join("|||");
+        return {
+          ...p,
+          coverUrl: safeCover,
+          images: parts.slice(0, 3),
+        };
+      });
+      localStorage.setItem(STORAGE_KEY_POSTS, JSON.stringify(trimmed));
+    } catch {}
+  }
 }
 
 /**

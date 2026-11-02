@@ -96,11 +96,20 @@ export default function ProfilePage() {
     try {
       const storageKey = cleanHandle ? `koharu_profile_v3_${cleanHandle}` : "koharu_profile_settings";
       const saved = localStorage.getItem(storageKey);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const discordId = parsed.discordId === "1339604814631534667" ? "" : (parsed.discordId || "");
+        return {
+          ...DEFAULT_PROFILE_CONFIG,
+          ...parsed,
+          discordId,
+        };
+      }
 
       const generalSaved = localStorage.getItem("koharu_profile_settings");
       if (generalSaved) {
         const parsed = JSON.parse(generalSaved);
+        const discordId = parsed.discordId === "1339604814631534667" ? "" : (parsed.discordId || "");
         return {
           ...DEFAULT_PROFILE_CONFIG,
           name: parsed.name || user?.name || "",
@@ -108,6 +117,7 @@ export default function ProfilePage() {
           avatarUrl: parsed.avatarUrl || user?.avatar || "",
           githubUrl: parsed.githubUrl || "",
           websiteUrl: parsed.websiteUrl || "",
+          discordId,
           handle: parsed.handle || (user?.email ? user.email.split("@")[0] : ""),
         };
       }
@@ -117,6 +127,7 @@ export default function ProfilePage() {
       name: user?.name || "",
       avatarUrl: user?.avatar || "",
       handle: user?.email ? user.email.split("@")[0] : "",
+      discordId: "",
     };
   });
 
@@ -147,6 +158,7 @@ export default function ProfilePage() {
   const [editTagsInput, setEditTagsInput] = useState(profile.techTags.join(", "));
   const [editGithub, setEditGithub] = useState(profile.githubUrl || "");
   const [editWebsite, setEditWebsite] = useState(profile.websiteUrl || "");
+  const [editDiscordId, setEditDiscordId] = useState(profile.discordId || "");
 
   const [copiedLink, setCopiedLink] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -243,7 +255,7 @@ export default function ProfilePage() {
       techTags: parsedTags.length > 0 ? parsedTags : profile.techTags,
       githubUrl: editGithub.trim(),
       websiteUrl: editWebsite.trim(),
-      discordId: profile.discordId,
+      discordId: editDiscordId.trim(),
     };
 
     setProfile(updatedConfig);
@@ -688,14 +700,14 @@ export default function ProfilePage() {
         {/* ── Profile Customization Modal (Own Profile Only) ──────────────── */}
         {isCustomizeOpen && isOwnProfile && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in select-none"
             onClick={() => setIsCustomizeOpen(false)}
           >
             <div
-              className="bg-white rounded-[28px] max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-pink-100 max-h-[88vh] overflow-y-auto animate-in zoom-in-95 duration-150"
+              className="bg-white rounded-[28px] max-w-xl w-full p-5 sm:p-6 shadow-2xl border border-pink-100 max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between pb-3.5 border-b border-pink-100/70 mb-5">
+              <div className="flex items-center justify-between pb-3.5 border-b border-pink-100/70 mb-4 shrink-0">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center">
                     <Palette className="w-4 h-4" />
@@ -713,7 +725,7 @@ export default function ProfilePage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSaveCustomization} className="space-y-4">
+              <form onSubmit={handleSaveCustomization} className="flex-1 overflow-y-auto space-y-4 pr-1">
                 {/* 1. Theme Color Selector */}
                 <div className="p-3 rounded-2xl bg-pink-50/50 border border-pink-100/60">
                   <label className="block text-xs font-bold text-[#38314a] mb-2">테마 포인트 색상</label>
@@ -872,8 +884,8 @@ export default function ProfilePage() {
                   />
                 </div>
 
-                {/* 7. Links */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* 7. Links & Socials */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-[#38314a] mb-1">GitHub 링크 (선택)</label>
                     <input
@@ -894,10 +906,20 @@ export default function ProfilePage() {
                       className="w-full text-xs p-2.5 rounded-xl border border-gray-200 focus:outline-hidden focus:border-pink-500 focus:ring-2 focus:ring-pink-100 bg-white"
                     />
                   </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[#38314a] mb-1">Discord 사용자 ID (선택)</label>
+                    <input
+                      type="text"
+                      placeholder="비워두면 비활성화"
+                      value={editDiscordId}
+                      onChange={(e) => setEditDiscordId(e.target.value)}
+                      className="w-full text-xs p-2.5 rounded-xl border border-gray-200 focus:outline-hidden focus:border-pink-500 focus:ring-2 focus:ring-pink-100 bg-white font-mono"
+                    />
+                  </div>
                 </div>
 
                 {/* Modal Actions */}
-                <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-pink-100/70">
+                <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-pink-100/70 shrink-0">
                   <button
                     type="button"
                     onClick={() => setIsCustomizeOpen(false)}

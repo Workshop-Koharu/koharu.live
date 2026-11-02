@@ -124,7 +124,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen pb-24">
-      <SiteNav active="/profile" />
+      <SiteNav active="/" />
 
       <main className="page-container max-w-5xl mx-auto px-4 pt-4 sm:pt-6" id="main">
         {/* ── 1. Hero Section (Intro-us Style High-End Developer Banner) ── */}

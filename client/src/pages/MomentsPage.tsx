@@ -70,6 +70,7 @@ interface StoryItem {
   mediaUrls?: string[];
   caption?: string;
   createdAt: string;
+  isMe?: boolean;
 }
 
 interface ChatMessage {
@@ -278,11 +279,10 @@ export default function MomentsPage() {
       const saved = localStorage.getItem("koharu_profile_settings");
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Wipe any lingering legacy template text
+        // Wipe legacy mock placeholder text only if it strictly matches obsolete dummy template
         if (
-          parsed.bio?.includes("아이디어를 코드로") ||
-          parsed.bio?.includes("게임 프로그래머 · 인디 게임") ||
-          parsed.avatarUrl === "/assets/koharu-profile.png"
+          parsed.bio?.includes("아이디어를 코드로 실체화하는 중") &&
+          parsed.name?.includes("플레이어")
         ) {
           localStorage.removeItem("koharu_profile_settings");
           return DEFAULT_PROFILE_CONFIG;
@@ -319,9 +319,10 @@ export default function MomentsPage() {
   const [createCoverUrl, setCreateCoverUrl] = useState("");
   const [createImages, setCreateImages] = useState<string[]>([]);
   const [createCategory, setCreateCategory] = useState("일상");
-  const [selectedTags, setSelectedTags] = useState<string[]>(["일상"]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isStoryPaused, setIsStoryPaused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const storyFileInputRef = useRef<HTMLInputElement>(null);
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
@@ -414,6 +415,7 @@ export default function MomentsPage() {
     const totalMedia = mediaList.length;
 
     const interval = setInterval(() => {
+      if (isStoryPaused || storyReplyInput.trim().length > 0) return;
       setStoryProgress((prev) => {
         if (prev >= 100) {
           if (activeStoryMediaIndex < totalMedia - 1) {
@@ -662,7 +664,12 @@ export default function MomentsPage() {
     }
 
     const finalCover = createImages.join("|||");
-    const tagsToSave = selectedTags.length > 0 ? selectedTags.join(", ") : (customTagInput.trim() || "일상");
+    const extraCustom = customTagInput
+      .split(/[,#\s]+/)
+      .map((t) => t.trim().replace(/^#/, ""))
+      .filter(Boolean);
+    const combinedTags = Array.from(new Set([...selectedTags, ...extraCustom]));
+    const tagsToSave = combinedTags.length > 0 ? combinedTags.join(", ") : "일상";
 
     setIsSubmitting(true);
     try {
@@ -1488,12 +1495,13 @@ export default function MomentsPage() {
 
                   <div className="flex items-center gap-2">
                     {/* Story Delete Button (Only for own story or Admin) */}
-                    {(user && (
-                      stories[activeStoryIndex].authorOpenId === user.openId ||
-                      stories[activeStoryIndex].authorOpenId === user.id ||
-                      stories[activeStoryIndex].authorName === (profileConfig.name || user.name) ||
+                    {(Boolean(user) && (
+                      stories[activeStoryIndex].isMe ||
+                      stories[activeStoryIndex].authorOpenId === user?.openId ||
+                      stories[activeStoryIndex].authorOpenId === user?.id ||
+                      stories[activeStoryIndex].authorName === (profileConfig.name || user?.name) ||
                       stories[activeStoryIndex].authorName === "나" ||
-                      isAdmin
+                      Boolean(isAdmin)
                     )) && (
                       <button
                         onClick={(e) => {
@@ -1548,6 +1556,8 @@ export default function MomentsPage() {
                     type="text"
                     value={storyReplyInput}
                     onChange={(e) => setStoryReplyInput(e.target.value)}
+                    onFocus={() => setIsStoryPaused(true)}
+                    onBlur={() => !storyReplyInput.trim() && setIsStoryPaused(false)}
                     placeholder="스토리에 답장하기..."
                     className="flex-1 text-xs px-3.5 py-2.5 rounded-full bg-white/20 border border-white/40 text-white placeholder-white/70 focus:outline-hidden focus:border-white transition"
                     onClick={(e) => e.stopPropagation()}
