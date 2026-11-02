@@ -140,3 +140,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export function useAppAuth() {
   return useContext(AuthContext);
 }
+

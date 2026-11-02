@@ -1016,3 +1016,4 @@ export default function TechBlogPage() {
     </div>
   );
 }
+
