@@ -19,6 +19,8 @@ import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import SkillsPage from "./pages/SkillsPage";
 import UrlShortenerPage from "./pages/UrlShortenerPage";
+import ProfilePage from "./pages/ProfilePage";
+import PostDetailPage from "./pages/PostDetailPage";
 import CherryBlossomParticles from "./components/CherryBlossomParticles";
 import FloatingControls from "./components/FloatingControls";
 import { fetchShortUrl, incrementShortUrlClicks } from "./lib/remoteDb";
@@ -82,7 +84,7 @@ function HandleRoute({ params }: { params: { handle?: string } }) {
     decoded.toLowerCase() === "koharu.live" ||
     decoded.toLowerCase() === "koharu"
   ) {
-    return <MomentsPage />;
+    return <ProfilePage />;
   }
 
   // Known static/system routes that are not user profile handles
@@ -111,9 +113,9 @@ function HandleRoute({ params }: { params: { handle?: string } }) {
     "auth",
   ];
 
-  // If not a known static system page, route to Moments profile!
+  // If not a known static system page, route to ProfilePage!
   if (clean && !knownStaticPages.includes(clean)) {
-    return <MomentsPage />;
+    return <ProfilePage />;
   }
 
   return <NotFound />;
@@ -122,31 +124,34 @@ function HandleRoute({ params }: { params: { handle?: string } }) {
 function Router() {
   return (
     <Switch>
-      {/* Home / Profile */}
+      {/* Home */}
       <Route path="/" component={Home} />
-      <Route path="/profile" component={Home} />
       <Route path="/index.html" component={Home} />
-      <Route path="/profile.html" component={Home} />
 
-      {/* Koharu Moments (Formerly Instagram Feed) */}
+      {/* Dedicated Standalone Profile Pages */}
+      <Route path="/profile" component={ProfilePage} />
+      <Route path="/profile.html" component={ProfilePage} />
+      <Route path="/profile/:handle" component={ProfilePage} />
+      <Route path="/u/:handle" component={ProfilePage} />
+      <Route path="/user/:handle" component={ProfilePage} />
+
+      {/* Koharu Moments (Feed) */}
       <Route path="/moments" component={MomentsPage} />
       <Route path="/moments.html" component={MomentsPage} />
-      <Route path="/moments/:slug" component={MomentsPage} />
-      <Route path="/moments/:slug.html" component={MomentsPage} />
-
-      {/* Instagram Aliases (Backward-Compatibility) */}
       <Route path="/instagram" component={MomentsPage} />
       <Route path="/instagram.html" component={MomentsPage} />
-      <Route path="/instagram/:slug" component={MomentsPage} />
-      <Route path="/instagram/:slug.html" component={MomentsPage} />
-      <Route path="/instagram/post/:slug" component={MomentsPage} />
-      <Route path="/instagram/p/:slug" component={MomentsPage} />
-      <Route path="/post/:slug" component={MomentsPage} />
-      <Route path="/post/:slug.html" component={MomentsPage} />
-      <Route path="/posts/:slug" component={MomentsPage} />
-      <Route path="/posts/:slug.html" component={MomentsPage} />
-      <Route path="/p/:slug" component={MomentsPage} />
-      <Route path="/p/:slug.html" component={MomentsPage} />
+
+      {/* Dedicated Moment & Post Share Links */}
+      <Route path="/moment/:id" component={PostDetailPage} />
+      <Route path="/moment/:id.html" component={PostDetailPage} />
+      <Route path="/post/:slug" component={PostDetailPage} />
+      <Route path="/post/:slug.html" component={PostDetailPage} />
+      <Route path="/posts/:slug" component={PostDetailPage} />
+      <Route path="/posts/:slug.html" component={PostDetailPage} />
+      <Route path="/p/:slug" component={PostDetailPage} />
+      <Route path="/p/:slug.html" component={PostDetailPage} />
+      <Route path="/instagram/post/:slug" component={PostDetailPage} />
+      <Route path="/instagram/p/:slug" component={PostDetailPage} />
 
       {/* Dedicated Tech Blog */}
       <Route path="/blog" component={TechBlogPage} />
@@ -205,13 +210,11 @@ function Router() {
       <Route path="/s.html" component={UrlShortenerPage} />
 
       {/* Explicit Handle & Profile Routes */}
-      <Route path="/@koharu.live" component={MomentsPage} />
-      <Route path="/%40koharu.live" component={MomentsPage} />
-      <Route path="/koharu.live" component={MomentsPage} />
-      <Route path="/koharu" component={MomentsPage} />
-      <Route path="/u/:handle" component={MomentsPage} />
-      <Route path="/user/:handle" component={MomentsPage} />
-      <Route path="/profile/:handle" component={MomentsPage} />
+      <Route path="/@:handle" component={ProfilePage} />
+      <Route path="/@koharu.live" component={ProfilePage} />
+      <Route path="/%40koharu.live" component={ProfilePage} />
+      <Route path="/koharu.live" component={ProfilePage} />
+      <Route path="/koharu" component={ProfilePage} />
       <Route path="/:handle" component={HandleRoute} />
 
       {/* Fallback */}

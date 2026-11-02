@@ -20,6 +20,7 @@ interface AuthContextType {
   loginWithDiscord: (overrideUri?: string) => void;
   loginWithGoogle: () => void;
   renderGoogleButton: (element: HTMLElement) => void;
+  updateUserProfile: (updates: { name?: string; avatar?: string }) => void;
   logout: () => void;
   logoutDiscord: () => void;
   isAdmin: boolean;
@@ -47,6 +48,7 @@ const AuthContext = createContext<AuthContextType>({
   loginWithDiscord: () => {},
   loginWithGoogle: () => {},
   renderGoogleButton: () => {},
+  updateUserProfile: () => {},
   logout: () => {},
   logoutDiscord: () => {},
   isAdmin: false,
@@ -155,7 +157,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 1. Google User for Moments
       const storedUser = localStorage.getItem(STORAGE_KEY_USER);
       if (storedUser) {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        try {
+          const profileSettings = localStorage.getItem("koharu_profile_settings");
+          if (profileSettings) {
+            const parsedConfig = JSON.parse(profileSettings);
+            if (parsedConfig.avatarUrl) {
+              parsedUser.avatar = parsedConfig.avatarUrl;
+            }
+            if (parsedConfig.name) {
+              parsedUser.name = parsedConfig.name;
+            }
+          }
+        } catch {}
+        setUser(parsedUser);
       }
 
       // 2. Discord User for Blog Admin
@@ -232,6 +247,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUserProfile = (updates: { name?: string; avatar?: string }) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated: AppUser = {
+        ...prev,
+        name: updates.name?.trim() || prev.name,
+        avatar: updates.avatar?.trim() || prev.avatar,
+      };
+      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem(STORAGE_KEY_USER);
@@ -256,6 +284,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithDiscord,
         loginWithGoogle,
         renderGoogleButton,
+        updateUserProfile,
         logout,
         logoutDiscord,
         isAdmin: isDiscordAdmin,

@@ -206,7 +206,7 @@ function FeedPostCarousel({
 }
 
 export default function MomentsPage() {
-  const { user, loginWithGoogle, renderGoogleButton, logout, isAdmin } = useAppAuth();
+  const { user, loginWithGoogle, renderGoogleButton, logout, isAdmin, updateUserProfile } = useAppAuth();
   const [, postRoute] = useRoute<{ slug: string }>("/moments/:slug");
   const [, instaRoute] = useRoute<{ slug: string }>("/instagram/:slug");
 
@@ -450,6 +450,14 @@ export default function MomentsPage() {
     localStorage.setItem("koharu_setting_private", String(isPrivateAccount));
     localStorage.setItem("koharu_setting_notif", String(allowNotifications));
     localStorage.setItem("koharu_setting_status", String(showActiveStatus));
+
+    if (user) {
+      updateUserProfile({
+        name: updated.name,
+        avatar: updated.avatarUrl,
+      });
+    }
+
     setIsProfileSettingsOpen(false);
     toast.success("설정이 안전하게 저장되었습니다.");
   };
@@ -573,18 +581,12 @@ export default function MomentsPage() {
   // Create Post
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!createCaption.trim() && !createCoverUrl.trim()) {
-      toast.error("내용 또는 사진 링크를 입력해주세요!");
+    if (createImages.length === 0) {
+      toast.error("최소 1장의 사진/동영상을 파일 관리자에서 선택해주세요.");
       return;
     }
 
-    const finalCover =
-      createImages.length > 0 ? createImages.join("|||") : createCoverUrl.trim();
-
-    if (!finalCover) {
-      toast.error("최소 1장의 사진을 파일 관리자에서 선택하거나 입력해주세요.");
-      return;
-    }
+    const finalCover = createImages.join("|||");
 
     setIsSubmitting(true);
     try {
@@ -912,7 +914,7 @@ export default function MomentsPage() {
           >
             <div className="relative w-16 h-16 rounded-full p-0.5 border-2 border-dashed border-pink-400 flex items-center justify-center">
               <img
-                src={user.avatar || "/assets/koharu-profile.png"}
+                src={profileConfig.avatarUrl || user.avatar || "/assets/koharu-profile.png"}
                 alt={user.name}
                 className="w-14 h-14 rounded-full object-cover"
               />
@@ -988,7 +990,7 @@ export default function MomentsPage() {
                 <div className="flex items-center gap-2">
                   {/* Share Profile QR Button - Strictly links to user profile */}
                   <QRButton
-                    url={`${window.location.origin}/@${(profileConfig.name || user.name || "user").toLowerCase().replace(/\s+/g, "")}`}
+                    url={`${window.location.origin}/profile/${(profileConfig.name || user.name || "koharu_81s").toLowerCase().replace(/\s+/g, "")}`}
                     label={`${profileConfig.name || user.name} 프로필`}
                   />
 
@@ -1235,13 +1237,18 @@ export default function MomentsPage() {
                       </button>
                       <button
                         onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/moments?post=${post.slug}`);
-                          toast.success("링크가 복사되었습니다! 🔗");
+                          navigator.clipboard.writeText(`${window.location.origin}/moment/${post.id}`);
+                          toast.success("게시글 공유 링크가 복사되었습니다! 🔗");
                         }}
                         className="p-1 text-gray-600 hover:text-pink-600 transition cursor-pointer"
+                        title="게시글 공유 링크 복사"
                       >
                         <Share2 className="w-4 h-4" />
                       </button>
+                      <QRButton
+                        url={`${window.location.origin}/moment/${post.id}`}
+                        label={post.title || "모먼트 게시글"}
+                      />
                     </div>
                     <span className="text-xs font-bold text-[#38314a]">좋아요 {post.likesCount || 0}개</span>
                   </div>
@@ -1670,16 +1677,17 @@ export default function MomentsPage() {
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(
-                            `${window.location.origin}/moments?post=${selectedPost.slug}`
+                            `${window.location.origin}/moment/${selectedPost.id}`
                           );
-                          toast.success("링크가 복사되었습니다! 🔗");
+                          toast.success("게시글 공유 링크가 복사되었습니다! 🔗");
                         }}
                         className="p-1 text-gray-600 hover:text-pink-600 transition cursor-pointer"
+                        title="게시글 공유 링크 복사"
                       >
                         <Share2 className="w-4 h-4" />
                       </button>
                       <QRButton
-                        url={`${window.location.origin}/moments?post=${selectedPost.slug}`}
+                        url={`${window.location.origin}/moment/${selectedPost.id}`}
                         label={selectedPost.title}
                       />
                     </div>
@@ -1800,18 +1808,7 @@ export default function MomentsPage() {
                     </div>
                   )}
 
-                  {/* Alternative URL Input Fallback */}
-                  {createImages.length === 0 && (
-                    <div className="mt-2.5">
-                      <input
-                        type="url"
-                        placeholder="또는 이미지 URL 직접 입력 (https://...)"
-                        value={createCoverUrl}
-                        onChange={(e) => setCreateCoverUrl(e.target.value)}
-                        className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
-                      />
-                    </div>
-                  )}
+
                 </div>
 
                 <div>
@@ -2054,13 +2051,11 @@ export default function MomentsPage() {
                         </button>
                       )}
                     </div>
-                    <input
-                      type="url"
-                      value={editAvatar}
-                      onChange={(e) => setEditAvatar(e.target.value)}
-                      placeholder="또는 이미지 URL 직접 입력 (비워둘 시 기본 프로필)"
-                      className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
-                    />
+                    {editAvatar && (
+                      <div className="mt-2 w-16 h-16 rounded-full overflow-hidden border-2 border-pink-200">
+                        <img src={editAvatar} alt="Avatar Preview" className="w-full h-full object-cover" />
+                      </div>
+                    )}
                   </div>
 
                   <div>

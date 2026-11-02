@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useRoute } from "wouter";
 import {
   ArrowLeft,
@@ -11,6 +11,7 @@ import {
   Edit3,
   Eye,
   Heart,
+  ImageIcon,
   LogIn,
   LogOut,
   MessageCircle,
@@ -182,6 +183,19 @@ export default function TechBlogPage() {
   const [editorContent, setEditorContent] = useState("");
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const blogCoverFileRef = useRef<HTMLInputElement>(null);
+
+  const handleBlogCoverFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      if (evt.target?.result) {
+        setEditorCoverUrl(evt.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     loadBlogPosts();
@@ -1072,15 +1086,38 @@ export default function TechBlogPage() {
 
                 <div>
                   <label className="block text-xs font-bold text-[#38314a] mb-1">
-                    커버 이미지 URL (선택)
+                    커버 이미지 (파일 관리자에서 선택)
                   </label>
                   <input
-                    type="url"
-                    placeholder="https://images.unsplash.com/... 또는 이미지 URL"
-                    value={editorCoverUrl}
-                    onChange={(e) => setEditorCoverUrl(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-purple-200 focus:outline-hidden"
+                    type="file"
+                    ref={blogCoverFileRef}
+                    accept="image/*"
+                    onChange={handleBlogCoverFileSelect}
+                    className="hidden"
                   />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => blogCoverFileRef.current?.click()}
+                      className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-xs font-bold text-purple-700 transition cursor-pointer flex items-center gap-1.5"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" /> 파일 관리자에서 사진 선택
+                    </button>
+                    {editorCoverUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setEditorCoverUrl("")}
+                        className="text-xs text-red-500 hover:underline cursor-pointer"
+                      >
+                        사진 초기화
+                      </button>
+                    )}
+                  </div>
+                  {editorCoverUrl && (
+                    <div className="mt-2.5 h-28 w-44 rounded-xl overflow-hidden border border-purple-200 shadow-xs">
+                      <img src={editorCoverUrl} alt="Cover Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
                 </div>
 
                 {/* Markdown Editor or Preview */}

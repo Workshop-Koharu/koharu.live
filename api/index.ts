@@ -30,7 +30,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   );
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://discord.com https://*.neon.tech https://accounts.google.com https://*.googleapis.com wss: https:; frame-src 'self' https://accounts.google.com https://discord.com; base-uri 'self'; form-action 'self';"
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; media-src 'self' data: https: blob:; connect-src 'self' https://discord.com https://*.neon.tech https://accounts.google.com https://*.googleapis.com wss: https:; frame-src 'self' https://accounts.google.com https://discord.com; base-uri 'self'; form-action 'self';"
   );
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
   res.setHeader("Cross-Origin-Resource-Policy", "same-site");
