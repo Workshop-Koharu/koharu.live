@@ -3,9 +3,9 @@ import SiteNav from "@/components/SiteNav";
 
 const PARTNERS = [
   {
-    name: "선아",
+    name: "수아",
     tag: "Special Partner 🌸",
-    desc: "선아!!!!!",
+    desc: "수아!!!!!",
     avatar: "https://www.google.com/s2/favicons?domain=se01hxa.xyz&sz=128",
     link: "https://se01hxa.xyz/",
     badge: "Partner 💖",

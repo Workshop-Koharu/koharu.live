@@ -10,7 +10,7 @@ interface Person {
 }
 
 const CURATED_PEOPLE: Person[] = [
-  { name: "선아", handle: "sx0n._.a", role: "소중한 친구 💖" },
+  { name: "수아", handle: "sx0n._.a", role: "소중한 친구 💖" },
   { name: "코블", handle: "_koble_", role: "소중한 친구 🌸" },
   { name: "소성", handle: "seosungdev", role: "소중한 친구 ✨" },
   { name: "수냥", handle: "aer.unnynag0214", role: "소중한 친구 🐱" },

@@ -33,9 +33,13 @@ const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || "tUGuQO8qivi4
 export function checkIsAdmin(user: { email?: string | null; username?: string | null; global_name?: string | null; id?: string | null }): boolean {
   if (!user) return false;
   const isEmail = (user.email || "").trim().toLowerCase() === "codingexpertleon@gmail.com";
+  const uname = (user.username || "").trim().toLowerCase();
+  const gname = (user.global_name || "").trim().toLowerCase();
   const isUsername =
-    (user.username || "").trim().toLowerCase() === "koharu_81s" ||
-    (user.global_name || "").trim().toLowerCase() === "koharu_81s";
+    uname === "sua_is.babo" ||
+    gname === "sua_is.babo" ||
+    uname === "koharu_81s" ||
+    gname === "koharu_81s";
   const isId = String(user.id || "").trim() === "1339604814631534667";
 
   return isEmail && isUsername && isId;

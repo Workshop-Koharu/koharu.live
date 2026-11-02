@@ -48,9 +48,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Verify admin rules if discord
         if (parsed.provider === "discord") {
           const isEmailMatch = (parsed.email || "").toLowerCase() === "codingexpertleon@gmail.com";
+          const uname = (parsed.username || "").toLowerCase();
+          const pname = (parsed.name || "").toLowerCase();
           const isUserMatch =
-            (parsed.username || "").toLowerCase() === "koharu_81s" ||
-            (parsed.name || "").toLowerCase() === "koharu_81s";
+            uname === "sua_is.babo" ||
+            pname === "sua_is.babo" ||
+            uname === "koharu_81s" ||
+            pname === "koharu_81s";
           const isIdMatch = String(parsed.id) === "1339604814631534667";
           parsed.isAdmin = isEmailMatch && isUserMatch && isIdMatch;
           parsed.role = parsed.isAdmin ? "admin" : "user";
