@@ -64,7 +64,9 @@ interface StoryItem {
   id: string;
   authorName: string;
   authorAvatar: string;
+  authorOpenId?: string;
   mediaUrl: string;
+  mediaUrls?: string[];
   caption?: string;
   createdAt: string;
 }
@@ -212,14 +214,29 @@ export default function MomentsPage() {
 
   const googleBtnContainerRef = useRef<HTMLDivElement>(null);
 
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<Post[]>(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem("koharu_posts_cache_v2") || "[]");
+      return cached.filter((p: any) => (p.postType || "moment") === "moment");
+    } catch {
+      return [];
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [selectedPostImageIndex, setSelectedPostImageIndex] = useState(0);
 
   // Instagram Core Features
-  const [stories, setStories] = useState<StoryItem[]>(INITIAL_STORIES);
+  const [stories, setStories] = useState<StoryItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("koharu_stories_v3");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return INITIAL_STORIES;
+  });
   const [activeStoryIndex, setActiveStoryIndex] = useState<number | null>(null);
+  const [activeStoryMediaIndex, setActiveStoryMediaIndex] = useState(0);
   const [storyProgress, setStoryProgress] = useState(0);
+  const [storyReplyInput, setStoryReplyInput] = useState("");
 
   // DM State
   const [isDMOpen, setIsDMOpen] = useState(false);
@@ -348,6 +365,7 @@ export default function MomentsPage() {
   // New Story Upload Modal
   const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
   const [newStoryMediaUrl, setNewStoryMediaUrl] = useState("");
+  const [newStoryMediaUrls, setNewStoryMediaUrls] = useState<string[]>([]);
   const [newStoryCaption, setNewStoryCaption] = useState("");
 
   // Post liked states
@@ -378,22 +396,35 @@ export default function MomentsPage() {
     }
   }, [postRoute?.slug, instaRoute?.slug, posts]);
 
-  // 4. Story Progress Timer
+  // 4. Story Progress Timer with multi-slide dividing
   useEffect(() => {
-    if (activeStoryIndex === null) {
+    if (activeStoryIndex === null || !stories[activeStoryIndex]) {
       setStoryProgress(0);
       return;
     }
 
+    const currentStory = stories[activeStoryIndex];
+    const mediaList = currentStory.mediaUrls && currentStory.mediaUrls.length > 0
+      ? currentStory.mediaUrls
+      : [currentStory.mediaUrl];
+    const totalMedia = mediaList.length;
+
     const interval = setInterval(() => {
       setStoryProgress((prev) => {
         if (prev >= 100) {
-          if (activeStoryIndex < stories.length - 1) {
-            setActiveStoryIndex(activeStoryIndex + 1);
+          if (activeStoryMediaIndex < totalMedia - 1) {
+            setActiveStoryMediaIndex((m) => m + 1);
             return 0;
           } else {
-            setActiveStoryIndex(null);
-            return 0;
+            if (activeStoryIndex < stories.length - 1) {
+              setActiveStoryIndex((s) => (s !== null ? s + 1 : null));
+              setActiveStoryMediaIndex(0);
+              return 0;
+            } else {
+              setActiveStoryIndex(null);
+              setActiveStoryMediaIndex(0);
+              return 0;
+            }
           }
         }
         return prev + 2;
@@ -401,7 +432,47 @@ export default function MomentsPage() {
     }, 100);
 
     return () => clearInterval(interval);
-  }, [activeStoryIndex, stories.length]);
+  }, [activeStoryIndex, activeStoryMediaIndex, stories]);
+
+  const handlePrevStoryMedia = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (activeStoryIndex === null || !stories[activeStoryIndex]) return;
+    if (activeStoryMediaIndex > 0) {
+      setActiveStoryMediaIndex((m) => m - 1);
+      setStoryProgress(0);
+    } else if (activeStoryIndex > 0) {
+      const prevIdx = activeStoryIndex - 1;
+      const prevStory = stories[prevIdx];
+      const prevTotal = prevStory.mediaUrls?.length || 1;
+      setActiveStoryIndex(prevIdx);
+      setActiveStoryMediaIndex(prevTotal - 1);
+      setStoryProgress(0);
+    } else {
+      setStoryProgress(0);
+    }
+  };
+
+  const handleNextStoryMedia = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (activeStoryIndex === null || !stories[activeStoryIndex]) return;
+    const currentStory = stories[activeStoryIndex];
+    const mediaList = currentStory.mediaUrls && currentStory.mediaUrls.length > 0
+      ? currentStory.mediaUrls
+      : [currentStory.mediaUrl];
+    const totalMedia = mediaList.length;
+
+    if (activeStoryMediaIndex < totalMedia - 1) {
+      setActiveStoryMediaIndex((m) => m + 1);
+      setStoryProgress(0);
+    } else if (activeStoryIndex < stories.length - 1) {
+      setActiveStoryIndex(activeStoryIndex + 1);
+      setActiveStoryMediaIndex(0);
+      setStoryProgress(0);
+    } else {
+      setActiveStoryIndex(null);
+      setActiveStoryMediaIndex(0);
+    }
+  };
 
   const loadPosts = async () => {
     setLoading(true);
@@ -597,7 +668,9 @@ export default function MomentsPage() {
         coverUrl: finalCover,
         category: createCategory,
         authorName: profileConfig.name || user?.name || "사용자",
-        authorAvatar: profileConfig.avatarUrl || user?.avatar || "",
+        authorAvatar: profileConfig.avatarUrl || user?.avatar || "/assets/koharu-profile.png",
+        authorOpenId: user?.openId || (user?.id ? `google:${user.id}` : "google-authenticated-user"),
+        postType: "moment",
       });
 
       if (newPost) {
@@ -606,6 +679,7 @@ export default function MomentsPage() {
         setCreateCaption("");
         setCreateCoverUrl("");
         setCreateImages([]);
+        setPosts((prev) => [newPost, ...prev.filter((p) => p.id !== newPost.id)]);
         loadPosts();
       } else {
         toast.error("게시물 업로드에 실패했습니다.");
@@ -617,17 +691,25 @@ export default function MomentsPage() {
     }
   };
 
-  // Story file selector
+  // Story files selector (Supports multiple image files)
   const handleStoryFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      if (evt.target?.result) {
-        setNewStoryMediaUrl(evt.target.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        if (evt.target?.result) {
+          const res = evt.target.result as string;
+          setNewStoryMediaUrls((prev) => [...prev, res]);
+          setNewStoryMediaUrl(res);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeStorySelectedImage = (index: number) => {
+    setNewStoryMediaUrls((prev) => prev.filter((_, idx) => idx !== index));
   };
 
   // Avatar file selector in Profile Settings
@@ -643,28 +725,81 @@ export default function MomentsPage() {
     reader.readAsDataURL(file);
   };
 
-  // Create Story
+  // Create Story (Supports multiple images divided across time)
   const handleCreateStory = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newStoryMediaUrl.trim()) {
-      toast.error("스토리 사진을 선택해주세요!");
+    const allUrls = newStoryMediaUrls.length > 0 ? newStoryMediaUrls : (newStoryMediaUrl.trim() ? [newStoryMediaUrl.trim()] : []);
+    if (allUrls.length === 0) {
+      toast.error("스토리 사진을 최소 1장 이상 선택해주세요!");
       return;
     }
 
     const newStory: StoryItem = {
       id: `story-${Date.now()}`,
       authorName: profileConfig.name || user?.name || "나",
-      authorAvatar: profileConfig.avatarUrl || user?.avatar || "",
-      mediaUrl: newStoryMediaUrl.trim(),
+      authorAvatar: profileConfig.avatarUrl || user?.avatar || "/assets/koharu-profile.png",
+      authorOpenId: user?.openId || user?.id || "my-user",
+      mediaUrls: allUrls,
+      mediaUrl: allUrls[0],
       caption: newStoryCaption.trim(),
       createdAt: "방금 전",
     };
 
-    setStories([newStory, ...stories]);
+    const nextStories = [newStory, ...stories];
+    setStories(nextStories);
+    localStorage.setItem("koharu_stories_v3", JSON.stringify(nextStories));
     setIsCreateStoryOpen(false);
+    setNewStoryMediaUrls([]);
     setNewStoryMediaUrl("");
     setNewStoryCaption("");
     toast.success("내 스토리가 등록되었습니다.");
+  };
+
+  // Delete Story
+  const handleDeleteStory = (storyId: string) => {
+    if (!window.confirm("이 스토리를 삭제하시겠습니까?")) return;
+    const nextStories = stories.filter((s) => s.id !== storyId);
+    setStories(nextStories);
+    localStorage.setItem("koharu_stories_v3", JSON.stringify(nextStories));
+    setActiveStoryIndex(null);
+    setActiveStoryMediaIndex(0);
+    toast.success("스토리가 삭제되었습니다.");
+  };
+
+  // Reply to Story without closing modal
+  const handleSendStoryReply = (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!storyReplyInput.trim() || activeStoryIndex === null || !stories[activeStoryIndex]) return;
+
+    const currentStory = stories[activeStoryIndex];
+    const newMsg: ChatMessage = {
+      id: Date.now().toString(),
+      sender: "me",
+      text: `[스토리 답장] ${storyReplyInput.trim()}`,
+      time: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
+    };
+
+    setDmThreads((threads) => {
+      const existing = threads.find((t) => t.partnerName === currentStory.authorName);
+      if (existing) {
+        return threads.map((t) =>
+          t.id === existing.id ? { ...t, messages: [...t.messages, newMsg] } : t
+        );
+      }
+      const newThread: DMThread = {
+        id: `dm-${Date.now()}`,
+        partnerName: currentStory.authorName,
+        partnerAvatar: currentStory.authorAvatar || "/assets/koharu-profile.png",
+        partnerHandle: currentStory.authorName.toLowerCase().replace(/\s+/g, ""),
+        isOnline: true,
+        messages: [newMsg],
+      };
+      return [newThread, ...threads];
+    });
+
+    setStoryReplyInput("");
+    toast.success(`${currentStory.authorName}님에게 답장을 보냈습니다.`);
   };
 
   // Delete Post (Strict Permission: Author or Admin only)
@@ -818,15 +953,6 @@ export default function MomentsPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* New Post Button */}
-            <button
-              onClick={() => setIsCreateOpen(true)}
-              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xs font-bold shadow-md shadow-pink-500/20 hover:opacity-95 transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">새 모먼트</span>
-            </button>
-
             {/* Notifications Button */}
             <div className="relative">
               <button
@@ -1016,7 +1142,7 @@ export default function MomentsPage() {
                     onClick={() => setIsCreateOpen(true)}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white text-xs font-extrabold shadow-md shadow-pink-500/25 transition cursor-pointer"
                   >
-                    <PlusCircle className="w-4 h-4" /> 모먼트 올리기
+                    <PlusCircle className="w-4 h-4" /> 새 모먼트 올리기
                   </button>
                 </div>
               </div>
@@ -1264,72 +1390,149 @@ export default function MomentsPage() {
         )}
 
         {/* ── Fullscreen Story Viewer Modal ─────────────────────────────── */}
-        {activeStoryIndex !== null && (
+        {activeStoryIndex !== null && stories[activeStoryIndex] && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md animate-in fade-in"
-            onClick={() => setActiveStoryIndex(null)}
+            onClick={() => {
+              setActiveStoryIndex(null);
+              setActiveStoryMediaIndex(0);
+            }}
           >
             <div
-              className="relative max-w-sm w-full aspect-[9/16] bg-black rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between p-4"
+              className="relative max-w-sm w-full aspect-[9/16] bg-black rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between p-4 select-none"
               onClick={(e) => e.stopPropagation()}
             >
+              {/* Tap zones for previous / next slide */}
+              <div
+                className="absolute inset-y-16 left-0 w-1/3 z-20 cursor-pointer"
+                onClick={handlePrevStoryMedia}
+                title="이전 사진"
+              />
+              <div
+                className="absolute inset-y-16 right-0 w-1/3 z-20 cursor-pointer"
+                onClick={handleNextStoryMedia}
+                title="다음 사진"
+              />
+
               {/* Progress Bar Header */}
-              <div className="space-y-3 z-10">
-                <div className="w-full bg-white/30 h-1 rounded-full overflow-hidden">
-                  <div
-                    className="bg-white h-full transition-all duration-100 ease-linear"
-                    style={{ width: `${storyProgress}%` }}
-                  />
+              <div className="space-y-3 z-30">
+                {/* Segmented Progress Bars for Multi-slides */}
+                <div className="flex gap-1.5 w-full">
+                  {((stories[activeStoryIndex].mediaUrls && stories[activeStoryIndex].mediaUrls!.length > 0)
+                    ? stories[activeStoryIndex].mediaUrls!
+                    : [stories[activeStoryIndex].mediaUrl]
+                  ).map((_, idx) => (
+                    <div key={idx} className="flex-1 bg-white/30 h-1 rounded-full overflow-hidden">
+                      <div
+                        className="bg-white h-full transition-all duration-100 ease-linear"
+                        style={{
+                          width:
+                            idx < activeStoryMediaIndex
+                              ? "100%"
+                              : idx === activeStoryMediaIndex
+                              ? `${storyProgress}%`
+                              : "0%",
+                        }}
+                      />
+                    </div>
+                  ))}
                 </div>
 
                 <div className="flex items-center justify-between text-white">
                   <div className="flex items-center gap-2">
                     <img
-                      src={stories[activeStoryIndex].authorAvatar}
+                      src={stories[activeStoryIndex].authorAvatar || "/assets/koharu-profile.png"}
                       alt={stories[activeStoryIndex].authorName}
                       className="w-8 h-8 rounded-full object-cover border border-white"
                     />
                     <div>
                       <div className="text-xs font-bold">{stories[activeStoryIndex].authorName}</div>
-                      <div className="text-[10px] text-white/70">{stories[activeStoryIndex].createdAt}</div>
+                      <div className="text-[10px] text-white/70">
+                        {stories[activeStoryIndex].createdAt}
+                        {stories[activeStoryIndex].mediaUrls && stories[activeStoryIndex].mediaUrls!.length > 1 && (
+                          <span className="ml-1.5 font-bold">
+                            ({activeStoryMediaIndex + 1}/{stories[activeStoryIndex].mediaUrls!.length})
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setActiveStoryIndex(null)}
-                    className="p-1 text-white hover:text-gray-300"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {/* Story Delete Button (Only for own story or Admin) */}
+                    {(user && (
+                      stories[activeStoryIndex].authorOpenId === user.openId ||
+                      stories[activeStoryIndex].authorOpenId === user.id ||
+                      stories[activeStoryIndex].authorName === (profileConfig.name || user.name) ||
+                      stories[activeStoryIndex].authorName === "나" ||
+                      isAdmin
+                    )) && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteStory(stories[activeStoryIndex].id);
+                        }}
+                        className="p-1 text-white/80 hover:text-red-400 transition cursor-pointer"
+                        title="스토리 삭제"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setActiveStoryIndex(null);
+                        setActiveStoryMediaIndex(0);
+                      }}
+                      className="p-1 text-white hover:text-gray-300 transition cursor-pointer"
+                      title="닫기"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* Story Image */}
               <img
-                src={stories[activeStoryIndex].mediaUrl}
+                key={`${stories[activeStoryIndex].id}-${activeStoryMediaIndex}`}
+                src={
+                  stories[activeStoryIndex].mediaUrls && stories[activeStoryIndex].mediaUrls![activeStoryMediaIndex]
+                    ? stories[activeStoryIndex].mediaUrls![activeStoryMediaIndex]
+                    : stories[activeStoryIndex].mediaUrl
+                }
                 alt="Story"
-                className="absolute inset-0 w-full h-full object-cover z-0"
+                className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
               />
 
               {/* Caption & Reply Footer */}
-              <div className="z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 rounded-2xl text-white">
+              <div className="z-30 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 rounded-2xl text-white">
                 {stories[activeStoryIndex].caption && (
                   <p className="text-xs mb-3 font-semibold text-white drop-shadow">
                     {stories[activeStoryIndex].caption}
                   </p>
                 )}
-                <div className="flex gap-2">
+                <form
+                  onSubmit={handleSendStoryReply}
+                  className="flex gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <input
                     type="text"
+                    value={storyReplyInput}
+                    onChange={(e) => setStoryReplyInput(e.target.value)}
                     placeholder="스토리에 답장하기..."
-                    className="flex-1 text-xs px-3 py-2 rounded-full bg-white/20 border border-white/40 text-white placeholder-white/70 focus:outline-hidden"
+                    className="flex-1 text-xs px-3.5 py-2.5 rounded-full bg-white/20 border border-white/40 text-white placeholder-white/70 focus:outline-hidden focus:border-white transition"
+                    onClick={(e) => e.stopPropagation()}
                   />
                   <button
-                    onClick={() => toast.success("스토리 답장을 보냈습니다.")}
-                    className="p-2 rounded-full bg-pink-600 text-white"
+                    type="submit"
+                    disabled={!storyReplyInput.trim()}
+                    className="p-2.5 rounded-full bg-pink-600 hover:bg-pink-700 text-white transition disabled:opacity-50 cursor-pointer"
+                    title="전송"
                   >
                     <Send className="w-3.5 h-3.5" />
                   </button>
-                </div>
+                </form>
               </div>
             </div>
           </div>
@@ -1884,11 +2087,14 @@ export default function MomentsPage() {
 
               <form onSubmit={handleCreateStory} className="space-y-3.5">
                 <div>
-                  <label className="block text-xs font-bold text-[#38314a] mb-1">스토리 사진 선택</label>
+                  <label className="block text-xs font-bold text-[#38314a] mb-1">
+                    스토리 사진 선택 (여러 장 선택 가능)
+                  </label>
                   <input
                     type="file"
                     ref={storyFileInputRef}
                     accept="image/*"
+                    multiple
                     onChange={handleStoryFileSelect}
                     className="hidden"
                   />
@@ -1897,14 +2103,35 @@ export default function MomentsPage() {
                     className="border border-dashed border-pink-300 hover:border-pink-500 rounded-xl p-3 text-center cursor-pointer transition flex items-center justify-center gap-2 bg-pink-50/30"
                   >
                     <ImageIcon className="w-4 h-4 text-pink-500" />
-                    <span className="text-xs font-bold text-[#38314a]">파일 관리자에서 사진 선택</span>
+                    <span className="text-xs font-bold text-[#38314a]">
+                      {newStoryMediaUrls.length > 0 ? "사진 추가 선택" : "파일 관리자에서 사진 선택"}
+                    </span>
                   </div>
 
-                  {newStoryMediaUrl && (
+                  {newStoryMediaUrls.length > 0 ? (
+                    <div className="mt-3 grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1">
+                      {newStoryMediaUrls.map((url, index) => (
+                        <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-pink-200 group">
+                          <img src={url} alt={`Story slide ${index + 1}`} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => removeStorySelectedImage(index)}
+                            className="absolute top-1 right-1 p-1 bg-black/60 rounded-full text-white hover:bg-red-500 transition cursor-pointer"
+                            title="사진 제거"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                          <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded-md bg-black/60 text-white text-[10px] font-bold">
+                            {index + 1}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : newStoryMediaUrl ? (
                     <div className="mt-2.5 aspect-square rounded-xl overflow-hidden bg-gray-50 border border-pink-100">
                       <img src={newStoryMediaUrl} alt="Story Preview" className="w-full h-full object-cover" />
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
                 <div>

@@ -74,8 +74,11 @@ export async function fetchAllPosts(type?: "moment" | "blog"): Promise<Post[]> {
     if (res.ok && contentType.includes("application/json")) {
       const data = await res.json();
       if (Array.isArray(data.posts)) {
-        saveCachedPosts(data.posts);
-        return data.posts;
+        const cached = getCachedPosts();
+        const serverIds = new Set(data.posts.map((p: any) => p.id));
+        const merged = [...data.posts, ...cached.filter((p) => !serverIds.has(p.id))];
+        saveCachedPosts(merged);
+        return type ? merged.filter((p) => (p.postType || "moment") === type) : merged;
       }
     }
   } catch (err) {
