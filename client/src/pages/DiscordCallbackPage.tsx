@@ -30,8 +30,10 @@ export default function DiscordCallbackPage() {
 
     const exchangeCode = async () => {
       try {
-        const origin = window.location.origin;
-        const redirectUri = `${origin}/auth/discord/callback`;
+        let redirectUri = `${window.location.origin}/auth/discord/callback`;
+        if (!window.location.hostname.includes("localhost") && !window.location.hostname.includes("127.0.0.1")) {
+          redirectUri = "https://www.koharu.live/auth/discord/callback";
+        }
 
         const res = await fetch("/api/auth/discord/token", {
           method: "POST",
