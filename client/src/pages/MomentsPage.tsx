@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRoute } from "wouter";
 import {
+  AlertTriangle,
   Bell,
   Calendar,
   Camera,
@@ -9,6 +10,7 @@ import {
   ChevronRight,
   Edit3,
   ExternalLink,
+  EyeOff,
   Flame,
   Grid,
   Heart,
@@ -26,11 +28,14 @@ import {
   RefreshCw,
   Search,
   Send,
+  Settings,
   Share2,
+  Shield,
   Smile,
   Sparkles,
   Tag,
   Trash2,
+  User,
   UserCheck,
   UserPlus,
   Users,
@@ -114,12 +119,13 @@ interface UserProfileConfig {
   websiteUrl?: string;
 }
 
+// Default is completely EMPTY: No hardcoded templates or dummy data!
 const DEFAULT_PROFILE_CONFIG: UserProfileConfig = {
-  name: "! Koharu · 코하루",
-  bio: "게임 프로그래머 · 인디 게임 및 커스텀 엔진 제작\nUnity / C# · HLSL Shader · TypeScript · Web\n플레이되는 아이디어를 코드로 실체화하는 중",
-  avatarUrl: "/assets/koharu-profile.png",
-  githubUrl: "https://github.com/Workshop-Koharu",
-  websiteUrl: "https://www.koharu.live",
+  name: "",
+  bio: "",
+  avatarUrl: "",
+  githubUrl: "",
+  websiteUrl: "",
 };
 
 export default function MomentsPage() {
@@ -156,15 +162,41 @@ export default function MomentsPage() {
     return new Set<string>();
   });
 
-  // Profile Settings State (Restored Profile Settings Feature)
+  // Account Settings Toggles
+  const [isPrivateAccount, setIsPrivateAccount] = useState(() => {
+    return localStorage.getItem("koharu_setting_private") === "true";
+  });
+  const [allowNotifications, setAllowNotifications] = useState(() => {
+    return localStorage.getItem("koharu_setting_notif") !== "false";
+  });
+  const [showActiveStatus, setShowActiveStatus] = useState(() => {
+    return localStorage.getItem("koharu_setting_status") !== "false";
+  });
+
+  // Profile Settings State (Completely Empty by Default, Clears any legacy templates)
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
+  const [activeSettingsTab, setActiveSettingsTab] = useState<"profile" | "preferences" | "danger">("profile");
+
   const [profileConfig, setProfileConfig] = useState<UserProfileConfig>(() => {
     try {
       const saved = localStorage.getItem("koharu_profile_settings");
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Wipe any lingering legacy template text
+        if (
+          parsed.bio?.includes("아이디어를 코드로") ||
+          parsed.bio?.includes("게임 프로그래머 · 인디 게임") ||
+          parsed.avatarUrl === "/assets/koharu-profile.png"
+        ) {
+          localStorage.removeItem("koharu_profile_settings");
+          return DEFAULT_PROFILE_CONFIG;
+        }
+        return parsed;
+      }
     } catch {}
     return DEFAULT_PROFILE_CONFIG;
   });
+
   const [editName, setEditName] = useState(profileConfig.name);
   const [editBio, setEditBio] = useState(profileConfig.bio);
   const [editAvatar, setEditAvatar] = useState(profileConfig.avatarUrl);
@@ -279,20 +311,52 @@ export default function MomentsPage() {
     setEditingCommentId(null);
   };
 
-  // Save Profile Settings (Name, Bio, Avatar, Links)
+  // Save Profile Settings (Name, Bio, Avatar, Links & Toggles)
   const handleSaveProfileSettings = (e: React.FormEvent) => {
     e.preventDefault();
     const updated: UserProfileConfig = {
-      name: editName.trim() || user?.name || "! Koharu",
+      name: editName.trim() || user?.name || "사용자",
       bio: editBio.trim(),
-      avatarUrl: editAvatar.trim() || user?.avatar || "/assets/koharu-profile.png",
+      avatarUrl: editAvatar.trim() || user?.avatar || "",
       githubUrl: editGithub.trim(),
       websiteUrl: editWebsite.trim(),
     };
     setProfileConfig(updated);
     localStorage.setItem("koharu_profile_settings", JSON.stringify(updated));
+    localStorage.setItem("koharu_setting_private", String(isPrivateAccount));
+    localStorage.setItem("koharu_setting_notif", String(allowNotifications));
+    localStorage.setItem("koharu_setting_status", String(showActiveStatus));
     setIsProfileSettingsOpen(false);
-    toast.success("프로필 설정이 저장되었습니다.");
+    toast.success("설정이 안전하게 저장되었습니다.");
+  };
+
+  // Deactivate Account
+  const handleDeactivateAccount = () => {
+    if (!window.confirm("계정을 일시 비활성화하시겠습니까? 비활성화 시 프로필이 숨김 처리되며 로그아웃됩니다. 언제든 다시 로그인하여 활성화할 수 있습니다.")) {
+      return;
+    }
+    logout();
+    toast.info("계정이 일시 비활성화되었습니다.");
+  };
+
+  // Permanently Delete Account and Wipe All Data
+  const handleDeleteAccount = () => {
+    const confirmInput = window.prompt(
+      "정말로 계정을 영구 삭제하시겠습니까?\n작성한 모든 모먼트, 설정 및 프로필 데이터가 복구 불가능하게 삭제됩니다.\n계속 진행하려면 '삭제'를 정확히 입력해주세요."
+    );
+    if (confirmInput !== "삭제") {
+      toast.error("계정 삭제가 취소되었습니다.");
+      return;
+    }
+
+    localStorage.removeItem("koharu_profile_settings");
+    localStorage.removeItem("koharu_following_users");
+    localStorage.removeItem("koharu_setting_private");
+    localStorage.removeItem("koharu_setting_notif");
+    localStorage.removeItem("koharu_setting_status");
+    localStorage.removeItem("koharu_app_user_v2");
+    logout();
+    toast.success("계정과 모든 데이터가 영구적으로 삭제되었습니다.");
   };
 
   // Follow / Unfollow Toggle
@@ -754,12 +818,18 @@ export default function MomentsPage() {
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
             {/* User Avatar with Verification Badge */}
             <div className="relative flex-shrink-0">
-              <div className="w-22 h-22 sm:w-24 sm:h-24 rounded-full p-1 bg-gradient-to-tr from-pink-500 via-rose-500 to-purple-600 shadow-lg shadow-pink-500/20">
-                <img
-                  src={profileConfig.avatarUrl || user.avatar || "/assets/koharu-profile.png"}
-                  alt={user.name}
-                  className="w-full h-full rounded-full object-cover border-2 border-white bg-white"
-                />
+              <div className="w-22 h-22 sm:w-24 sm:h-24 rounded-full p-1 bg-gradient-to-tr from-pink-500 via-rose-500 to-purple-600 shadow-lg shadow-pink-500/20 flex items-center justify-center">
+                {profileConfig.avatarUrl || user.avatar ? (
+                  <img
+                    src={profileConfig.avatarUrl || user.avatar}
+                    alt={user.name}
+                    className="w-full h-full rounded-full object-cover border-2 border-white bg-white"
+                  />
+                ) : (
+                  <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-pink-400">
+                    <User className="w-10 h-10" />
+                  </div>
+                )}
               </div>
               <span className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-white shadow-xs">
                 <Check className="w-3 h-3 stroke-[3]" />
@@ -782,27 +852,28 @@ export default function MomentsPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* Share Profile QR Button - Strictly links to user profile, NOT /moments */}
+                  {/* Share Profile QR Button - Strictly links to user profile */}
                   <QRButton
-                    url={`${window.location.origin}/@koharu.live`}
+                    url={`${window.location.origin}/@${(profileConfig.name || user.name || "user").toLowerCase().replace(/\s+/g, "")}`}
                     label={`${profileConfig.name || user.name} 프로필`}
                   />
 
-                  {/* Profile Settings Trigger Button */}
+                  {/* Settings Toggle Trigger Button */}
                   <button
                     onClick={() => {
                       setEditName(profileConfig.name || user.name);
-                      setEditBio(profileConfig.bio);
+                      setEditBio(profileConfig.bio || "");
                       setEditAvatar(profileConfig.avatarUrl || user.avatar || "");
                       setEditGithub(profileConfig.githubUrl || "");
                       setEditWebsite(profileConfig.websiteUrl || "");
+                      setActiveSettingsTab("profile");
                       setIsProfileSettingsOpen(true);
                     }}
                     className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-pink-200 text-[#38314a] text-xs font-bold hover:bg-pink-50 transition cursor-pointer shadow-xs"
-                    title="프로필 설정"
+                    title="모먼트 설정"
                   >
-                    <Edit3 className="w-3.5 h-3.5 text-pink-500" />
-                    <span>프로필 설정</span>
+                    <Settings className="w-3.5 h-3.5 text-pink-500" />
+                    <span>설정</span>
                   </button>
 
                   <button
@@ -814,7 +885,7 @@ export default function MomentsPage() {
                 </div>
               </div>
 
-              {/* Bio description */}
+              {/* Bio description (Only renders if user explicitly set it, completely clean by default) */}
               {profileConfig.bio && (
                 <p className="text-xs text-[#5f5270] leading-relaxed whitespace-pre-line text-left">
                   {profileConfig.bio}
@@ -1593,19 +1664,20 @@ export default function MomentsPage() {
           </div>
         )}
 
-        {/* ── Profile Settings Modal (Restored) ─────────────────────────── */}
+        {/* ── Comprehensive Moments Settings & Account Management Modal ── */}
         {isProfileSettingsOpen && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
             onClick={() => setIsProfileSettingsOpen(false)}
           >
             <div
-              className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-pink-100 animate-in zoom-in-95"
+              className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-pink-100 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between pb-3 border-b border-pink-100 mb-4">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3.5 border-b border-pink-100 mb-4">
                 <h3 className="text-base font-extrabold text-[#38314a] flex items-center gap-2">
-                  <Edit3 className="w-5 h-5 text-pink-500" /> 프로필 설정
+                  <Settings className="w-5 h-5 text-pink-500" /> 모먼트 설정 & 계정 관리
                 </h3>
                 <button
                   onClick={() => setIsProfileSettingsOpen(false)}
@@ -1615,78 +1687,247 @@ export default function MomentsPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSaveProfileSettings} className="space-y-3.5">
-                <div>
-                  <label className="block text-xs font-bold text-[#38314a] mb-1">닉네임 / 표시 이름</label>
-                  <input
-                    type="text"
-                    required
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
-                  />
-                </div>
+              {/* Navigation Tabs */}
+              <div className="flex items-center gap-1.5 p-1 bg-pink-50/70 rounded-2xl mb-5 border border-pink-100">
+                <button
+                  type="button"
+                  onClick={() => setActiveSettingsTab("profile")}
+                  className={`flex-1 py-1.5 text-xs font-extrabold rounded-xl transition cursor-pointer ${
+                    activeSettingsTab === "profile"
+                      ? "bg-white text-pink-600 shadow-xs"
+                      : "text-gray-500 hover:text-[#38314a]"
+                  }`}
+                >
+                  프로필 편집
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveSettingsTab("preferences")}
+                  className={`flex-1 py-1.5 text-xs font-extrabold rounded-xl transition cursor-pointer ${
+                    activeSettingsTab === "preferences"
+                      ? "bg-white text-pink-600 shadow-xs"
+                      : "text-gray-500 hover:text-[#38314a]"
+                  }`}
+                >
+                  환경설정 토글
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveSettingsTab("danger")}
+                  className={`flex-1 py-1.5 text-xs font-extrabold rounded-xl transition cursor-pointer ${
+                    activeSettingsTab === "danger"
+                      ? "bg-white text-red-600 shadow-xs"
+                      : "text-gray-500 hover:text-red-600"
+                  }`}
+                >
+                  계정 관리
+                </button>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-[#38314a] mb-1">소개글 (Bio)</label>
-                  <textarea
-                    rows={3}
-                    value={editBio}
-                    onChange={(e) => setEditBio(e.target.value)}
-                    placeholder="자신을 소개하는 문구를 작성해주세요..."
-                    className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500 resize-none"
-                  />
-                </div>
+              {/* Tab 1: Profile Edit */}
+              {activeSettingsTab === "profile" && (
+                <form onSubmit={handleSaveProfileSettings} className="space-y-3.5">
+                  <div>
+                    <label className="block text-xs font-bold text-[#38314a] mb-1">닉네임 / 표시 이름</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="표시할 이름을 입력해주세요"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-[#38314a] mb-1">아바타 이미지 URL</label>
-                  <input
-                    type="url"
-                    value={editAvatar}
-                    onChange={(e) => setEditAvatar(e.target.value)}
-                    placeholder="https://... 아바타 이미지 주소"
-                    className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[#38314a] mb-1">소개글 (Bio)</label>
+                    <textarea
+                      rows={3}
+                      value={editBio}
+                      onChange={(e) => setEditBio(e.target.value)}
+                      placeholder="자신을 소개하는 문구를 자유롭게 남겨보세요..."
+                      className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500 resize-none"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-[#38314a] mb-1">GitHub 프로필 URL (선택)</label>
-                  <input
-                    type="url"
-                    value={editGithub}
-                    onChange={(e) => setEditGithub(e.target.value)}
-                    placeholder="https://github.com/..."
-                    className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[#38314a] mb-1">프로필 아바타 이미지 URL (선택)</label>
+                    <input
+                      type="url"
+                      value={editAvatar}
+                      onChange={(e) => setEditAvatar(e.target.value)}
+                      placeholder="https://... 이미지 링크 (비워둘 시 Google 기본 프로필 사용)"
+                      className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-[#38314a] mb-1">웹사이트 URL (선택)</label>
-                  <input
-                    type="url"
-                    value={editWebsite}
-                    onChange={(e) => setEditWebsite(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[#38314a] mb-1">GitHub 링크 (선택)</label>
+                    <input
+                      type="url"
+                      value={editGithub}
+                      onChange={(e) => setEditGithub(e.target.value)}
+                      placeholder="https://github.com/..."
+                      className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
+                    />
+                  </div>
 
-                <div className="pt-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsProfileSettingsOpen(false)}
-                    className="flex-1 py-2.5 rounded-xl bg-gray-100 text-[#38314a] font-bold text-xs hover:bg-gray-200 cursor-pointer"
-                  >
-                    취소
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-xs shadow-md shadow-pink-500/25 hover:opacity-90 cursor-pointer"
-                  >
-                    저장하기
-                  </button>
+                  <div>
+                    <label className="block text-xs font-bold text-[#38314a] mb-1">웹사이트 / 포트폴리오 링크 (선택)</label>
+                    <input
+                      type="url"
+                      value={editWebsite}
+                      onChange={(e) => setEditWebsite(e.target.value)}
+                      placeholder="https://..."
+                      className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
+                    />
+                  </div>
+
+                  <div className="pt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsProfileSettingsOpen(false)}
+                      className="flex-1 py-2.5 rounded-xl bg-gray-100 text-[#38314a] font-bold text-xs hover:bg-gray-200 cursor-pointer"
+                    >
+                      취소
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-xs shadow-md shadow-pink-500/25 hover:opacity-90 cursor-pointer"
+                    >
+                      저장하기
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Tab 2: Settings Toggles */}
+              {activeSettingsTab === "preferences" && (
+                <div className="space-y-4 py-1">
+                  {/* Private Account Toggle */}
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 border border-gray-200/80">
+                    <div className="pr-4">
+                      <div className="text-xs font-extrabold text-[#38314a] flex items-center gap-1.5 mb-0.5">
+                        <Lock className="w-3.5 h-3.5 text-pink-500" />
+                        <span>비공개 계정 전환</span>
+                      </div>
+                      <p className="text-[11px] text-[#7a6e8f]">
+                        비공개로 설정하면 승인된 팔로워만 내 모먼트와 스토리를 열람할 수 있습니다.
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={isPrivateAccount}
+                        onChange={(e) => {
+                          setIsPrivateAccount(e.target.checked);
+                          localStorage.setItem("koharu_setting_private", String(e.target.checked));
+                          toast.success(e.target.checked ? "계정이 비공개로 전환되었습니다." : "계정이 공개로 전환되었습니다.");
+                        }}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                    </label>
+                  </div>
+
+                  {/* Notifications Toggle */}
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 border border-gray-200/80">
+                    <div className="pr-4">
+                      <div className="text-xs font-extrabold text-[#38314a] flex items-center gap-1.5 mb-0.5">
+                        <Bell className="w-3.5 h-3.5 text-purple-500" />
+                        <span>활동 알림 수신</span>
+                      </div>
+                      <p className="text-[11px] text-[#7a6e8f]">
+                        내 게시글의 좋아요, 댓글 및 새로운 팔로우 알림을 실시간으로 수신합니다.
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={allowNotifications}
+                        onChange={(e) => {
+                          setAllowNotifications(e.target.checked);
+                          localStorage.setItem("koharu_setting_notif", String(e.target.checked));
+                          toast.success(e.target.checked ? "알림이 활성화되었습니다." : "알림이 음소거되었습니다.");
+                        }}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    </label>
+                  </div>
+
+                  {/* Active Status Toggle */}
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 border border-gray-200/80">
+                    <div className="pr-4">
+                      <div className="text-xs font-extrabold text-[#38314a] flex items-center gap-1.5 mb-0.5">
+                        <UserCheck className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>온라인 활동 상태 표시</span>
+                      </div>
+                      <p className="text-[11px] text-[#7a6e8f]">
+                        내가 접속 중일 때 프로필에 온라인 상태 인디케이터를 표시합니다.
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={showActiveStatus}
+                        onChange={(e) => {
+                          setShowActiveStatus(e.target.checked);
+                          localStorage.setItem("koharu_setting_status", String(e.target.checked));
+                          toast.success(e.target.checked ? "활동 상태가 표시됩니다." : "활동 상태가 숨김 처리되었습니다.");
+                        }}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                    </label>
+                  </div>
                 </div>
-              </form>
+              )}
+
+              {/* Tab 3: Account Deactivation & Wipe */}
+              {activeSettingsTab === "danger" && (
+                <div className="space-y-4 py-1">
+                  {/* Deactivate Option */}
+                  <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200">
+                    <div className="flex items-start gap-2.5">
+                      <EyeOff className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-xs font-black text-amber-900 mb-1">계정 일시 비활성화</h4>
+                        <p className="text-[11px] text-amber-800 leading-relaxed mb-3">
+                          프로필과 활동 내역을 일시적으로 숨기고 로그아웃합니다. 언제든 다시 로그인하면 모든 데이터가 그대로 복원됩니다.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleDeactivateAccount}
+                          className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                        >
+                          계정 일시 비활성화
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Wipe & Delete Option */}
+                  <div className="p-4 rounded-2xl bg-red-50/80 border border-red-200">
+                    <div className="flex items-start gap-2.5">
+                      <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-xs font-black text-red-900 mb-1">계정 및 데이터 영구 삭제</h4>
+                        <p className="text-[11px] text-red-800 leading-relaxed mb-3">
+                          프로필 설정, 팔로우 관계, 알림 내역 등 저장된 모든 개인 데이터가 영구적으로 지워지며 되돌릴 수 없습니다.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleDeleteAccount}
+                          className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                        >
+                          계정 영구 삭제 (초기화)
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

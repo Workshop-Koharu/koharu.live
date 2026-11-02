@@ -11,7 +11,7 @@
 
 :root {
   --radius: 1.25rem;
-  --font-diary: 'EF Diary', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-diary: -apple-system, BlinkMacSystemFont, "Pretendard", "Noto Sans KR", "Segoe UI", Roboto, sans-serif;
   
   /* Koharu Dreamy Palette */
   --ink: #38314a;
@@ -53,7 +53,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Ambient Dreamy Background with Floating Orbs & Twinkling Sparkles */
+/* Ambient Modern Studio Glass Background */
 .ambient-background {
   position: fixed;
   inset: 0;
@@ -61,18 +61,17 @@ body {
   pointer-events: none;
   overflow: hidden;
   background:
-    radial-gradient(ellipse at 10% 12%, rgba(201, 182, 255, 0.42) 0%, transparent 40%),
-    radial-gradient(ellipse at 92% 10%, rgba(165, 212, 245, 0.42) 0%, transparent 40%),
-    radial-gradient(ellipse at 80% 88%, rgba(242, 104, 156, 0.28) 0%, transparent 45%),
-    radial-gradient(ellipse at 20% 85%, rgba(225, 204, 250, 0.35) 0%, transparent 40%),
-    linear-gradient(180deg, #fff6fa 0%, #faebf5 50%, #f4e9f7 100%);
+    radial-gradient(ellipse at 15% 15%, rgba(99, 102, 241, 0.08) 0%, transparent 45%),
+    radial-gradient(ellipse at 85% 12%, rgba(236, 72, 153, 0.07) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 90%, rgba(56, 189, 248, 0.06) 0%, transparent 50%),
+    linear-gradient(180deg, #fafafa 0%, #f4f4f7 50%, #eff0f6 100%);
 }
 
 .ambient-background::before {
   content: "";
   position: absolute;
   inset: -20%;
-  background: radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.5) 0%, transparent 70%);
+  background: radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.7) 0%, transparent 70%);
   animation: atmosphere-flow 24s ease-in-out infinite alternate;
 }
 

@@ -510,7 +510,7 @@ export default function Home() {
                 <span>{copied ? "이메일 복사완료" : "admin@koharu.live 복사"}</span>
               </button>
               <a
-                href="https://discord.com"
+                href="https://discord.com/users/1339604814631534667"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-4 py-3 rounded-2xl bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition cursor-pointer flex items-center gap-1.5"

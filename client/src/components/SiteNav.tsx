@@ -37,11 +37,7 @@ export default function SiteNav({ active }: SiteNavProps) {
         }
       })
       .catch(() => {
-        setLatestPost({
-          title: "✨ 코하루 모먼트 & 개발 블로그에 오신 것을 환영합니다! 🌸",
-          slug: "",
-          category: "moments",
-        });
+        setLatestPost(null);
       });
   }, []);
 
@@ -175,19 +171,17 @@ export default function SiteNav({ active }: SiteNavProps) {
           </div>
         )}
 
-        {/* Floating Notice Bar */}
-        <Link
-          href={latestPost && latestPost.slug ? `/moments?post=${latestPost.slug}` : "/moments"}
-          className="notice-bar"
-        >
-          <span className="notice-badge">소식</span>
-          <span className="notice-text">
-            {latestPost ? latestPost.title : "새 소식을 확인해보세요 🌸"}
-          </span>
-          <span className="notice-more">
-            피드 보기 →
-          </span>
-        </Link>
+        {/* Floating Notice Bar (Only shown when an actual post exists) */}
+        {latestPost && latestPost.title && (
+          <Link
+            href={latestPost.slug ? `/moments?post=${latestPost.slug}` : "/moments"}
+            className="notice-bar"
+          >
+            <span className="notice-badge">소식</span>
+            <span className="notice-text">{latestPost.title}</span>
+            <span className="notice-more">피드 보기 →</span>
+          </Link>
+        )}
       </div>
 
       {/* Mobile Floating Bottom Bar for quick navigation on phone */}
