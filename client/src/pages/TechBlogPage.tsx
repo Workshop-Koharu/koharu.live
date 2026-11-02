@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRoute } from "wouter";
 import {
   ArrowLeft,
@@ -144,6 +144,15 @@ function renderSimpleMarkdown(markdown: string) {
   return htmlLines.join("\n");
 }
 
+// Helper to extract clean tags from a post's category or content
+export function getPostTags(post: Post): string[] {
+  const parts = (post.category || "")
+    .split(/[·,#\s]+/)
+    .map((s) => s.trim().replace(/^#/, ""))
+    .filter(Boolean);
+  return Array.from(new Set(parts));
+}
+
 export default function TechBlogPage() {
   const { discordUser, loginWithDiscord, logoutDiscord, isAdmin } = useAppAuth();
   const [, blogDetailRoute] = useRoute<{ slug: string }>("/blog/:slug");
@@ -151,6 +160,7 @@ export default function TechBlogPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("all");
+  const [activeTag, setActiveTag] = useState("all");
   const [readingPost, setReadingPost] = useState<Post | null>(null);
 
   // Comments for current reading post
@@ -167,6 +177,7 @@ export default function TechBlogPage() {
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
   const [editorTitle, setEditorTitle] = useState("");
   const [editorCategory, setEditorCategory] = useState("개발");
+  const [editorTags, setEditorTags] = useState("");
   const [editorCoverUrl, setEditorCoverUrl] = useState("");
   const [editorContent, setEditorContent] = useState("");
   const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -335,6 +346,7 @@ export default function TechBlogPage() {
     setEditingPostId(null);
     setEditorTitle("");
     setEditorCategory("개발");
+    setEditorTags("");
     setEditorCoverUrl("");
     setEditorContent("");
     setIsPreviewMode(false);
@@ -346,9 +358,11 @@ export default function TechBlogPage() {
       toast.error("블로그 글 수정은 관리자만 가능합니다.");
       return;
     }
+    const tags = getPostTags(post);
     setEditingPostId(post.id);
     setEditorTitle(post.title);
-    setEditorCategory(post.category);
+    setEditorCategory(tags[0] || "개발");
+    setEditorTags(tags.slice(1).join(", "));
     setEditorCoverUrl(post.coverUrl);
     setEditorContent(post.content);
     setIsPreviewMode(false);
@@ -366,6 +380,14 @@ export default function TechBlogPage() {
       return;
     }
 
+    const tagTokens = editorTags
+      .split(/[,#\s]+/)
+      .map((t) => t.trim().replace(/^#/, ""))
+      .filter(Boolean);
+    const finalCategory = tagTokens.length > 0
+      ? `${editorCategory.trim()} · ${tagTokens.join(" · ")}`
+      : editorCategory.trim();
+
     setIsSaving(true);
     try {
       if (editingPostId) {
@@ -377,7 +399,7 @@ export default function TechBlogPage() {
             title: editorTitle.trim(),
             content: editorContent.trim(),
             coverUrl: editorCoverUrl.trim() || "/assets/koharu-profile.png",
-            category: editorCategory,
+            category: finalCategory,
             isAdmin: true,
             userOpenId: discordUser?.id,
           }),
@@ -397,9 +419,10 @@ export default function TechBlogPage() {
           title: editorTitle.trim(),
           caption: editorContent.trim(),
           coverUrl: editorCoverUrl.trim() || "/assets/koharu-profile.png",
-          category: editorCategory,
+          category: finalCategory,
           authorName: discordUser?.name || "! Koharu",
           authorAvatar: discordUser?.avatar || "/assets/koharu-profile.png",
+          postType: "blog",
         });
 
         if (newPost) {
@@ -442,11 +465,28 @@ export default function TechBlogPage() {
     }
   };
 
-  const categories = Array.from(new Set(posts.map((p) => p.category))).filter(Boolean);
-  const filteredPosts =
-    activeCategory === "all"
-      ? posts
-      : posts.filter((p) => p.category === activeCategory);
+  const categories = Array.from(new Set(posts.map((p) => p.category.split(",")[0].trim()))).filter(Boolean);
+
+  const allUniqueTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    posts.forEach((p) => {
+      getPostTags(p).forEach((t) => tagSet.add(t));
+    });
+    return Array.from(tagSet);
+  }, [posts]);
+
+  const filteredPosts = useMemo(() => {
+    return posts.filter((p) => {
+      const matchCategory =
+        activeCategory === "all" ||
+        p.category.toLowerCase().includes(activeCategory.toLowerCase());
+      const postTags = getPostTags(p);
+      const matchTag =
+        activeTag === "all" ||
+        postTags.some((t) => t.toLowerCase() === activeTag.toLowerCase());
+      return matchCategory && matchTag;
+    });
+  }, [posts, activeCategory, activeTag]);
 
   return (
     <div className="min-h-screen pb-24">
@@ -465,7 +505,7 @@ export default function TechBlogPage() {
                 코하루 개발 블로그
               </h1>
               <p className="text-xs sm:text-sm text-[#7a6e8f] mt-1">
-                Unity 엔진, C#, 셰이더, 경량 스크립트 엔진과 인디 게임 개발 일지를 기록하는 전용 공간입니다.
+                언리얼 엔진 5, Unity, C++, C#, 셰이더, 게임플레이 아키텍처 및 게임 개발 일지를 기록하는 전용 공간입니다.
               </p>
             </div>
 
@@ -498,12 +538,21 @@ export default function TechBlogPage() {
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={loginWithDiscord}
-                  className="px-4 py-2 rounded-2xl bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-extrabold shadow-md shadow-indigo-500/25 transition cursor-pointer flex items-center gap-2"
-                >
-                  <LogIn className="w-4 h-4" /> Discord 로그인
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => loginWithDiscord()}
+                    className="px-4 py-2 rounded-2xl bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-extrabold shadow-md shadow-indigo-500/25 transition cursor-pointer flex items-center gap-2"
+                  >
+                    <LogIn className="w-4 h-4" /> Discord 로그인
+                  </button>
+                  <button
+                    onClick={() => loginWithDiscord("https://www.koharu.live/auth/discord/callback")}
+                    title="Discord 포털에 www.koharu.live 리디렉션이 등록된 경우 클릭"
+                    className="px-2.5 py-2 rounded-2xl bg-white text-purple-700 border border-purple-200 hover:bg-purple-50 text-[11px] font-bold transition cursor-pointer"
+                  >
+                    www 리디렉션
+                  </button>
+                </div>
               )}
 
               {/* Admin New Post Button (Only when Discord Admin) */}
@@ -560,10 +609,22 @@ export default function TechBlogPage() {
 
             {/* Post Header */}
             <div className="space-y-3 mb-8">
-              <div className="flex items-center gap-2 text-xs font-bold text-pink-600">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-pink-600">
                 <span className="px-2.5 py-0.5 rounded-full bg-pink-100 text-pink-700">
-                  #{readingPost.category}
+                  #{readingPost.category.split(",")[0].trim()}
                 </span>
+                {getPostTags(readingPost).map((tag) => (
+                  <span
+                    key={tag}
+                    onClick={() => {
+                      setActiveTag(tag);
+                      setReadingPost(null);
+                    }}
+                    className="px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700 cursor-pointer hover:bg-purple-200 transition"
+                  >
+                    #{tag}
+                  </span>
+                ))}
                 <span>·</span>
                 <span className="text-[#7a6e8f] flex items-center gap-1">
                   <Calendar className="w-3.5 h-3.5" />{" "}
@@ -775,7 +836,7 @@ export default function TechBlogPage() {
           /* ── Post List View ─────────────────────────────────────────── */
           <>
             {/* Category Filter Chips */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-6 scrollbar-none">
+            <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-2 scrollbar-none">
               <button
                 onClick={() => setActiveCategory("all")}
                 className={`px-4 py-1.5 rounded-full text-xs font-extrabold transition cursor-pointer whitespace-nowrap ${
@@ -784,7 +845,7 @@ export default function TechBlogPage() {
                     : "bg-white/80 text-[#7a6e8f] hover:bg-white border border-pink-100"
                 }`}
               >
-                전체 아티클 ({posts.length})
+                전체 카테고리 ({posts.length})
               </button>
               {categories.map((c) => (
                 <button
@@ -800,6 +861,38 @@ export default function TechBlogPage() {
                 </button>
               ))}
             </div>
+
+            {/* Tag Filter Chips */}
+            {allUniqueTags.length > 0 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-4 mb-6 scrollbar-none text-xs">
+                <span className="text-[#7a6e8f] text-[11px] font-bold shrink-0 mr-1 flex items-center gap-1">
+                  <Tag className="w-3.5 h-3.5" /> 태그:
+                </span>
+                <button
+                  onClick={() => setActiveTag("all")}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                    activeTag === "all"
+                      ? "bg-pink-600 text-white shadow-xs"
+                      : "bg-white/80 text-[#7a6e8f] hover:bg-pink-50 border border-purple-100"
+                  }`}
+                >
+                  전체 태그
+                </button>
+                {allUniqueTags.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setActiveTag(t)}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap ${
+                      activeTag === t
+                        ? "bg-pink-600 text-white shadow-xs"
+                        : "bg-white/80 text-[#7a6e8f] hover:bg-pink-50 border border-purple-100"
+                    }`}
+                  >
+                    #{t}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Posts Grid / Cards */}
             {loading ? (
@@ -839,7 +932,7 @@ export default function TechBlogPage() {
                       {/* Category & Date */}
                       <div className="flex items-center justify-between text-[11px] font-bold text-[#7a6e8f] mb-2.5">
                         <span className="px-2.5 py-0.5 rounded-full bg-purple-100/70 text-purple-700">
-                          #{post.category}
+                          #{post.category.split(",")[0].trim()}
                         </span>
                         <div className="flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5" />
@@ -853,9 +946,27 @@ export default function TechBlogPage() {
                       </h2>
 
                       {/* Excerpt */}
-                      <p className="text-xs text-[#4a3952] line-clamp-3 leading-relaxed mb-4">
+                      <p className="text-xs text-[#4a3952] line-clamp-3 leading-relaxed mb-3">
                         {post.excerpt || post.caption || post.content}
                       </p>
+
+                      {/* Tags */}
+                      {getPostTags(post).length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          {getPostTags(post).map((t) => (
+                            <span
+                              key={t}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveTag(t);
+                              }}
+                              className="text-[10px] px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-100 hover:bg-purple-100 font-semibold"
+                            >
+                              #{t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Footer Meta */}
@@ -944,12 +1055,25 @@ export default function TechBlogPage() {
                     <label className="block text-xs font-bold text-[#38314a] mb-1">카테고리</label>
                     <input
                       type="text"
-                      placeholder="예: Unity, C#, Shader"
+                      placeholder="예: Unreal, Unity, C#, Shader"
                       value={editorCategory}
                       onChange={(e) => setEditorCategory(e.target.value)}
                       className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-purple-200 focus:outline-hidden"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#38314a] mb-1">
+                    태그 (쉼표로 구분, 예: 언리얼5, C++, 셰이더, 게임플레이)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="언리얼5, C++, 셰이더, 렌더링, 최적화"
+                    value={editorTags}
+                    onChange={(e) => setEditorTags(e.target.value)}
+                    className="w-full text-xs p-2.5 rounded-xl border border-purple-200 focus:outline-hidden"
+                  />
                 </div>
 
                 <div>

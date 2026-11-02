@@ -44,34 +44,29 @@ interface ProjectItem {
 
 const FEATURED_PROJECTS: ProjectItem[] = [
   {
-    id: "lucent-engine",
-    title: "Lucent Shader & Custom Render Pipeline",
-    category: "Graphics & Rendering",
-    description:
-      "Unity URP Render Graph 기반 커스텀 툰 셰이더 및 포스트 프로세싱 볼륨 프레임워크. HLSL 수식 최적화와 림 라이트, 셀 셰이딩 파이프라인 구현.",
-    tags: ["Unity", "HLSL", "ShaderLab", "URP Render Graph"],
-    githubUrl: "https://github.com/Koharu81",
+    id: "workshop-koharu",
+    title: "Workshop-Koharu",
+    category: "AI Service & Tools",
+    description: "Mirae AI 생성형 AI 어시스턴트 연구 및 웹 서비스 개발",
+    tags: ["Workshop-Koharu", "Mirae AI", "생성형 AI", "Fullstack"],
+    liveUrl: "https://mirae.koharu.live/",
     accent: "from-pink-500 to-rose-500",
   },
   {
-    id: "project-stella",
-    title: "Project Stella: Responsive Combat System",
-    category: "Game Client & Physics",
-    description:
-      "상태 머신(FSM) 기반의 유려한 플레이어 액션 컨트롤러와 충돌 판정 히트박스 시스템. 넉백, 대시, 회피 및 콤보 캔슬 아키텍처 설계.",
-    tags: ["Unity 6", "C#", "FSM", "2D/3D Physics"],
-    githubUrl: "https://github.com/Koharu81",
+    id: "team-light",
+    title: "Team Light",
+    category: "Bot & Automation",
+    description: "보안 봇 서린 · AI 채팅 봇 아린 · 알림 봇 다모아 개발 및 운영",
+    tags: ["Team Light", "서린 (보안)", "아린 (AI 채팅)", "다모아 (알림)", "Discord Bot"],
+    liveUrl: "https://teamlight.pe.kr/",
     accent: "from-purple-500 to-indigo-500",
   },
   {
-    id: "koharu-live",
-    title: "Koharu Live Web Platform & Ecosystem",
-    category: "Fullstack Web & Tools",
-    description:
-      "React, TypeScript, Tailwind 기반의 게임 프로그래머 전용 포털. 마크다운 테크 블로그, 모먼트 피드, OAuth 인증 및 은행급 웹 보안 아키텍처 적용.",
-    tags: ["React", "TypeScript", "Tailwind", "PostgreSQL"],
-    githubUrl: "https://github.com/Koharu81/koharu.live",
-    liveUrl: "https://www.koharu.live",
+    id: "noctil-studio",
+    title: "NOCTIL Studio",
+    category: "Indie Game Studio",
+    description: "서브컬쳐 오픈월드 어반 판타지 게임 개발 중",
+    tags: ["NOCTIL Studio", "서브컬쳐", "오픈월드", "어반 판타지", "게임 개발"],
     accent: "from-sky-500 to-cyan-500",
   },
 ];
@@ -80,22 +75,36 @@ const SKILL_CATEGORIES = [
   {
     title: "Game Engine & Mechanics",
     icon: Gamepad2,
-    skills: ["Unity (2022 / 6)", "C# (.NET Core)", "FSM / State Pattern", "Physics 2D / 3D", "NavMesh AI", "Optimization"],
+    skills: [
+      "Unreal Engine 5 (C++ / Blueprint)",
+      "Unity (2022 / 6)",
+      "C# (.NET Core)",
+      "게임플레이 프레임워크",
+      "FSM / 상태 머신",
+      "2D / 3D 물리 시스템",
+      "성능 최적화",
+    ],
   },
   {
     title: "Graphics & Shaders",
     icon: Palette,
-    skills: ["HLSL / ShaderLab", "URP Render Graph", "Custom Lighting", "Post-Processing", "Toon / Stylized Shaders"],
+    skills: [
+      "HLSL / ShaderLab",
+      "Unreal 머티리얼 에디터 & 나이아가라",
+      "URP Render Graph",
+      "커스텀 라이팅 및 툰 셰이딩",
+      "포스트 프로세싱 볼륨",
+    ],
   },
   {
     title: "Web & Tooling",
     icon: Code2,
-    skills: ["TypeScript", "React", "Tailwind CSS", "Node.js", "PostgreSQL / Drizzle", "Vite / Modern Toolchains"],
+    skills: ["TypeScript", "React", "Tailwind CSS", "Node.js", "PostgreSQL / Drizzle", "Vite"],
   },
   {
     title: "Engineering Practices",
     icon: Wrench,
-    skills: ["Git & GitHub Workflow", "Clean Architecture", "REST API Integration", "Security Headers", "Vercel Deployment"],
+    skills: ["Git & GitHub 워크플로우", "모듈형 클린 아키텍처", "REST API", "보안 헤더 설정", "배포 자동화"],
   },
 ];
 
@@ -167,12 +176,12 @@ export default function Home() {
 
                 <p className="text-sm sm:text-base text-[#5f5270] leading-relaxed break-keep max-w-2xl font-medium">
                   플레이되는 아이디어를 정교한 코드로 실체화하는 게임 프로그래머입니다.
-                  Unity C#, 커스텀 HLSL 셰이더 및 렌더링 파이프라인, 그리고 안정적인 웹 풀스택 기술을 결합하여 완성도 높은 디지털 경험을 설계합니다.
+                  Unreal Engine 5, Unity C#, 커스텀 HLSL 셰이더 및 게임플레이 아키텍처, 그리고 안정적인 웹 풀스택 기술을 결합하여 플레이어블한 프로젝트를 개발합니다.
                 </p>
 
                 {/* Core Stack Pills */}
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 pt-1">
-                  {["Unity 6", "C# / .NET", "HLSL Shader", "URP Render Graph", "TypeScript", "React"].map((pill) => (
+                  {["Unreal Engine 5", "Unity 6", "C++ / C#", "HLSL Shader", "Gameplay Architecture", "TypeScript", "React"].map((pill) => (
                     <span
                       key={pill}
                       className="px-3 py-1 rounded-xl bg-white/90 border border-pink-200 text-[#38314a] text-xs font-bold shadow-xs hover:border-pink-300 transition"
@@ -271,28 +280,18 @@ export default function Home() {
                     ))}
                   </div>
 
-                  <div className="flex items-center gap-2 pt-3 border-t border-pink-100/60">
-                    {project.githubUrl && (
-                      <a
-                        href={project.githubUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-bold text-gray-700 hover:text-black transition"
-                      >
-                        <Github className="w-3.5 h-3.5" /> GitHub
-                      </a>
-                    )}
-                    {project.liveUrl && (
+                  {project.liveUrl && (
+                    <div className="flex items-center gap-2 pt-3 border-t border-pink-100/60">
                       <a
                         href={project.liveUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-xs font-bold text-pink-600 hover:text-pink-700 transition ml-auto"
                       >
-                        라이브 링크 <ArrowUpRight className="w-3.5 h-3.5" />
+                        공식 웹사이트 바로가기 <ArrowUpRight className="w-3.5 h-3.5" />
                       </a>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

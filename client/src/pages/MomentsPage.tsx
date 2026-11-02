@@ -774,47 +774,22 @@ export default function MomentsPage() {
         <SiteNav active="/moments" />
 
         <main className="page-container max-w-lg mx-auto px-4 pt-10 sm:pt-16 pb-20" id="main">
-          <div className="glass-card !p-8 sm:!p-12 text-center rounded-[36px] border border-pink-200/80 shadow-2xl relative overflow-hidden backdrop-blur-xl">
-            {/* Ambient Top Glow */}
-            <div className="w-48 h-48 bg-gradient-to-tr from-pink-400/20 to-purple-400/20 rounded-full blur-2xl absolute -top-12 -left-12 pointer-events-none" />
-            <div className="w-48 h-48 bg-gradient-to-tr from-amber-400/20 to-pink-400/20 rounded-full blur-2xl absolute -bottom-12 -right-12 pointer-events-none" />
-
-            {/* Instagram Style Gradient App Icon */}
-            <div className="relative w-24 h-24 mx-auto mb-6">
-              <div className="w-full h-full rounded-[28px] p-1 bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 shadow-xl shadow-pink-500/25 flex items-center justify-center text-white">
-                <Camera className="w-12 h-12" />
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center text-pink-500 border border-pink-100">
-                <Lock className="w-4 h-4" />
-              </div>
+          <div className="glass-card !p-8 sm:!p-12 text-center rounded-3xl border border-pink-200/80 shadow-xl bg-white/95">
+            {/* Instagram Style App Icon */}
+            <div className="w-20 h-20 mx-auto mb-6 rounded-3xl p-1 bg-gradient-to-tr from-rose-400 via-pink-500 to-purple-600 shadow-md flex items-center justify-center text-white">
+              <Camera className="w-10 h-10" />
             </div>
-
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-pink-100/80 text-pink-700 text-xs font-extrabold mb-3 border border-pink-200">
-              <Sparkles className="w-3.5 h-3.5 text-pink-500" />
-              Koharu Moments Authentication
-            </span>
 
             <h1 className="text-2xl sm:text-3xl font-black text-[#38314a] tracking-tight mb-2">
-              코하루 모먼트 로그인
+              코하루 모먼트
             </h1>
             <p className="text-xs sm:text-sm text-[#7a6e8f] leading-relaxed mb-8 max-w-xs mx-auto break-keep">
-              실제 인스타그램 피드, 스토리, 1:1 DM 및 친구 팔로우 기능을 이용하려면 <strong>Google 계정 로그인</strong>이 필수입니다.
+              피드, 스토리, 다이렉트 메시지(DM) 이용을 위해 Google 계정으로 로그인해주세요.
             </p>
 
-            {/* Official Google Login Button Container (Single Clean Button) */}
+            {/* Official Google Login Button Container */}
             <div className="flex flex-col items-center justify-center gap-3">
               <div ref={googleBtnContainerRef} className="flex justify-center w-full min-h-[44px]" />
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-pink-100 flex items-center justify-center gap-6 text-[11px] text-gray-500">
-              <span className="flex items-center gap-1.5 font-medium">
-                <Lock className="w-3.5 h-3.5 text-pink-500" />
-                SSL 보안 암호화
-              </span>
-              <span className="flex items-center gap-1.5 font-medium">
-                <Sparkles className="w-3.5 h-3.5 text-purple-500" />
-                안전한 OAuth 2.0
-              </span>
             </div>
           </div>
         </main>

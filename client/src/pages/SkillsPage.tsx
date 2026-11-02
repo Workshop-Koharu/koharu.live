@@ -23,6 +23,12 @@ const SKILL_CATEGORIES: SkillCategory[] = [
     desc: "플레이 가능한 상호작용과 게임플레이 시스템을 구현하는 핵심 스택입니다.",
     items: [
       {
+        name: "Unreal Engine 5",
+        icon: "https://cdn.simpleicons.org/unrealengine/E48CDC",
+        level: 82,
+        desc: "C++ 게임플레이 프레임워크, 블루프린트 및 나이아가라 이펙트",
+      },
+      {
         name: "Unity / C#",
         icon: "https://cdn.simpleicons.org/unity/E48CDC",
         level: 85,
@@ -88,7 +94,7 @@ const SKILL_CATEGORIES: SkillCategory[] = [
         name: "PostgreSQL & Drizzle",
         icon: "https://cdn.simpleicons.org/postgresql/E48CDC",
         level: 76,
-        desc: "Neon Serverless PostgreSQL 데이터베이스 연동",
+        desc: "관계형 데이터베이스 설계 및 ORM 데이터 모델링",
       },
     ],
   },

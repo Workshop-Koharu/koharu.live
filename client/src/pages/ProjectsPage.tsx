@@ -16,41 +16,40 @@ interface Project {
 
 const PROJECTS: Project[] = [
   {
-    title: "Mirae AI (미래 AI)",
-    category: "AI Service",
-    desc: "2026년 8월부터 개발을 시작한 코하루의 AI 어시스턴트 서비스입니다. 편리하고 자연스러운 대화와 다양한 기능들을 웹에서 바로 경험해보실 수 있어요 🌸",
-    tags: ["Mirae AI", "AI", "Assistant", "Web"],
-    image: "", // 배너 없음
+    title: "Workshop-Koharu",
+    category: "AI Service & Tools",
+    desc: "Mirae AI 생성형 AI 어시스턴트 연구 및 웹 서비스 개발",
+    tags: ["Workshop-Koharu", "Mirae AI", "생성형 AI", "Fullstack"],
+    image: "",
     demoUrl: "https://mirae.koharu.live/",
-    githubUrl: "", // 깃허브 명시 제거
+    githubUrl: "",
     icon: Bot,
     featured: true,
     actionLabel: "Mirae AI 바로가기",
   },
   {
-    title: "비공식 스텔라이브 팬서버",
-    category: "Community / Fan Discord",
-    desc: "7,000명 이상의 파스텔(팬)들이 함께 교류하고 소통하는 비공식 스텔라이브 팬 디스코드 커뮤니티 서버입니다 🌸 팬아트, 클립 공유, 정기 이벤트 등 활발한 커뮤니티 활동이 이루어지고 있습니다.",
-    tags: ["스텔라이브", "디스코드", "7000+ Members", "팬서버"],
-    image:
-      "https://cdn.discordapp.com/banners/1345272253977333801/1606fe46597a8c62fc6dd52ee4d64436.webp?size=480",
-    demoUrl: "https://discord.gg/pwRZEZ4zmt",
-    githubUrl: "",
-    icon: Gamepad2,
-    featured: true,
-    actionLabel: "디스코드 참여하기",
-  },
-  {
     title: "Team Light",
-    category: "Development Team & Web",
-    desc: "더 안전하고 편리한 디스코드 환경을 만들기 위해 봇 보호, 운영 자동화, 커뮤니티 관리 기능을 개발하고 연구하는 팀입니다 ✨",
-    tags: ["Team Light", "Discord", "Automation", "Web"],
-    image: "", // 배너 없음
+    category: "Bot & Automation",
+    desc: "보안 봇 서린 · AI 채팅 봇 아린 · 알림 봇 다모아 개발 및 운영",
+    tags: ["Team Light", "서린 (보안)", "아린 (AI 채팅)", "다모아 (알림)", "Discord Bot"],
+    image: "",
     demoUrl: "https://teamlight.pe.kr/",
     githubUrl: "",
     icon: Users,
     featured: true,
     actionLabel: "팀라이트 사이트",
+  },
+  {
+    title: "NOCTIL Studio",
+    category: "Indie Game Studio",
+    desc: "서브컬쳐 오픈월드 어반 판타지 게임 개발 중 (Unity / Unreal Engine 5)",
+    tags: ["NOCTIL Studio", "서브컬쳐", "오픈월드", "어반 판타지", "게임 개발"],
+    image: "",
+    demoUrl: "",
+    githubUrl: "",
+    icon: Gamepad2,
+    featured: true,
+    actionLabel: "개발 진행 중",
   },
 ];
 

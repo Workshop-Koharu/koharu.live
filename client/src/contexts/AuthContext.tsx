@@ -17,7 +17,7 @@ interface AuthContextType {
   user: AppUser | null;
   discordUser: AppUser | null;
   loading: boolean;
-  loginWithDiscord: () => void;
+  loginWithDiscord: (overrideUri?: string) => void;
   loginWithGoogle: () => void;
   renderGoogleButton: (element: HTMLElement) => void;
   logout: () => void;
@@ -183,17 +183,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // Discord Login
-  const loginWithDiscord = () => {
-    let redirectUri = `${window.location.origin}/auth/discord/callback`;
-    if (!window.location.hostname.includes("localhost") && !window.location.hostname.includes("127.0.0.1")) {
-      redirectUri = "https://www.koharu.live/auth/discord/callback";
+  const loginWithDiscord = (overrideUri?: string) => {
+    let redirectUri = overrideUri;
+    if (!redirectUri) {
+      redirectUri = `${window.location.origin}/auth/discord/callback`;
+      // Default to exact origin (e.g. https://www.koharu.live or https://koharu.live)
     }
 
-    const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(
+    sessionStorage.setItem("discord_redirect_uri", redirectUri);
+    sessionStorage.setItem("auth_return_url", window.location.pathname + window.location.search);
+
+    const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(
       redirectUri
     )}&response_type=code&scope=identify%20email`;
 
-    sessionStorage.setItem("auth_return_url", window.location.pathname + window.location.search);
     window.location.href = discordAuthUrl;
   };
 
