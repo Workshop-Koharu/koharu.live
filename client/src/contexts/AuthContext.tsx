@@ -203,8 +203,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithDiscord = (overrideUri?: string) => {
     let redirectUri = overrideUri;
     if (!redirectUri) {
-      redirectUri = `${window.location.origin}/auth/discord/callback`;
-      // Default to exact origin (e.g. https://www.koharu.live or https://koharu.live)
+      const hostname = typeof window !== "undefined" ? window.location.hostname : "";
+      if (hostname === "localhost" || hostname === "127.0.0.1") {
+        redirectUri = `${window.location.origin}/auth/discord/callback`;
+      } else {
+        // Strictly use registered Discord Developer Portal OAuth2 redirect URI
+        redirectUri = "https://koharu.live/auth/discord/callback";
+      }
     }
 
     sessionStorage.setItem("discord_redirect_uri", redirectUri);

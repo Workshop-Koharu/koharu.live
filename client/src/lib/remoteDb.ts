@@ -329,13 +329,48 @@ export async function togglePostReaction(
       body: JSON.stringify({ userIdentifier, reaction }),
     });
     if (res.ok) {
-      return await res.json();
+      const data = await res.json();
+      // Update local storage cache so page refresh immediately retains updated count
+      const cached = getCachedPosts();
+      const updated = cached.map((p) => {
+        if (p.id === postId) {
+          return {
+            ...p,
+            likesCount: data.likesCount,
+            dislikesCount: data.dislikesCount ?? p.dislikesCount,
+          };
+        }
+        return p;
+      });
+      saveCachedPosts(updated);
+      return data;
     }
   } catch (err) {
     console.error("[RemoteDB] Reaction error:", err);
   }
 
-  return { liked: false, disliked: false, likesCount: 0, dislikesCount: 0 };
+  // Graceful fallback: update cached post locally
+  const cached = getCachedPosts();
+  let fallbackLikes = 0;
+  let fallbackDislikes = 0;
+  let fallbackLiked = false;
+  const updated = cached.map((p) => {
+    if (p.id === postId) {
+      const curLikes = p.likesCount || 0;
+      fallbackLikes = reaction === "like" ? curLikes + 1 : curLikes;
+      fallbackDislikes = reaction === "dislike" ? (p.dislikesCount || 0) + 1 : (p.dislikesCount || 0);
+      fallbackLiked = reaction === "like";
+      return {
+        ...p,
+        likesCount: fallbackLikes,
+        dislikesCount: fallbackDislikes,
+      };
+    }
+    return p;
+  });
+  saveCachedPosts(updated);
+
+  return { liked: fallbackLiked, disliked: reaction === "dislike", likesCount: fallbackLikes, dislikesCount: fallbackDislikes };
 }
 
 // ─── Short URL Database Functions ─────────────────────────────────────────────

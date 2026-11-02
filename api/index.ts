@@ -83,12 +83,12 @@ function getDiscordComponentDataForPath(pathStr: string): DiscordComponentData {
 
   if (p.startsWith("/blog")) {
     return {
-      title: "코하루 기술 블로그",
-      description: "게임 클라이언트 및 개발 기술 아티클 공간입니다.",
-      accentColor: 0x5865f2, // Discord Blurple
-      thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
+      title: "코하루 개발 블로그",
+      description: "언리얼 엔진 5 · Unity · C++ · C# 게임플레이 아키텍처 및 개발 일지",
+      accentColor: 0x5865f2,
+      thumbnailUrl: "https://www.koharu.live/favicon.png",
       buttons: [
-        { label: "블로그 바로가기", url: "https://www.koharu.live/blog" },
+        { label: "블로그 최신 글 읽기", url: "https://www.koharu.live/blog" },
         { label: "메인 포트폴리오", url: "https://www.koharu.live/" },
       ],
     };
@@ -97,9 +97,9 @@ function getDiscordComponentDataForPath(pathStr: string): DiscordComponentData {
   if (p.startsWith("/moments") || p.startsWith("/instagram") || p.startsWith("/post")) {
     return {
       title: "코하루 모먼트",
-      description: "사진과 일상 소식을 기록하는 모먼트 피드입니다.",
+      description: "일상 사진과 개발 진척 소식을 공유하는 모먼트 피드",
       accentColor: 0x38bdf8,
-      thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
+      thumbnailUrl: "https://www.koharu.live/favicon.png",
       buttons: [
         { label: "모먼트 피드 열기", url: "https://www.koharu.live/moments" },
         { label: "메인 포트폴리오", url: "https://www.koharu.live/" },
@@ -109,13 +109,13 @@ function getDiscordComponentDataForPath(pathStr: string): DiscordComponentData {
 
   if (p.startsWith("/projects") || p.startsWith("/project")) {
     return {
-      title: "코하루 프로젝트 갤러리",
-      description: "게임 개발 및 소프트웨어 프로젝트 아카이브입니다.",
+      title: "코하루 프로젝트 쇼케이스",
+      description: "Workshop-Koharu (Mirae AI 생성형 AI) · Team Light (보안 봇 서린, AI 봇 아린, 알림 봇 다모아) · NOCTIL Studio (서브컬쳐 오픈월드 게임)",
       accentColor: 0x2563eb,
-      thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
+      thumbnailUrl: "https://www.koharu.live/favicon.png",
       buttons: [
-        { label: "프로젝트 목록", url: "https://www.koharu.live/projects" },
-        { label: "GitHub 저장소", url: "https://github.com/Koharu81" },
+        { label: "프로젝트 둘러보기", url: "https://www.koharu.live/projects" },
+        { label: "Team Light 바로가기", url: "https://teamlight.pe.kr/" },
       ],
     };
   }
@@ -123,9 +123,9 @@ function getDiscordComponentDataForPath(pathStr: string): DiscordComponentData {
   if (p.startsWith("/history")) {
     return {
       title: "개발 히스토리 & 마일스톤",
-      description: "코하루의 개발 발자취와 주요 마일스톤 기록입니다.",
+      description: "코하루의 개발 발자취와 주요 마일스톤 기록",
       accentColor: 0x6366f1,
-      thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
+      thumbnailUrl: "https://www.koharu.live/favicon.png",
       buttons: [
         { label: "히스토리 보기", url: "https://www.koharu.live/history" },
         { label: "메인 포트폴리오", url: "https://www.koharu.live/" },
@@ -136,9 +136,9 @@ function getDiscordComponentDataForPath(pathStr: string): DiscordComponentData {
   if (p.startsWith("/letter")) {
     return {
       title: "코하루의 편지",
-      description: "코하루가 전하는 메시지 공간입니다.",
+      description: "코하루가 전하는 메시지 공간",
       accentColor: 0xec4899,
-      thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
+      thumbnailUrl: "https://www.koharu.live/favicon.png",
       buttons: [
         { label: "편지함 열기", url: "https://www.koharu.live/letter" },
         { label: "메인 포트폴리오", url: "https://www.koharu.live/" },
@@ -149,11 +149,11 @@ function getDiscordComponentDataForPath(pathStr: string): DiscordComponentData {
   if (p.startsWith("/partners") || p.startsWith("/partner")) {
     return {
       title: "협업 파트너스",
-      description: "소중한 협력 파트너들을 소개합니다.",
+      description: "Sua (intro-us.xyz), Team Light, Workshop-Koharu 등 소중한 협력 파트너",
       accentColor: 0x3b82f6,
-      thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
+      thumbnailUrl: "https://www.koharu.live/favicon.png",
       buttons: [
-        { label: "파트너 목록", url: "https://www.koharu.live/partners" },
+        { label: "파트너스 페이지", url: "https://www.koharu.live/partners" },
         { label: "디스코드 프로필", url: "https://discord.com/users/1339604814631534667" },
       ],
     };
@@ -162,9 +162,9 @@ function getDiscordComponentDataForPath(pathStr: string): DiscordComponentData {
   if (p.startsWith("/person") || p.startsWith("/people")) {
     return {
       title: "지인 목록",
-      description: "함께하는 소중한 인연들의 공간입니다.",
+      description: "함께하는 소중한 인연들의 공간",
       accentColor: 0x06b6d4,
-      thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
+      thumbnailUrl: "https://www.koharu.live/favicon.png",
       buttons: [
         { label: "지인 목록 보기", url: "https://www.koharu.live/person" },
         { label: "메인 포트폴리오", url: "https://www.koharu.live/" },
@@ -174,10 +174,10 @@ function getDiscordComponentDataForPath(pathStr: string): DiscordComponentData {
 
   if (p.startsWith("/shorten") || p.startsWith("/s")) {
     return {
-      title: "URL 단축 서비스",
-      description: "웹 주소를 간결하게 줄여주는 단축기입니다.",
+      title: "URL 단축기",
+      description: "웹 주소를 간결하게 줄여주는 단축 URL 서비스",
       accentColor: 0x2563eb,
-      thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
+      thumbnailUrl: "https://www.koharu.live/favicon.png",
       buttons: [
         { label: "단축기 열기", url: "https://www.koharu.live/shorten" },
         { label: "메인 포트폴리오", url: "https://www.koharu.live/" },
@@ -187,13 +187,13 @@ function getDiscordComponentDataForPath(pathStr: string): DiscordComponentData {
 
   // Default Home
   return {
-    title: "! Koharu — Portfolio",
-    description: "게임 개발자 코하루의 개인 포트폴리오입니다.",
+    title: "! Koharu — 게임 클라이언트 프로그래머",
+    description: "언리얼 엔진 5 & Unity 개발자 · Workshop-Koharu (Mirae AI 생성형 AI) · Team Light (보안 봇 서린, AI 채팅 봇 아린, 알림 봇 다모아) · NOCTIL Studio (서브컬쳐 오픈월드 게임)",
     accentColor: 0x2563eb,
-    thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
+    thumbnailUrl: "https://www.koharu.live/favicon.png",
     buttons: [
       { label: "포트폴리오 열기", url: "https://www.koharu.live/" },
-      { label: "GitHub 둘러보기", url: "https://github.com/Koharu81" },
+      { label: "디스코드 프로필", url: "https://discord.com/users/1339604814631534667" },
     ],
   };
 }
@@ -206,8 +206,19 @@ function buildDiscordComponentV2Payload(data: DiscordComponentData) {
       accent_color: data.accentColor,
       components: [
         {
-          type: 10, // Text Display (Header & Body)
-          content: `### ${data.title}\n${data.description}`,
+          type: 9, // Section with accessory thumbnail
+          components: [
+            {
+              type: 10, // Text Display (Header & Body)
+              content: `### ${data.title}\n${data.description}`,
+            },
+          ],
+          accessory: {
+            type: 11, // Media / Thumbnail
+            media: {
+              url: data.thumbnailUrl,
+            },
+          },
         },
         {
           type: 14, // Separator / Divider Component

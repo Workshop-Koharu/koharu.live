@@ -3,17 +3,27 @@ const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || "tUGuQO8qivi4
 
 function checkIsAdmin(user: { email?: string | null; username?: string | null; global_name?: string | null; id?: string | null }): boolean {
   if (!user) return false;
-  const isEmail = (user.email || "").trim().toLowerCase() === "codingexpertleon@gmail.com";
+  const idStr = String(user.id || "").trim();
+  const emailStr = (user.email || "").trim().toLowerCase();
   const uname = (user.username || "").trim().toLowerCase();
   const gname = (user.global_name || "").trim().toLowerCase();
-  const isUsername =
+
+  // Primary check: Koharu's unique Discord snowflake ID
+  if (idStr === "1339604814631534667") return true;
+
+  // Secondary checks: verified admin email or explicit admin handles
+  if (emailStr === "codingexpertleon@gmail.com") return true;
+  if (
     uname.includes("sua_is.babo") ||
     gname.includes("sua_is.babo") ||
     uname.includes("koharu_81s") ||
-    gname.includes("koharu_81s");
-  const isId = String(user.id || "").trim() === "1339604814631534667";
+    gname.includes("koharu_81s") ||
+    uname.includes("koharu81")
+  ) {
+    return true;
+  }
 
-  return isId && (isEmail || isUsername);
+  return false;
 }
 
 export default async function handler(req: any, res: any) {
@@ -41,23 +51,31 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: "Authorization code is required" });
     }
 
-    const host = req.headers?.host || "www.koharu.live";
-    const finalRedirect = redirectUri || `https://${host}/auth/discord/callback`;
+    const host = req.headers?.host || "koharu.live";
+    const finalRedirect = redirectUri || (host.includes("localhost") ? `http://${host}/auth/discord/callback` : "https://koharu.live/auth/discord/callback");
 
-    // 1. Exchange code for access token with Discord OAuth2
-    const tokenParams = new URLSearchParams({
-      client_id: DISCORD_CLIENT_ID,
-      client_secret: DISCORD_CLIENT_SECRET,
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: finalRedirect,
-    });
+    // 1. Exchange code for access token with Discord OAuth2 (with auto fallback)
+    const tryExchange = async (rUri: string) => {
+      const tokenParams = new URLSearchParams({
+        client_id: DISCORD_CLIENT_ID,
+        client_secret: DISCORD_CLIENT_SECRET,
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: rUri,
+      });
+      return fetch("https://discord.com/api/oauth2/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: tokenParams,
+      });
+    };
 
-    const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: tokenParams,
-    });
+    let tokenRes = await tryExchange(finalRedirect);
+    if (!tokenRes.ok && finalRedirect.includes("www.koharu.live")) {
+      tokenRes = await tryExchange("https://koharu.live/auth/discord/callback");
+    } else if (!tokenRes.ok && !finalRedirect.includes("www.") && finalRedirect.includes("koharu.live")) {
+      tokenRes = await tryExchange("https://www.koharu.live/auth/discord/callback");
+    }
 
     if (!tokenRes.ok) {
       const errText = await tokenRes.text();

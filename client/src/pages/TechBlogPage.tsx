@@ -154,6 +154,86 @@ export function getPostTags(post: Post): string[] {
   return Array.from(new Set(parts));
 }
 
+const INITIAL_BLOG_POSTS: Post[] = [
+  {
+    id: 101,
+    slug: "unreal-engine-5-gameplay-architecture",
+    title: "언리얼 엔진 5 게임플레이 프레임워크 & C++ 상태 머신 설계",
+    caption: "언리얼 엔진 5 환경에서 반응성 높은 게임플레이를 구현하기 위한 C++ 컴포넌트 아키텍처와 상태 머신(FSM) 최적화 일지입니다.",
+    excerpt: "언리얼 엔진 5 환경에서 반응성 높은 게임플레이를 구현하기 위한 C++ 컴포넌트 아키텍처와 상태 머신(FSM) 최적화 일지입니다.",
+    content: `# 언리얼 엔진 5 게임플레이 프레임워크 & C++ 상태 머신 설계
+
+언리얼 엔진 5(UE5)에서 복잡한 액션 캐릭터를 개발할 때, 유연하고 확장 가능한 아키텍처는 필수적입니다.
+
+## 1. FSM (유한 상태 머신) 기반 컴포넌트 설계
+플레이어의 이동, 공격, 대시, 회피 등의 상태를 깔끔하게 분리하기 위해 C++ 인터페이스 기반의 상태 머신을 구축했습니다.
+
+\`\`\`cpp
+class ICharacterState {
+public:
+    virtual void Enter(ACharacter* Character) = 0;
+    virtual void Update(ACharacter* Character, float DeltaTime) = 0;
+    virtual void Exit(ACharacter* Character) = 0;
+};
+\`\`\`
+
+## 2. 히트박스와 판정 동기화
+- 몽타주 노티파이(AnimNotify)와 연동된 정밀 히트박스 판정
+- 콤보 캔슬 타이밍을 프레임 단위로 제어하여 타격감 극대화
+- 언리얼 엔진의 Gameplay Ability System(GAS) 연계 설계
+
+앞으로도 게임 클라이언트 개발 과정에서의 아키텍처 경험을 지속적으로 기록하겠습니다.`,
+    coverUrl: "",
+    category: "언리얼 엔진, C++, 아키텍처",
+    authorName: "코하루",
+    authorAvatar: "/assets/koharu-profile.png",
+    authorOpenId: "1339604814631534667",
+    createdAt: "2026-10-28T09:00:00.000Z",
+    postType: "blog",
+    likesCount: 5,
+    dislikesCount: 0,
+  },
+  {
+    id: 102,
+    slug: "team-light-bot-architecture-and-security",
+    title: "Team Light 보안 봇 서린 & AI 채팅 봇 아린 아키텍처 분석",
+    caption: "Team Light의 디스코드 봇 생태계(보안 봇 서린, AI 어시스턴트 아린, 알림 봇 다모아)의 이벤트 기반 서버 아키텍처와 보안 설계.",
+    excerpt: "Team Light의 디스코드 봇 생태계(보안 봇 서린, AI 어시스턴트 아린, 알림 봇 다모아)의 이벤트 기반 서버 아키텍처와 보안 설계.",
+    content: `# Team Light 보안 봇 서린 & AI 채팅 봇 아린 아키텍처 분석
+
+Team Light 팀에서 운영 중인 디스코드 봇들의 핵심 시스템과 아키텍처를 소개합니다.
+
+## 1. 봇 라인업
+- **서린 (Seorin)**: 서버 레이드 방지, 토큰 탈취 방어, 권한 관리 등 고신뢰 보안 봇
+- **아린 (Arin)**: 자연어 대화 및 질의응답을 지원하는 대화형 AI 봇
+- **다모아 (Damoa)**: 실시간 웹훅 연동 및 커뮤니티 알림 자동화 봇
+
+## 2. 분산 이벤트 파이프라인
+대량의 길드 이벤트를 병목 없이 처리하기 위해 샤딩(Sharding) 및 비동기 워커 큐를 도입하여 안정성을 확보했습니다.
+
+\`\`\`typescript
+// Event Dispatcher Pattern
+interface BotEventPayload<T> {
+  guildId: string;
+  eventType: string;
+  payload: T;
+  timestamp: number;
+}
+\`\`\`
+
+NOCTIL Studio와 Workshop-Koharu의 협업을 통해 더욱 진화된 기술적 솔루션을 만들어가고 있습니다.`,
+    coverUrl: "",
+    category: "디스코드봇, 백엔드, 아키텍처",
+    authorName: "코하루",
+    authorAvatar: "/assets/koharu-profile.png",
+    authorOpenId: "1339604814631534667",
+    createdAt: "2026-10-30T14:30:00.000Z",
+    postType: "blog",
+    likesCount: 8,
+    dislikesCount: 0,
+  },
+];
+
 export default function TechBlogPage() {
   const { discordUser, loginWithDiscord, logoutDiscord, isAdmin } = useAppAuth();
   const [, blogDetailRoute] = useRoute<{ slug: string }>("/blog/:slug");
@@ -188,8 +268,15 @@ export default function TechBlogPage() {
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState("");
 
-  // Reactions state for current user
-  const [userReactions, setUserReactions] = useState<Record<number, "like" | "dislike" | null>>({});
+  // Reactions state for current user (loaded from persistent storage)
+  const [userReactions, setUserReactions] = useState<Record<number, "like" | "dislike" | null>>(() => {
+    try {
+      const saved = localStorage.getItem("koharu_blog_reactions_v2");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
 
   // Editor Modal State (Admin only)
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -235,9 +322,14 @@ export default function TechBlogPage() {
     setLoading(true);
     try {
       const data = await fetchAllPosts("blog");
-      setPosts(data);
+      if (data && data.length > 0) {
+        setPosts(data);
+      } else {
+        setPosts(INITIAL_BLOG_POSTS);
+      }
     } catch (e) {
       console.error(e);
+      setPosts(INITIAL_BLOG_POSTS);
     } finally {
       setLoading(false);
     }
@@ -254,45 +346,116 @@ export default function TechBlogPage() {
     }
   };
 
-  // Reactions (Like & Dislike)
+  // Reactions (Like & Dislike) with instant optimistic UI and persistent cache sync
   const handleReaction = async (post: Post, type: "like" | "dislike") => {
-    if (!activeDiscordUser) {
-      toast.error("반응을 남기려면 Discord 로그인이 필요합니다.");
-      return;
+    // Persistent visitor or discord user identifier
+    let userIdentifier = activeDiscordUser?.id || activeDiscordUser?.email;
+    if (!userIdentifier) {
+      userIdentifier = localStorage.getItem("koharu_visitor_id") || "";
+      if (!userIdentifier) {
+        userIdentifier = "visitor_" + Math.random().toString(36).substring(2, 10);
+        localStorage.setItem("koharu_visitor_id", userIdentifier);
+      }
     }
 
-    const userIdentifier = activeDiscordUser.id || activeDiscordUser.email || "discord-guest";
+    const currentReaction = userReactions[post.id] || null;
+    let nextReaction: "like" | "dislike" | null = null;
+    let deltaLikes = 0;
+    let deltaDislikes = 0;
+
+    if (type === "like") {
+      if (currentReaction === "like") {
+        nextReaction = null;
+        deltaLikes = -1;
+      } else if (currentReaction === "dislike") {
+        nextReaction = "like";
+        deltaLikes = 1;
+        deltaDislikes = -1;
+      } else {
+        nextReaction = "like";
+        deltaLikes = 1;
+      }
+    } else {
+      if (currentReaction === "dislike") {
+        nextReaction = null;
+        deltaDislikes = -1;
+      } else if (currentReaction === "like") {
+        nextReaction = "dislike";
+        deltaDislikes = 1;
+        deltaLikes = -1;
+      } else {
+        nextReaction = "dislike";
+        deltaDislikes = 1;
+      }
+    }
+
+    const optimisticLikes = Math.max(0, (post.likesCount || 0) + deltaLikes);
+    const optimisticDislikes = Math.max(0, (post.dislikesCount || 0) + deltaDislikes);
+
+    // 1. Instant optimistic state update
+    const updatedReactions = { ...userReactions, [post.id]: nextReaction };
+    setUserReactions(updatedReactions);
+    try {
+      localStorage.setItem("koharu_blog_reactions_v2", JSON.stringify(updatedReactions));
+    } catch {}
+
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === post.id
+          ? { ...p, likesCount: optimisticLikes, dislikesCount: optimisticDislikes }
+          : p
+      )
+    );
+
+    if (readingPost && readingPost.id === post.id) {
+      setReadingPost((prev) =>
+        prev
+          ? {
+              ...prev,
+              likesCount: optimisticLikes,
+              dislikesCount: optimisticDislikes,
+            }
+          : null
+      );
+    }
+
+    if (nextReaction === "like") {
+      toast.success("좋아요를 눌렀습니다.");
+    } else if (nextReaction === "dislike") {
+      toast.info("싫어요를 표시했습니다.");
+    } else {
+      toast.info("반응을 취소했습니다.");
+    }
+
+    // 2. Sync with server in background and reconcile
     try {
       const result = await togglePostReaction(post.id, userIdentifier, type);
-      setUserReactions((prev) => ({
-        ...prev,
-        [post.id]: result.liked ? "like" : result.disliked ? "dislike" : null,
-      }));
-
-      // Update post counts
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === post.id
-            ? { ...p, likesCount: result.likesCount, dislikesCount: result.dislikesCount }
-            : p
-        )
-      );
-
-      if (readingPost && readingPost.id === post.id) {
-        setReadingPost((prev) =>
-          prev
-            ? {
-                ...prev,
-                likesCount: result.likesCount,
-                dislikesCount: result.dislikesCount,
-              }
-            : null
+      if (result && typeof result.likesCount === "number") {
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === post.id
+              ? {
+                  ...p,
+                  likesCount: result.likesCount,
+                  dislikesCount: result.dislikesCount ?? optimisticDislikes,
+                }
+              : p
+          )
         );
+        if (readingPost && readingPost.id === post.id) {
+          setReadingPost((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  likesCount: result.likesCount,
+                  dislikesCount: result.dislikesCount ?? optimisticDislikes,
+                }
+              : null
+          );
+        }
       }
-
-      toast.success(type === "like" ? "좋아요를 눌렀습니다." : "싫어요를 표시했습니다.");
-    } catch {
-      toast.error("반응 처리에 실패했습니다.");
+    } catch (err) {
+      console.warn("Server reaction sync warning:", err);
     }
   };
 
@@ -715,7 +878,9 @@ export default function TechBlogPage() {
                       : "bg-white text-gray-700 border-pink-200 hover:bg-pink-50"
                   }`}
                 >
-                  <ThumbsUp className="w-4 h-4" />
+                  <ThumbsUp
+                    className={`w-4 h-4 ${userReactions[readingPost.id] === "like" ? "fill-white" : ""}`}
+                  />
                   <span>좋아요 {readingPost.likesCount || 0}</span>
                 </button>
 
@@ -727,7 +892,9 @@ export default function TechBlogPage() {
                       : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                   }`}
                 >
-                  <ThumbsDown className="w-4 h-4" />
+                  <ThumbsDown
+                    className={`w-4 h-4 ${userReactions[readingPost.id] === "dislike" ? "fill-white" : ""}`}
+                  />
                   <span>싫어요 {readingPost.dislikesCount || 0}</span>
                 </button>
               </div>
@@ -1007,9 +1174,26 @@ export default function TechBlogPage() {
                       </div>
 
                       <div className="flex items-center gap-3 font-semibold">
-                        <span className="flex items-center gap-1 text-pink-600">
-                          <ThumbsUp className="w-3.5 h-3.5" /> {post.likesCount || 0}
-                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReaction(post, "like");
+                          }}
+                          className={`flex items-center gap-1 transition-colors px-2 py-1 rounded-lg cursor-pointer ${
+                            userReactions[post.id] === "like"
+                              ? "bg-pink-100 text-pink-600 font-bold"
+                              : "text-gray-500 hover:text-pink-600 hover:bg-pink-50"
+                          }`}
+                          title="좋아요"
+                        >
+                          <ThumbsUp
+                            className={`w-3.5 h-3.5 ${
+                              userReactions[post.id] === "like" ? "fill-pink-500 text-pink-500" : ""
+                            }`}
+                          />{" "}
+                          {post.likesCount || 0}
+                        </button>
                         <span className="text-purple-600 font-bold group-hover:translate-x-0.5 transition-transform">
                           읽기 →
                         </span>

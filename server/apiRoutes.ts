@@ -34,17 +34,27 @@ const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || "tUGuQO8qivi4
 // Helper: Check if user matches admin credentials
 export function checkIsAdmin(user: { email?: string | null; username?: string | null; global_name?: string | null; id?: string | null }): boolean {
   if (!user) return false;
-  const isEmail = (user.email || "").trim().toLowerCase() === "codingexpertleon@gmail.com";
+  const idStr = String(user.id || "").trim();
+  const emailStr = (user.email || "").trim().toLowerCase();
   const uname = (user.username || "").trim().toLowerCase();
   const gname = (user.global_name || "").trim().toLowerCase();
-  const isUsername =
+
+  // Primary check: Koharu's unique Discord snowflake ID
+  if (idStr === "1339604814631534667") return true;
+
+  // Secondary checks: verified admin email or explicit admin handles
+  if (emailStr === "codingexpertleon@gmail.com") return true;
+  if (
     uname.includes("sua_is.babo") ||
     gname.includes("sua_is.babo") ||
     uname.includes("koharu_81s") ||
-    gname.includes("koharu_81s");
-  const isId = String(user.id || "").trim() === "1339604814631534667";
+    gname.includes("koharu_81s") ||
+    uname.includes("koharu81")
+  ) {
+    return true;
+  }
 
-  return isId && (isEmail || isUsername);
+  return false;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -77,20 +87,71 @@ apiRouter.get("/auth/discord/url", (req: Request, res: Response) => {
   res.json({ url, redirectUri });
 });
 
-// Discord Component v2 Embed JSON with Favicon Thumbnail
-apiRouter.get("/discord/embed.json", (_req: Request, res: Response) => {
-  res.setHeader("Content-Type", "application/vnd.discord.component-embed+json");
+// Discord Component v2 Embed JSON with Favicon Thumbnail and Multi-route dynamic support
+apiRouter.get("/discord/embed.json", (req: Request, res: Response) => {
+  const reqUrl = (req.query.url as string) || (req.query.path as string) || "/";
+  let pathname = "/";
+  try {
+    pathname = new URL(reqUrl, "https://www.koharu.live").pathname;
+  } catch {
+    pathname = reqUrl;
+  }
+
+  const p = pathname.toLowerCase();
+  let title = "! Koharu — 게임 클라이언트 프로그래머";
+  let description = "언리얼 엔진 5 & Unity 개발자 · Workshop-Koharu (Mirae AI 생성형 AI) · Team Light (보안 봇 서린, AI 채팅 봇 아린, 알림 봇 다모아) · NOCTIL Studio (서브컬쳐 오픈월드 게임)";
+  let accentColor = 0x2563eb;
+  let buttons = [
+    { label: "포트폴리오 열기", url: "https://www.koharu.live/" },
+    { label: "디스코드 프로필", url: "https://discord.com/users/1339604814631534667" },
+  ];
+
+  if (p.startsWith("/blog")) {
+    title = "코하루 개발 블로그";
+    description = "언리얼 엔진 5 · Unity · C++ · C# 게임플레이 아키텍처 및 개발 일지";
+    accentColor = 0x5865f2;
+    buttons = [
+      { label: "블로그 최신 글 읽기", url: "https://www.koharu.live/blog" },
+      { label: "메인 포트폴리오", url: "https://www.koharu.live/" },
+    ];
+  } else if (p.startsWith("/moments") || p.startsWith("/instagram") || p.startsWith("/post")) {
+    title = "코하루 모먼트";
+    description = "일상 사진과 개발 진척 소식을 공유하는 모먼트 피드";
+    accentColor = 0x38bdf8;
+    buttons = [
+      { label: "모먼트 피드 열기", url: "https://www.koharu.live/moments" },
+      { label: "메인 포트폴리오", url: "https://www.koharu.live/" },
+    ];
+  } else if (p.startsWith("/projects") || p.startsWith("/project")) {
+    title = "코하루 프로젝트 쇼케이스";
+    description = "Workshop-Koharu (Mirae AI 생성형 AI) · Team Light (보안 봇 서린, AI 봇 아린, 알림 봇 다모아) · NOCTIL Studio (서브컬쳐 오픈월드 게임)";
+    accentColor = 0x2563eb;
+    buttons = [
+      { label: "프로젝트 둘러보기", url: "https://www.koharu.live/projects" },
+      { label: "Team Light 바로가기", url: "https://teamlight.pe.kr/" },
+    ];
+  } else if (p.startsWith("/partners")) {
+    title = "협업 파트너스";
+    description = "Sua (intro-us.xyz), Team Light, Workshop-Koharu 등 소중한 협력 파트너";
+    accentColor = 0x3b82f6;
+    buttons = [
+      { label: "파트너스 페이지", url: "https://www.koharu.live/partners" },
+      { label: "디스코드 프로필", url: "https://discord.com/users/1339604814631534667" },
+    ];
+  }
+
+  res.setHeader("Content-Type", "application/vnd.discord.component-embed+json; charset=utf-8");
   res.json({
     component: {
       type: 17,
-      accent_color: 2450411,
+      accent_color: accentColor,
       components: [
         {
           type: 9,
           components: [
             {
               type: 10,
-              content: "### ! Koharu — Portfolio\n게임 개발자 코하루의 개인 포트폴리오입니다.",
+              content: `### ${title}\n${description}`,
             },
           ],
           accessory: {
@@ -107,20 +168,12 @@ apiRouter.get("/discord/embed.json", (_req: Request, res: Response) => {
         },
         {
           type: 1,
-          components: [
-            {
-              type: 2,
-              style: 5,
-              label: "포트폴리오 열기",
-              url: "https://www.koharu.live/",
-            },
-            {
-              type: 2,
-              style: 5,
-              label: "GitHub 둘러보기",
-              url: "https://github.com/Koharu81",
-            },
-          ],
+          components: buttons.map((btn) => ({
+            type: 2,
+            style: 5,
+            label: btn.label,
+            url: btn.url,
+          })),
         },
       ],
     },
@@ -137,20 +190,29 @@ apiRouter.post("/auth/discord/token", async (req: Request, res: Response) => {
 
     const host = req.get("host") || "koharu.live";
     const protocol = req.protocol === "https" || req.headers["x-forwarded-proto"] === "https" ? "https" : "http";
-    const finalRedirect = redirectUri || `${protocol}://${host}/auth/discord/callback`;
+    const finalRedirect = redirectUri || (host.includes("localhost") ? `${protocol}://${host}/auth/discord/callback` : "https://koharu.live/auth/discord/callback");
 
-    // 1. Exchange code for access token
-    const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: DISCORD_CLIENT_ID,
-        client_secret: DISCORD_CLIENT_SECRET,
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: finalRedirect,
-      }),
-    });
+    // 1. Exchange code for access token (with auto fallback)
+    const tryExchange = async (rUri: string) => {
+      return fetch("https://discord.com/api/oauth2/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: DISCORD_CLIENT_ID,
+          client_secret: DISCORD_CLIENT_SECRET,
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: rUri,
+        }),
+      });
+    };
+
+    let tokenRes = await tryExchange(finalRedirect);
+    if (!tokenRes.ok && finalRedirect.includes("www.koharu.live")) {
+      tokenRes = await tryExchange("https://koharu.live/auth/discord/callback");
+    } else if (!tokenRes.ok && !finalRedirect.includes("www.") && finalRedirect.includes("koharu.live")) {
+      tokenRes = await tryExchange("https://www.koharu.live/auth/discord/callback");
+    }
 
     if (!tokenRes.ok) {
       const errText = await tokenRes.text();
@@ -513,22 +575,10 @@ apiRouter.delete("/posts/:id", async (req: Request, res: Response) => {
 apiRouter.post("/posts/:id/reaction", async (req: Request, res: Response) => {
   try {
     const postId = parseInt(req.params.id, 10);
-    const { userIdentifier, reaction = "like", isOwner } = req.body;
+    const { userIdentifier, reaction = "like" } = req.body;
+    const safeUser = userIdentifier || "visitor-reader";
 
-    if (!userIdentifier) {
-      return res.status(401).json({ error: "로그인이 필요합니다." });
-    }
-
-    if (isOwner) {
-      return res.status(400).json({ error: "자신의 게시물에는 반응을 남길 수 없습니다." });
-    }
-
-    const post = await getBlogPostById(postId);
-    if (post && post.authorOpenId === userIdentifier) {
-      return res.status(400).json({ error: "자신의 게시물에는 반응을 남길 수 없습니다." });
-    }
-
-    const result = await togglePostReaction(postId, userIdentifier, reaction as "like" | "dislike");
+    const result = await togglePostReaction(postId, safeUser, reaction as "like" | "dislike");
     res.json(result);
   } catch (error) {
     console.error("[API] Error toggling reaction:", error);
@@ -540,18 +590,10 @@ apiRouter.post("/posts/:id/reaction", async (req: Request, res: Response) => {
 apiRouter.post("/posts/:id/like", async (req: Request, res: Response) => {
   try {
     const postId = parseInt(req.params.id, 10);
-    const { userIdentifier, isOwner } = req.body;
+    const { userIdentifier } = req.body;
+    const safeUser = userIdentifier || "visitor-reader";
 
-    if (isOwner) {
-      return res.status(400).json({ error: "자신의 게시물에는 좋아요를 누를 수 없습니다." });
-    }
-
-    const post = await getBlogPostById(postId);
-    if (post && (post.authorOpenId === userIdentifier || userIdentifier === "koharu-owner")) {
-      return res.status(400).json({ error: "자신의 게시물에는 좋아요를 누를 수 없습니다." });
-    }
-
-    const result = await togglePostLike(postId, userIdentifier || "visitor-anonymous");
+    const result = await togglePostLike(postId, safeUser);
     res.json(result);
   } catch (error) {
     console.error("[API] Error toggling like:", error);
