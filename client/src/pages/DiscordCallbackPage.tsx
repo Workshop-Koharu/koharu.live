@@ -39,6 +39,13 @@ export default function DiscordCallbackPage() {
           body: JSON.stringify({ code, redirectUri }),
         });
 
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          const rawText = await res.text();
+          console.error("Non-JSON response from /api/auth/discord/token:", rawText);
+          throw new Error("서버에서 올바른 인증 응답을 받지 못했습니다. 잠시 후 다시 시도해주세요.");
+        }
+
         const data = await res.json();
         if (!res.ok || !data.success) {
           throw new Error(data.error || "디스코드 토큰 교환에 실패했습니다.");

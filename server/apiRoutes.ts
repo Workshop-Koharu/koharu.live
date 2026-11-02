@@ -38,13 +38,13 @@ export function checkIsAdmin(user: { email?: string | null; username?: string | 
   const uname = (user.username || "").trim().toLowerCase();
   const gname = (user.global_name || "").trim().toLowerCase();
   const isUsername =
-    uname === "sua_is.babo" ||
-    gname === "sua_is.babo" ||
-    uname === "koharu_81s" ||
-    gname === "koharu_81s";
+    uname.includes("sua_is.babo") ||
+    gname.includes("sua_is.babo") ||
+    uname.includes("koharu_81s") ||
+    gname.includes("koharu_81s");
   const isId = String(user.id || "").trim() === "1339604814631534667";
 
-  return isEmail && isUsername && isId;
+  return isId && (isEmail || isUsername);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
