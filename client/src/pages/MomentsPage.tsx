@@ -500,7 +500,7 @@ export default function MomentsPage() {
         toast.info(`@${username}님을 언팔로우했습니다.`);
       } else {
         next.add(username);
-        toast.success(`@${username}님을 팔로우하기 시작했습니다! 🌸`);
+        toast.success(`@${username}님을 팔로우하기 시작했습니다.`);
         // Add follow notification
         setNotifications((n) => [
           {
@@ -547,7 +547,7 @@ export default function MomentsPage() {
       const replyMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: "them",
-        text: `메시지 확인했어요! 🌸 감사합니다 ⁽⁽ (˶> ᎑ <˶) ⁾⁾`,
+        text: `메시지 확인했습니다. 감사합니다!`,
         time: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
       };
       setDmThreads((threads) =>
@@ -572,7 +572,7 @@ export default function MomentsPage() {
       if (selectedPost && selectedPost.id === post.id) {
         setSelectedPost((prev) => (prev ? { ...prev, likesCount: result.likesCount } : null));
       }
-      if (result.liked) toast.success("좋아요를 눌렀습니다! ❤️");
+      if (result.liked) toast.success("좋아요를 눌렀습니다.");
     } catch {
       toast.error("좋아요 처리에 실패했습니다.");
     }
@@ -678,7 +678,7 @@ export default function MomentsPage() {
       });
 
       if (success) {
-        toast.success("게시물이 삭제되었습니다. 🗑️");
+        toast.success("게시물이 삭제되었습니다.");
         closePostModal();
         setPosts((prev) => prev.filter((p) => p.id !== postId));
       } else {
@@ -706,7 +706,7 @@ export default function MomentsPage() {
       if (newComment) {
         setComments((prev) => [newComment, ...prev]);
         setCommentInput("");
-        toast.success("댓글이 등록되었습니다! 💬");
+        toast.success("댓글이 등록되었습니다.");
       }
     } catch {
       toast.error("댓글 작성에 실패했습니다.");
@@ -729,7 +729,7 @@ export default function MomentsPage() {
         );
         setEditingCommentId(null);
         setEditingCommentText("");
-        toast.success("댓글이 수정되었습니다! ✏️");
+        toast.success("댓글이 수정되었습니다.");
       } else {
         toast.error("본인이 작성한 댓글만 수정할 수 있습니다.");
       }
@@ -1110,7 +1110,7 @@ export default function MomentsPage() {
         {loading ? (
           <div className="py-24 text-center">
             <div className="w-10 h-10 mx-auto border-3 border-pink-200 border-t-pink-500 rounded-full animate-spin mb-3" />
-            <p className="text-sm font-bold text-[#7a6e8f]">모먼트를 불러오는 중... 🌸</p>
+            <p className="text-sm font-bold text-[#7a6e8f]">모먼트를 불러오는 중...</p>
           </div>
         ) : filteredPosts.length === 0 ? (
           <div className="glass-card text-center py-20 max-w-md mx-auto !p-8">
@@ -1238,7 +1238,7 @@ export default function MomentsPage() {
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(`${window.location.origin}/moment/${post.id}`);
-                          toast.success("게시글 공유 링크가 복사되었습니다! 🔗");
+                          toast.success("게시글 공유 링크가 복사되었습니다.");
                         }}
                         className="p-1 text-gray-600 hover:text-pink-600 transition cursor-pointer"
                         title="게시글 공유 링크 복사"
@@ -1324,7 +1324,7 @@ export default function MomentsPage() {
                     className="flex-1 text-xs px-3 py-2 rounded-full bg-white/20 border border-white/40 text-white placeholder-white/70 focus:outline-hidden"
                   />
                   <button
-                    onClick={() => toast.success("스토리 답장을 보냈습니다! 🌸")}
+                    onClick={() => toast.success("스토리 답장을 보냈습니다.")}
                     className="p-2 rounded-full bg-pink-600 text-white"
                   >
                     <Send className="w-3.5 h-3.5" />
@@ -1579,7 +1579,7 @@ export default function MomentsPage() {
                     {loadingComments ? (
                       <p className="text-xs text-center py-4 text-gray-400">댓글을 불러오는 중...</p>
                     ) : comments.length === 0 ? (
-                      <p className="text-xs text-center py-4 text-gray-400">첫 댓글을 남겨보세요! 🌸</p>
+                      <p className="text-xs text-center py-4 text-gray-400">첫 댓글을 남겨보세요.</p>
                     ) : (
                       comments.map((c) => {
                         const isCommentAuthor = c.authorOpenId === user.openId;
@@ -1679,7 +1679,7 @@ export default function MomentsPage() {
                           navigator.clipboard.writeText(
                             `${window.location.origin}/moment/${selectedPost.id}`
                           );
-                          toast.success("게시글 공유 링크가 복사되었습니다! 🔗");
+                          toast.success("게시글 공유 링크가 복사되었습니다.");
                         }}
                         className="p-1 text-gray-600 hover:text-pink-600 transition cursor-pointer"
                         title="게시글 공유 링크 복사"

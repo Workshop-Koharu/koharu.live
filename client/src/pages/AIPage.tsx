@@ -22,7 +22,7 @@ export default function AIPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "ai",
-      content: "안녕하세요! 코하루 포트폴리오의 AI 어시스턴트입니다 🌸\n게임 프로그래밍, 유니티 C# 코드 작성, 셰이더 아이디어, 또는 궁금한 점이 있다면 편하게 물어보세요 ⁽⁽ (˶> ᎑ <˶) ⁾⁾!",
+      content: "안녕하세요! 코하루 포트폴리오의 AI 어시스턴트입니다.\n게임 프로그래밍, 유니티 C# 코드 작성, 셰이더 아이디어, 또는 궁금한 점이 있다면 편하게 물어보세요.",
       timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -76,7 +76,7 @@ export default function AIPage() {
       // Fallback response
       const fallbackAiMsg: Message = {
         role: "ai",
-        content: `"${textToSend}"에 대한 답변입니다 🌸\n\n코하루는 게임 프로그래밍과 웹 개발, 유니티 셰이더에 깊은 열정을 쏟고 있어요!\n궁금하신 코드가 있으시면 언제든 편하게 물어보세요. 곧 더 강력한 모델로 업데이트될 예정입니다 ✨`,
+        content: `"${textToSend}"에 대한 답변입니다.\n\n코하루는 게임 프로그래밍과 웹 개발, 유니티 셰이더에 깊은 열정을 쏟고 있어요!\n궁금하신 코드가 있으시면 언제든 편하게 물어보세요. 곧 더 강력한 모델로 업데이트될 예정입니다.`,
         timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
       };
       setMessages((prev) => [...prev, fallbackAiMsg]);

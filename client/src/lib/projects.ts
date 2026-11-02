@@ -43,7 +43,7 @@ export const projects: Project[] = [
     name: "Enroll-Lang",
     type: "Custom esolang interpreter",
     description: "수강신청 시스템의 제어 흐름을 모티브로 한 난해한 언어.",
-    details: "🎓 Enroll-Lang (수강신청랭) — 대학 수강신청 시스템의 제어 흐름을 모티브로 한 커스텀 Esolang 인터프리터입니다. 라이브러리 확장을 지원합니다.",
+    details: "Enroll-Lang (수강신청랭) — 대학 수강신청 시스템의 제어 흐름을 모티브로 한 커스텀 Esolang 인터프리터입니다. 라이브러리 확장을 지원합니다.",
     tags: ["Esolang", "Interpreter", "Library"],
     href: "/project/enroll-lang",
   },

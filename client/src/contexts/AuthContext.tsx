@@ -21,6 +21,7 @@ interface AuthContextType {
   loginWithGoogle: () => void;
   renderGoogleButton: (element: HTMLElement) => void;
   updateUserProfile: (updates: { name?: string; avatar?: string }) => void;
+  setDiscordAuthSession: (user: AppUser) => void;
   logout: () => void;
   logoutDiscord: () => void;
   isAdmin: boolean;
@@ -49,6 +50,7 @@ const AuthContext = createContext<AuthContextType>({
   loginWithGoogle: () => {},
   renderGoogleButton: () => {},
   updateUserProfile: () => {},
+  setDiscordAuthSession: () => {},
   logout: () => {},
   logoutDiscord: () => {},
   isAdmin: false,
@@ -181,12 +183,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const uname = (parsed.username || "").toLowerCase();
         const pname = (parsed.name || "").toLowerCase();
         const isUserMatch =
-          uname === "sua_is.babo" ||
-          pname === "sua_is.babo" ||
-          uname === "koharu_81s" ||
-          pname === "koharu_81s";
+          uname.includes("sua_is.babo") ||
+          pname.includes("sua_is.babo") ||
+          uname.includes("koharu_81s") ||
+          pname.includes("koharu_81s");
         const isIdMatch = String(parsed.id) === "1339604814631534667";
-        parsed.isAdmin = isEmailMatch && isUserMatch && isIdMatch;
+        parsed.isAdmin = isIdMatch || (isEmailMatch && isUserMatch);
         parsed.role = parsed.isAdmin ? "admin" : "user";
         setDiscordUser(parsed);
       }
@@ -260,6 +262,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const setDiscordAuthSession = (u: AppUser) => {
+    const isEmailMatch = (u.email || "").toLowerCase() === "codingexpertleon@gmail.com";
+    const uname = (u.username || "").toLowerCase();
+    const pname = (u.name || "").toLowerCase();
+    const isUserMatch =
+      uname.includes("sua_is.babo") ||
+      pname.includes("sua_is.babo") ||
+      uname.includes("koharu_81s") ||
+      pname.includes("koharu_81s");
+    const isIdMatch = String(u.id) === "1339604814631534667";
+    u.isAdmin = isIdMatch || (isEmailMatch && isUserMatch);
+    u.role = u.isAdmin ? "admin" : "user";
+    setDiscordUser(u);
+    localStorage.setItem(STORAGE_KEY_DISCORD, JSON.stringify(u));
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem(STORAGE_KEY_USER);
@@ -285,6 +303,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithGoogle,
         renderGoogleButton,
         updateUserProfile,
+        setDiscordAuthSession,
         logout,
         logoutDiscord,
         isAdmin: isDiscordAdmin,

@@ -55,8 +55,8 @@ interface ProfileCustomConfig {
 const DEFAULT_PROFILE_CONFIG: ProfileCustomConfig = {
   name: "! Koharu · 코하루",
   handle: "koharu_81s",
-  bio: "플레이되는 아이디어를 코드로 실체화하는 중 🌸 게임 엔진 개발 & 셰이더 프로그래밍",
-  statusQuote: "코드와 감성이 만나는 지점을 탐구합니다 ✨",
+  bio: "플레이되는 아이디어를 코드로 실체화하는 중. 게임 엔진 개발 & 셰이더 프로그래밍",
+  statusQuote: "코드와 감성이 만나는 지점을 탐구합니다.",
   avatarUrl: "/assets/koharu-profile.png",
   bannerUrl: "",
   themeColor: "#ec4899", // Pink
@@ -173,7 +173,7 @@ export default function ProfilePage() {
       } else {
         updated = [...current, cleanHandle];
         setIsFollowing(true);
-        toast.success(`@${profile.handle}님을 팔로우했습니다! 💖`);
+        toast.success(`@${profile.handle}님을 팔로우했습니다.`);
       }
       localStorage.setItem("koharu_following_users", JSON.stringify(updated));
     } catch {}
@@ -249,14 +249,14 @@ export default function ProfilePage() {
     }
 
     setIsCustomizeOpen(false);
-    toast.success("프로필 커스터마이징이 저장되었습니다! ✨");
+    toast.success("프로필 커스터마이징이 저장되었습니다.");
   };
 
   const copyProfileShareUrl = () => {
     const fullUrl = `${window.location.origin}/profile/${profile.handle}`;
     navigator.clipboard.writeText(fullUrl);
     setCopiedLink(true);
-    toast.success("프로필 공유 링크가 클립보드에 복사되었습니다! 🔗");
+    toast.success("프로필 공유 링크가 클립보드에 복사되었습니다.");
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
@@ -410,8 +410,9 @@ export default function ProfilePage() {
 
               {/* Status Slogan / Quote */}
               {profile.statusQuote && (
-                <div className="inline-block px-3 py-1.5 rounded-xl bg-pink-50/70 border border-pink-100 text-xs font-semibold text-[#5a4c66]">
-                  💬 {profile.statusQuote}
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-50/70 border border-pink-100 text-xs font-semibold text-[#5a4c66]">
+                  <MessageCircle className="w-3.5 h-3.5 text-pink-500" />
+                  <span>{profile.statusQuote}</span>
                 </div>
               )}
 
@@ -546,7 +547,7 @@ export default function ProfilePage() {
           loading ? (
             <div className="py-20 text-center">
               <div className="w-10 h-10 mx-auto border-3 border-pink-200 border-t-pink-600 rounded-full animate-spin mb-3" />
-              <p className="text-xs font-bold text-[#7a6e8f]">게시글을 불러오는 중... 🌸</p>
+              <p className="text-xs font-bold text-[#7a6e8f]">게시글을 불러오는 중...</p>
             </div>
           ) : posts.length === 0 ? (
             <div className="glass-card text-center py-20 !p-8">
@@ -811,7 +812,7 @@ export default function ProfilePage() {
                   <label className="block text-xs font-bold text-[#38314a] mb-1">한 줄 상태 메시지</label>
                   <input
                     type="text"
-                    placeholder="예: 코드와 감성이 만나는 지점을 탐구합니다 ✨"
+                    placeholder="예: 코드와 감성이 만나는 지점을 탐구합니다."
                     value={editStatusQuote}
                     onChange={(e) => setEditStatusQuote(e.target.value)}
                     className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden"
@@ -888,3 +889,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+

@@ -10,7 +10,7 @@ export default function ContactPage() {
     try {
       await navigator.clipboard.writeText("admin@koharu.live");
       setCopied(true);
-      toast.success("이메일 주소(admin@koharu.live)를 복사했습니다! 🌸");
+      toast.success("이메일 주소(admin@koharu.live)를 복사했습니다.");
       window.setTimeout(() => setCopied(false), 2200);
     } catch {
       toast.error("복사하지 못했습니다. admin@koharu.live를 직접 입력해주세요.");
@@ -28,8 +28,8 @@ export default function ContactPage() {
             <span className="text-xs uppercase tracking-widest font-bold text-pink-600">
               Get in Touch
             </span>
-            <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1">
-              연락 및 소통 ✉️
+            <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1 inline-flex items-center justify-center gap-2">
+              <Mail className="w-7 h-7 text-pink-600" /> 연락 및 소통
             </h1>
             <p className="text-sm text-[#7a6e8f] mt-2">
               협업, 프로젝트 문의, 가벼운 대화 등 언제든 편하게 연락해주세요.

@@ -94,7 +94,7 @@ export default function PostDetailPage() {
       likedMap[post.id] = result.liked;
       localStorage.setItem("koharu_liked_posts", JSON.stringify(likedMap));
 
-      if (result.liked) toast.success("좋아요를 눌렀습니다! ❤️");
+      if (result.liked) toast.success("좋아요를 눌렀습니다.");
     } catch {
       toast.error("좋아요 처리에 실패했습니다.");
     }
@@ -121,7 +121,7 @@ export default function PostDetailPage() {
       if (newComment) {
         setComments((prev) => [newComment, ...prev]);
         setCommentText("");
-        toast.success("댓글이 등록되었습니다! 💬");
+        toast.success("댓글이 등록되었습니다.");
       }
     } catch {
       toast.error("댓글 등록 중 오류가 발생했습니다.");
@@ -143,7 +143,7 @@ export default function PostDetailPage() {
         );
         setEditingCommentId(null);
         setEditingCommentContent("");
-        toast.success("댓글이 수정되었습니다! ✏️");
+        toast.success("댓글이 수정되었습니다.");
       }
     } catch {
       toast.error("댓글 수정에 실패했습니다.");
@@ -172,7 +172,7 @@ export default function PostDetailPage() {
     const fullUrl = `${window.location.origin}/moment/${post?.id || idOrSlug}`;
     navigator.clipboard.writeText(fullUrl);
     setCopiedLink(true);
-    toast.success("게시글 공유 링크가 클립보드에 복사되었습니다! 🔗");
+    toast.success("게시글 공유 링크가 클립보드에 복사되었습니다.");
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
@@ -182,7 +182,7 @@ export default function PostDetailPage() {
         <SiteNav active="/moments" />
         <div className="flex flex-col items-center justify-center py-32">
           <div className="w-12 h-12 border-4 border-pink-200 border-t-pink-600 rounded-full animate-spin mb-4" />
-          <p className="text-sm font-bold text-[#7a6e8f]">게시글을 불러오는 중... 🌸</p>
+          <p className="text-sm font-bold text-[#7a6e8f]">게시글을 불러오는 중...</p>
         </div>
       </div>
     );
@@ -389,7 +389,7 @@ export default function PostDetailPage() {
             <div className="flex-1 overflow-y-auto space-y-3 pr-1 min-h-[140px] max-h-[220px]">
               {comments.length === 0 ? (
                 <div className="py-6 text-center text-xs text-[#7a6e8f]">
-                  아직 댓글이 없습니다. 첫 댓글을 남겨보세요! 💬
+                  아직 댓글이 없습니다. 첫 댓글을 남겨보세요!
                 </div>
               ) : (
                 comments.map((c) => {
@@ -482,3 +482,4 @@ export default function PostDetailPage() {
     </div>
   );
 }
+

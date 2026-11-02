@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Users } from "lucide-react";
 import { toast } from "sonner";
 import SiteNav from "@/components/SiteNav";
 
@@ -10,14 +10,14 @@ interface Person {
 }
 
 const CURATED_PEOPLE: Person[] = [
-  { name: "수아", handle: "sx0n._.a", role: "소중한 친구 💖" },
-  { name: "코블", handle: "_koble_", role: "소중한 친구 🌸" },
-  { name: "소성", handle: "seosungdev", role: "소중한 친구 ✨" },
-  { name: "수냥", handle: "aer.unnynag0214", role: "소중한 친구 🐱" },
-  { name: "제이", handle: "jxayx._.", role: "소중한 친구 💫" },
-  { name: "김치", handle: "kimchi090113", role: "소중한 친구 🥬" },
-  { name: "현이", handle: "07lee_hyun", role: "소중한 친구 🌿" },
-  { name: "치킨무", handle: "chimu314", role: "소중한 친구 🍗" },
+  { name: "수아", handle: "sx0n._.a", role: "소중한 친구" },
+  { name: "코블", handle: "_koble_", role: "소중한 친구" },
+  { name: "소성", handle: "seosungdev", role: "소중한 친구" },
+  { name: "수냥", handle: "aer.unnynag0214", role: "소중한 친구" },
+  { name: "제이", handle: "jxayx._.", role: "소중한 친구" },
+  { name: "김치", handle: "kimchi090113", role: "소중한 친구" },
+  { name: "현이", handle: "07lee_hyun", role: "소중한 친구" },
+  { name: "치킨무", handle: "chimu314", role: "소중한 친구" },
 ];
 
 export default function PeoplePage() {
@@ -55,7 +55,7 @@ export default function PeoplePage() {
       navigator.clipboard.writeText(clean);
     }
     setCopiedHandle(clean);
-    toast.success(`${name}님의 아이디(@${clean})를 복사했습니다! ✨`);
+    toast.success(`${name}님의 아이디(@${clean})를 복사했습니다.`);
     setTimeout(() => setCopiedHandle(null), 2000);
   };
 
@@ -70,8 +70,8 @@ export default function PeoplePage() {
             <span className="text-xs uppercase tracking-widest font-bold text-pink-600 flex items-center justify-center">
               Connections & Friends
             </span>
-            <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1">
-              소중한 지인들 🌸
+            <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1 inline-flex items-center justify-center gap-2">
+              <Users className="w-7 h-7 text-pink-600" /> 소중한 지인들
             </h1>
             <p className="text-sm text-[#7a6e8f] mt-2">
               코하루와 함께하는 소중한 친구들과 지인들입니다.

@@ -4,16 +4,16 @@ import SiteNav from "@/components/SiteNav";
 const PARTNERS = [
   {
     name: "수아",
-    tag: "Special Partner 🌸",
+    tag: "Special Partner",
     desc: "수아!!!!!",
     avatar: "https://intro-us.xyz/portal-assets/intro-us-logo.svg",
     link: "https://intro-us.xyz/",
-    badge: "Partner 💖",
+    badge: "Partner",
   },
   {
     name: "Team Light",
     tag: "Creative Development Team",
-    desc: "기술적인 도전과 웹 최적화, 공동 프로젝트를 함께 연구하며 시너지를 만들어가는 소중한 개발 팀입니다 ✨",
+    desc: "기술적인 도전과 웹 최적화, 공동 프로젝트를 함께 연구하며 시너지를 만들어가는 소중한 개발 팀입니다.",
     avatar: "https://www.google.com/s2/favicons?domain=teamlight.pe.kr&sz=128",
     link: "https://teamlight.pe.kr",
     badge: "Development Partner",
@@ -31,8 +31,8 @@ export default function PartnersPage() {
             <span className="text-xs uppercase tracking-widest font-bold text-pink-600">
               Partners & Collaboration
             </span>
-            <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1">
-              파트너 & 협업 🤝
+            <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1 inline-flex items-center justify-center gap-2">
+              <Users className="w-7 h-7 text-pink-600" /> 파트너 & 협업
             </h1>
             <p className="text-sm text-[#7a6e8f] mt-2">
               함께 멋진 가치와 영감을 나누는 파트너들을 소개합니다.

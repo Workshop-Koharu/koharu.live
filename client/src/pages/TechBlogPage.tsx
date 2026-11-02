@@ -158,6 +158,24 @@ export default function TechBlogPage() {
   const { discordUser, loginWithDiscord, logoutDiscord, isAdmin } = useAppAuth();
   const [, blogDetailRoute] = useRoute<{ slug: string }>("/blog/:slug");
 
+  // Local fallback resolution for instant admin reactivity
+  const [localDiscordUser] = useState<any>(() => {
+    try {
+      const s = localStorage.getItem("koharu_discord_user_v2");
+      return s ? JSON.parse(s) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const activeDiscordUser = discordUser || localDiscordUser;
+  const isEffectiveAdmin = Boolean(
+    isAdmin ||
+    activeDiscordUser?.isAdmin ||
+    String(activeDiscordUser?.id) === "1339604814631534667" ||
+    (activeDiscordUser?.email || "").toLowerCase() === "codingexpertleon@gmail.com"
+  );
+
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("all");
@@ -238,12 +256,12 @@ export default function TechBlogPage() {
 
   // Reactions (Like & Dislike)
   const handleReaction = async (post: Post, type: "like" | "dislike") => {
-    if (!discordUser) {
+    if (!activeDiscordUser) {
       toast.error("반응을 남기려면 Discord 로그인이 필요합니다.");
       return;
     }
 
-    const userIdentifier = discordUser.id || discordUser.email || "discord-guest";
+    const userIdentifier = activeDiscordUser.id || activeDiscordUser.email || "discord-guest";
     try {
       const result = await togglePostReaction(post.id, userIdentifier, type);
       setUserReactions((prev) => ({
@@ -281,7 +299,7 @@ export default function TechBlogPage() {
   // Comments
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!discordUser) {
+    if (!activeDiscordUser) {
       toast.error("댓글을 작성하려면 먼저 Discord 로그인을 진행해주세요.");
       return;
     }
@@ -290,10 +308,10 @@ export default function TechBlogPage() {
     try {
       const newComment = await addComment(
         readingPost.id,
-        discordUser.name,
-        discordUser.avatar || "/assets/koharu-profile.png",
+        activeDiscordUser.name,
+        activeDiscordUser.avatar || "/assets/koharu-profile.png",
         commentText.trim(),
-        discordUser.id
+        activeDiscordUser.id
       );
 
       if (newComment) {
@@ -307,12 +325,12 @@ export default function TechBlogPage() {
   };
 
   const handleEditComment = async (commentId: number) => {
-    if (!discordUser || !editingCommentContent.trim()) return;
+    if (!activeDiscordUser || !editingCommentContent.trim()) return;
 
     try {
       const updated = await updateComment(commentId, editingCommentContent.trim(), {
-        userOpenId: discordUser.id,
-        isAdmin,
+        userOpenId: activeDiscordUser.id,
+        isAdmin: isEffectiveAdmin,
       });
 
       if (updated) {
@@ -331,13 +349,13 @@ export default function TechBlogPage() {
   };
 
   const handleDeleteComment = async (comment: Comment) => {
-    if (!discordUser) return;
+    if (!activeDiscordUser) return;
     if (!window.confirm("이 댓글을 삭제하시겠습니까?")) return;
 
     try {
       const ok = await deleteComment(comment.id, {
-        userOpenId: discordUser.id,
-        isAdmin,
+        userOpenId: activeDiscordUser.id,
+        isAdmin: isEffectiveAdmin,
       });
 
       if (ok) {
@@ -353,7 +371,7 @@ export default function TechBlogPage() {
 
   // Editor Actions (Admin only)
   const openEditorForNew = () => {
-    if (!isAdmin) {
+    if (!isEffectiveAdmin) {
       toast.error("블로그 글 작성은 관리자 전용입니다.");
       return;
     }
@@ -368,7 +386,7 @@ export default function TechBlogPage() {
   };
 
   const openEditorForEdit = (post: Post) => {
-    if (!isAdmin) {
+    if (!isEffectiveAdmin) {
       toast.error("블로그 글 수정은 관리자만 가능합니다.");
       return;
     }
@@ -385,7 +403,7 @@ export default function TechBlogPage() {
 
   const handleSavePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isAdmin) {
+    if (!isEffectiveAdmin) {
       toast.error("관리자만 글을 발행할 수 있습니다.");
       return;
     }
@@ -415,7 +433,7 @@ export default function TechBlogPage() {
             coverUrl: editorCoverUrl.trim() || "/assets/koharu-profile.png",
             category: finalCategory,
             isAdmin: true,
-            userOpenId: discordUser?.id,
+            userOpenId: activeDiscordUser?.id,
           }),
         });
 
@@ -434,8 +452,8 @@ export default function TechBlogPage() {
           caption: editorContent.trim(),
           coverUrl: editorCoverUrl.trim() || "/assets/koharu-profile.png",
           category: finalCategory,
-          authorName: discordUser?.name || "! Koharu",
-          authorAvatar: discordUser?.avatar || "/assets/koharu-profile.png",
+          authorName: activeDiscordUser?.name || "! Koharu",
+          authorAvatar: activeDiscordUser?.avatar || "/assets/koharu-profile.png",
           postType: "blog",
         });
 
@@ -455,7 +473,7 @@ export default function TechBlogPage() {
   };
 
   const handleDeletePost = async (postId: number) => {
-    if (!isAdmin) {
+    if (!isEffectiveAdmin) {
       toast.error("글 삭제는 관리자만 가능합니다.");
       return;
     }
@@ -463,7 +481,7 @@ export default function TechBlogPage() {
 
     try {
       const ok = await deletePost(postId, {
-        userOpenId: discordUser?.id,
+        userOpenId: activeDiscordUser?.id,
         isAdmin: true,
       });
 
@@ -525,17 +543,17 @@ export default function TechBlogPage() {
 
             {/* Auth Area (Discord Admin Auth) */}
             <div className="flex flex-wrap items-center gap-2.5 self-stretch sm:self-auto justify-end">
-              {discordUser ? (
+              {activeDiscordUser ? (
                 <div className="flex items-center gap-2 bg-white/90 px-3.5 py-1.5 rounded-2xl border border-purple-200 shadow-xs">
                   <img
-                    src={discordUser.avatar || "/assets/koharu-profile.png"}
-                    alt={discordUser.name}
+                    src={activeDiscordUser.avatar || "/assets/koharu-profile.png"}
+                    alt={activeDiscordUser.name}
                     className="w-7 h-7 rounded-full object-cover border border-purple-300"
                   />
                   <div className="text-left">
                     <div className="text-xs font-bold text-[#38314a] flex items-center gap-1">
-                      {discordUser.name}
-                      {discordUser.isAdmin && (
+                      {activeDiscordUser.name}
+                      {isEffectiveAdmin && (
                         <span className="text-[10px] bg-purple-600 text-white px-1.5 py-0.2 rounded-full font-extrabold">
                           Admin
                         </span>
@@ -564,7 +582,7 @@ export default function TechBlogPage() {
               )}
 
               {/* Admin New Post Button (Only when Discord Admin) */}
-              {isAdmin && (
+              {isEffectiveAdmin && (
                 <button
                   onClick={openEditorForNew}
                   className="px-4 py-2 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white text-xs font-extrabold shadow-md shadow-purple-500/30 transition cursor-pointer flex items-center gap-1.5"
@@ -596,7 +614,7 @@ export default function TechBlogPage() {
                   url={`${window.location.origin}/blog/${readingPost.slug}`}
                   label={readingPost.title}
                 />
-                {isAdmin && (
+                {isEffectiveAdmin && (
                   <>
                     <button
                       onClick={() => openEditorForEdit(readingPost)}
@@ -685,7 +703,7 @@ export default function TechBlogPage() {
             <div className="flex flex-col sm:flex-row items-center justify-between p-6 rounded-2xl bg-gradient-to-r from-purple-50/80 via-pink-50/80 to-purple-50/80 border border-purple-100 gap-4 mb-10">
               <div>
                 <div className="font-extrabold text-sm text-[#38314a]">이 글이 도움이 되었나요?</div>
-                <div className="text-xs text-[#7a6e8f]">좋아요나 싫어요로 코하루에게 피드백을 남겨주세요! 🌸</div>
+                <div className="text-xs text-[#7a6e8f]">좋아요나 싫어요로 코하루에게 피드백을 남겨주세요.</div>
               </div>
 
               <div className="flex items-center gap-3">
@@ -754,8 +772,8 @@ export default function TechBlogPage() {
                   </p>
                 ) : (
                   comments.map((c) => {
-                    const isAuthor = discordUser && discordUser.id && c.authorOpenId === discordUser.id;
-                    const canDelete = isAuthor || isAdmin;
+                    const isAuthor = activeDiscordUser && activeDiscordUser.id && c.authorOpenId === activeDiscordUser.id;
+                    const canDelete = isAuthor || isEffectiveAdmin;
 
                     return (
                       <div
@@ -906,7 +924,7 @@ export default function TechBlogPage() {
             {loading ? (
               <div className="py-24 text-center">
                 <div className="w-10 h-10 mx-auto border-3 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-3" />
-                <p className="text-sm font-bold text-[#7a6e8f]">블로그 포스트를 불러오는 중... 🌸</p>
+                <p className="text-sm font-bold text-[#7a6e8f]">블로그 포스트를 불러오는 중...</p>
               </div>
             ) : filteredPosts.length === 0 ? (
               <div className="glass-card text-center py-20 max-w-md mx-auto !p-8">
@@ -915,11 +933,11 @@ export default function TechBlogPage() {
                 </div>
                 <h3 className="text-lg font-bold text-[#38314a] mb-1">등록된 글이 없습니다</h3>
                 <p className="text-xs text-[#7a6e8f] mb-6">
-                  {isAdmin
+                  {isEffectiveAdmin
                     ? "첫 번째 마크다운 테크 아티클을 작성해보세요!"
                     : "아직 작성된 글이 없습니다. 새로운 개발 일지가 올라오길 기대해주세요!"}
                 </p>
-                {isAdmin && (
+                {isEffectiveAdmin && (
                   <button
                     onClick={openEditorForNew}
                     className="px-5 py-2.5 rounded-2xl bg-purple-600 text-white text-xs font-bold shadow-md shadow-purple-500/25 cursor-pointer"
@@ -1005,7 +1023,7 @@ export default function TechBlogPage() {
         )}
 
         {/* ── Admin Markdown Editor Modal ───────────────────────────────── */}
-        {isEditorOpen && isAdmin && (
+        {isEditorOpen && isEffectiveAdmin && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-5 animate-in fade-in"
             onClick={() => setIsEditorOpen(false)}

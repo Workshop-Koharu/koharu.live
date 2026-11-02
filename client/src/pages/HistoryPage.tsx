@@ -28,7 +28,7 @@ const TIMELINE: TimelineItem[] = [
     year: "2026. 08 ~",
     title: "Mirae AI (미래 AI) 서비스 개발 및 웹 배포",
     category: "AI Project",
-    desc: "2026년 8월부터 코하루가 직접 개발을 시작한 대화형 AI 어시스턴트 Mirae AI를 공식 웹사이트(mirae.koharu.live)로 런칭하여 자연스러운 대화와 유용한 편의 기능을 제공하기 시작했습니다 ✨",
+    desc: "2026년 8월부터 코하루가 직접 개발을 시작한 대화형 AI 어시스턴트 Mirae AI를 공식 웹사이트(mirae.koharu.live)로 런칭하여 자연스러운 대화와 유용한 편의 기능을 제공하기 시작했습니다.",
     tags: ["Mirae AI", "AI Assistant", "Web Service", "LLM"],
     icon: Bot,
     highlight: true,
@@ -37,7 +37,7 @@ const TIMELINE: TimelineItem[] = [
     year: "2026. 03 ~ 현재",
     title: "! Koharu 포트폴리오 & 소셜 피드 플랫폼 오픈",
     category: "Release",
-    desc: "자신만의 색깔과 따뜻한 감성을 담은 통합 포트폴리오 및 소셜 피드 플랫폼을 오픈했습니다. 다양한 프로젝트와 소중한 지인들과의 연결고리를 기록하고 소통하는 공간입니다 🌸",
+    desc: "자신만의 색깔과 따뜻한 감성을 담은 통합 포트폴리오 및 소셜 피드 플랫폼을 오픈했습니다. 다양한 프로젝트와 소중한 지인들과의 연결고리를 기록하고 소통하는 공간입니다.",
     tags: ["React", "TypeScript", "TailwindCSS", "Full-Stack"],
     icon: Rocket,
     highlight: true,
@@ -46,7 +46,7 @@ const TIMELINE: TimelineItem[] = [
     year: "2025. 08",
     title: "생성형 AI 모델 연동 및 프롬프트 엔지니어링 연구",
     category: "AI Research",
-    desc: "다양한 거대 언어 모델(LLM)과 API 연동을 연구하며 사용자 친화적인 대화형 AI 챗봇 인터페이스와 실시간 응답 파이프라인의 기반을 닦았습니다 🤖",
+    desc: "다양한 거대 언어 모델(LLM)과 API 연동을 연구하며 사용자 친화적인 대화형 AI 챗봇 인터페이스와 실시간 응답 파이프라인의 기반을 닦았습니다.",
     tags: ["Generative AI", "Prompt Engineering", "API Integration"],
     icon: Sparkles,
   },
@@ -54,7 +54,7 @@ const TIMELINE: TimelineItem[] = [
     year: "2025. 05",
     title: "Team Light 합류 및 디스코드 자동화 생태계 구축",
     category: "Team & Tool",
-    desc: "디스코드 커뮤니티의 안전과 편의성을 극대화하기 위해 Team Light에 합류하여 봇 보호, 커뮤니티 운영 자동화 및 인프라 기능을 공동 연구하고 제작했습니다 💡",
+    desc: "디스코드 커뮤니티의 안전과 편의성을 극대화하기 위해 Team Light에 합류하여 봇 보호, 커뮤니티 운영 자동화 및 인프라 기능을 공동 연구하고 제작했습니다.",
     tags: ["Team Light", "Discord Bot", "Automation", "Security"],
     icon: Users,
     highlight: true,
@@ -63,7 +63,7 @@ const TIMELINE: TimelineItem[] = [
     year: "2024. 12",
     title: "팬 커뮤니티 연말 이벤트 및 인터랙티브 시스템 운영",
     category: "Event & System",
-    desc: "연말 맞이 커뮤니티 이벤트 기획과 자동화 추첨 봇, 아카이브 시스템을 제작하여 수천 명의 팬들이 함께 즐길 수 있는 축제의 장을 조성했습니다 🎉",
+    desc: "연말 맞이 커뮤니티 이벤트 기획과 자동화 추첨 봇, 아카이브 시스템을 제작하여 수천 명의 팬들이 함께 즐길 수 있는 축제의 장을 조성했습니다.",
     tags: ["Event Bot", "Community Growth", "Discord"],
     icon: Layers,
   },
@@ -71,7 +71,7 @@ const TIMELINE: TimelineItem[] = [
     year: "2024. 09",
     title: "비공식 스텔라이브 팬 디스코드 커뮤니티 제작 및 운영 지원",
     category: "Community",
-    desc: "7,000명 이상의 파스텔(팬)들이 함께 교류하고 소통하는 대규모 팬 디스코드 커뮤니티를 개설 및 제작 지원하며 활발한 팬아트·클립 공유 및 이벤트 환경을 구축했습니다 🎮",
+    desc: "7,000명 이상의 파스텔(팬)들이 함께 교류하고 소통하는 대규모 팬 디스코드 커뮤니티를 개설 및 제작 지원하며 활발한 팬아트·클립 공유 및 이벤트 환경을 구축했습니다.",
     tags: ["스텔라이브", "7000+ Members", "Community", "Discord"],
     icon: Gamepad2,
     highlight: true,
@@ -80,7 +80,7 @@ const TIMELINE: TimelineItem[] = [
     year: "2024. 06",
     title: "디스코드 봇 개발 및 커뮤니티 편의 기능 제작",
     category: "Bot Dev",
-    desc: "서버 내 유저 관리, 환영 메시지 자동화, 역할 분배 등을 처리하는 맞춤형 디스코드 봇을 개발하며 실무 개발 역량을 확장했습니다 ⚡",
+    desc: "서버 내 유저 관리, 환영 메시지 자동화, 역할 분배 등을 처리하는 맞춤형 디스코드 봇을 개발하며 실무 개발 역량을 확장했습니다.",
     tags: ["Discord.js", "Bot Automation", "Node.js"],
     icon: Code2,
   },
@@ -88,7 +88,7 @@ const TIMELINE: TimelineItem[] = [
     year: "2024. 03",
     title: "게임 및 웹 프로그래밍의 첫 걸음",
     category: "First Step",
-    desc: "머릿속으로 상상하던 재미있는 장면과 아이디어를 플레이 가능한 코드로 구현하기 위해 게임 엔진과 웹 기술 공부를 본격적으로 시작하며 개발의 길을 열었습니다 💫",
+    desc: "머릿속으로 상상하던 재미있는 장면과 아이디어를 플레이 가능한 코드로 구현하기 위해 게임 엔진과 웹 기술 공부를 본격적으로 시작하며 개발의 길을 열었습니다.",
     tags: ["Beginning", "Game Dev", "Interactive Web", "Study"],
     icon: Code2,
   },
@@ -115,8 +115,8 @@ export default function HistoryPage() {
             <span className="text-xs uppercase tracking-widest font-bold text-pink-600 flex items-center justify-center gap-1.5">
               <Milestone className="w-4 h-4" /> Journey & Milestones
             </span>
-            <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1">
-              히스토리 📜
+            <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1 inline-flex items-center justify-center gap-2">
+              <Milestone className="w-7 h-7 text-pink-600" /> 히스토리
             </h1>
             <p className="text-sm text-[#7a6e8f] mt-2">
               코하루가 걸어온 개발의 발자취와 소중한 주요 전환점들을 기록하는 공간입니다.
@@ -208,7 +208,7 @@ export default function HistoryPage() {
           <div className="glass-card text-center p-6 mt-12 bg-gradient-to-r from-pink-50/60 via-purple-50/60 to-pink-50/60 border border-pink-200/60">
             <Sparkles className="w-6 h-6 text-pink-500 mx-auto mb-2" />
             <h3 className="font-bold text-sm text-[#38314a]">
-              앞으로도 새로운 장면을 계속 만들어 갑니다 🌸
+              앞으로도 새로운 장면을 계속 만들어 갑니다
             </h3>
             <p className="text-xs text-[#7a6e8f] mt-1">
               코하루의 다음 도전과 발자취도 기대해주세요!

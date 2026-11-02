@@ -65,8 +65,8 @@ export default function SiteNav({ active }: SiteNavProps) {
         <span className="ambient-orb ambient-orb-one" />
         <span className="ambient-orb ambient-orb-two" />
         <span className="ambient-orb ambient-orb-three" />
-        <span className="ambient-spark spark-one">✦</span>
-        <span className="ambient-spark spark-two">✧</span>
+        <span className="ambient-spark spark-one">+</span>
+        <span className="ambient-spark spark-two">+</span>
         <span className="ambient-spark spark-three">·</span>
       </div>
 

@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { ShieldCheck, Sparkles, User, AlertCircle } from "lucide-react";
+import { useAppAuth } from "@/contexts/AuthContext";
 
 export default function DiscordCallbackPage() {
   const [, setLocation] = useLocation();
+  const { setDiscordAuthSession } = useAppAuth();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
   const [adminDetected, setAdminDetected] = useState(false);
@@ -52,12 +54,12 @@ export default function DiscordCallbackPage() {
         }
 
         const user = data.user;
-        localStorage.setItem("koharu_discord_user_v2", JSON.stringify(user));
+        setDiscordAuthSession(user);
         setAdminDetected(user.isAdmin);
         setStatus("success");
 
         if (user.isAdmin) {
-          toast.success(`환영합니다 코하루님! 블로그 관리자 권한으로 로그인되었습니다.`, { duration: 4000 });
+          toast.success("환영합니다 코하루님! 블로그 관리자 권한으로 로그인되었습니다.", { duration: 4000 });
         } else {
           toast.success(`${user.name}님 환영합니다! 디스코드 로그인이 완료되었습니다.`);
         }
@@ -66,8 +68,8 @@ export default function DiscordCallbackPage() {
         sessionStorage.removeItem("auth_return_url");
 
         setTimeout(() => {
-          setLocation(returnUrl);
-        }, 1200);
+          window.location.href = returnUrl;
+        }, 600);
       } catch (err: any) {
         console.error("Discord callback processing error:", err);
         setStatus("error");
@@ -85,7 +87,7 @@ export default function DiscordCallbackPage() {
           <div className="space-y-4">
             <div className="w-14 h-14 mx-auto rounded-full border-4 border-pink-200 border-t-pink-600 animate-spin" />
             <h2 className="text-xl font-extrabold text-[#38314a]">디스코드 계정 확인 중...</h2>
-            <p className="text-sm text-[#7a6e8f]">권한 및 로그인 정보를 동기화하고 있습니다. 잠시만 기다려주세요 🌸</p>
+            <p className="text-sm text-[#7a6e8f]">권한 및 로그인 정보를 동기화하고 있습니다. 잠시만 기다려주세요.</p>
           </div>
         )}
 

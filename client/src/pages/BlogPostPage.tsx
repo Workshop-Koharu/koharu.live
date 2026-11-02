@@ -129,7 +129,7 @@ export default function BlogPostPage() {
     if (!post) return;
 
     if (isMyPost) {
-      toast.error("자신의 게시물에는 좋아요를 누를 수 없습니다 🙅");
+      toast.error("자신의 게시물에는 좋아요를 누를 수 없습니다.");
       return;
     }
 
@@ -178,7 +178,7 @@ export default function BlogPostPage() {
         const data = await res.json();
         setComments((prev) => [data.comment, ...prev]);
         setCommentText("");
-        toast.success("댓글을 등록했습니다! 🌸");
+        toast.success("댓글을 등록했습니다.");
       }
     } catch {
       toast.error("댓글 등록에 실패했습니다.");
@@ -262,7 +262,7 @@ export default function BlogPostPage() {
                     onClick={() => {
                       if (navigator.clipboard) {
                         navigator.clipboard.writeText(window.location.href);
-                        toast.success("게시물 링크를 복사했습니다! 🔗");
+                        toast.success("게시물 링크를 복사했습니다.");
                       }
                     }}
                     className="insta-icon-btn cursor-pointer"

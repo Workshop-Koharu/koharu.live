@@ -112,8 +112,8 @@ export default function SkillsPage() {
             <span className="text-xs uppercase tracking-widest font-bold text-pink-600">
               Tech Stack & Capabilities
             </span>
-            <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1">
-              스킬 & 역량 💻
+            <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1 inline-flex items-center justify-center gap-2">
+              <Code2 className="w-7 h-7 text-pink-600" /> 스킬 & 역량
             </h1>
             <p className="text-sm text-[#7a6e8f] mt-2">
               코하루가 직접 고민하고 프로젝트에서 다루는 기술 스택들입니다.
@@ -195,7 +195,7 @@ export default function SkillsPage() {
               </h2>
             </div>
             <p className="text-sm text-[#5a4c66] leading-relaxed">
-              단순히 작동하는 코드에서 멈추지 않고, 사용하는 사람이 자연스럽게 몰입하고 즐길 수 있는 흐름과 마감 품질을 가장 소중하게 여깁니다. 새로운 기술과 도구를 두려움 없이 탐구하며, 작은 프로토타입부터 시작해 꾸준히 완성도를 높여갑니다 🌸
+              단순히 작동하는 코드에서 멈추지 않고, 사용하는 사람이 자연스럽게 몰입하고 즐길 수 있는 흐름과 마감 품질을 가장 소중하게 여깁니다. 새로운 기술과 도구를 두려움 없이 탐구하며, 작은 프로토타입부터 시작해 꾸준히 완성도를 높여갑니다.
             </p>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KeyRound, Lock, Mail, RefreshCw, Sparkles, Unlock } from "lucide-react";
+import { HelpCircle, KeyRound, Lock, Mail, RefreshCw, Sparkles, Unlock } from "lucide-react";
 import { toast } from "sonner";
 import SiteNav from "@/components/SiteNav";
 
@@ -115,9 +115,10 @@ export default function LetterPage() {
                 <button
                   type="button"
                   onClick={() => setShowHint(!showHint)}
-                  className="text-xs text-pink-600 font-bold hover:underline"
+                  className="text-xs text-pink-600 font-bold hover:underline inline-flex items-center gap-1"
                 >
-                  {showHint ? "힌트 접기" : "💡 비밀번호 힌트 보기"}
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  {showHint ? "힌트 접기" : "비밀번호 힌트 보기"}
                 </button>
                 {showHint && (
                   <p className="text-xs text-[#7a6e8f] mt-2 animate-fadeIn bg-pink-50 p-2.5 rounded-xl border border-pink-200">
@@ -143,7 +144,7 @@ export default function LetterPage() {
 
               <div className="text-left font-['EF_Diary'] text-[16px] leading-[2.1] text-[#3d2e47] space-y-4">
                 <p>
-                  안녕! 여기까지 찾아와 코드를 풀어줘서 고마워 ⁽⁽ (˶&gt; ᎑ &lt;˶) ⁾⁾🌸
+                  안녕! 여기까지 찾아와 코드를 풀어줘서 고마워.
                 </p>
                 <p>
                   혼자서 코드를 짜고 게임을 만들다 보면 가끔은 화면 속 세상이 전부인 것처럼 느껴질 때가 있어.
@@ -156,10 +157,10 @@ export default function LetterPage() {
                   지켜봐 주면 정말 기쁠 것 같아!
                 </p>
                 <p>
-                  오늘 너의 하루도 버그 없이 평온하고, 좋아하는 일들로 반짝이기를 바랄게 ✨
+                  오늘 너의 하루도 버그 없이 평온하고, 좋아하는 일들로 가득하기를 바랄게.
                 </p>
                 <div className="text-right pt-6">
-                  <p className="font-bold text-pink-600">! Koharu 드림 🌸</p>
+                  <p className="font-bold text-pink-600">! Koharu 드림</p>
                   <p className="text-xs text-[#7a6e8f]">From koharu.live</p>
                 </div>
               </div>

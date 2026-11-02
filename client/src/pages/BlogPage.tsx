@@ -393,7 +393,7 @@ export default function BlogPage() {
     if (e) e.stopPropagation();
 
     if (isMyPost(post)) {
-      toast.error("자신의 게시물에는 좋아요를 누를 수 없습니다 🙅");
+      toast.error("자신의 게시물에는 좋아요를 누를 수 없습니다.");
       return;
     }
 
@@ -441,7 +441,7 @@ export default function BlogPage() {
 
   const handleDoubleTap = (post: Post) => {
     if (isMyPost(post)) {
-      toast.error("자신의 게시물에는 좋아요를 누를 수 없습니다 🙅");
+      toast.error("자신의 게시물에는 좋아요를 누를 수 없습니다.");
       return;
     }
     setHeartBurst(post.id);
@@ -471,7 +471,7 @@ export default function BlogPage() {
       }));
       setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
       setModalCommentInput("");
-      toast.success("댓글을 등록했습니다! 🌸");
+      toast.success("댓글을 등록했습니다.");
     } catch {
       toast.error("댓글 등록에 실패했습니다.");
     }
@@ -517,7 +517,7 @@ export default function BlogPage() {
       return next;
     });
 
-    toast.success("새 게시물이 피드에 등록되었습니다! ✨");
+    toast.success("새 게시물이 피드에 등록되었습니다.");
     setIsCreateOpen(false);
     setNewTitle("");
     setNewCaption("");
@@ -571,7 +571,7 @@ export default function BlogPage() {
     });
 
     if (selectedPost && selectedPost.id === postId) setSelectedPost(null);
-    toast.success("게시물이 삭제되었습니다! 🗑️");
+    toast.success("게시물이 삭제되었습니다.");
 
     // 3. Delete from remote database
     try {
@@ -588,7 +588,7 @@ export default function BlogPage() {
     lsSet(STORAGE_KEY_PROFILE, editForm);
     setProfile(editForm);
     setIsEditProfileOpen(false);
-    toast.success("프로필이 저장되었습니다! ✨");
+    toast.success("프로필이 저장되었습니다.");
     setIsProfileSaving(false);
   };
 
@@ -597,14 +597,14 @@ export default function BlogPage() {
     const postUrl = `${window.location.origin}/instagram?post=${encodeURIComponent(slug)}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(postUrl);
-      toast.success("게시물 공유 링크가 복사되었습니다! 🔗");
+      toast.success("게시물 공유 링크가 복사되었습니다.");
     }
   };
 
   const copyShareLink = () => {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(profileShareUrl);
-      toast.success(`프로필 링크가 복사되었습니다! 🔗`);
+      toast.success(`프로필 링크가 복사되었습니다.`);
     }
   };
 
@@ -633,7 +633,7 @@ export default function BlogPage() {
     if (!file) return;
     try {
       setNewCoverUrl(await processImageFile(file));
-      toast.success("사진이 선택되었습니다! 📷");
+      toast.success("사진이 선택되었습니다.");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "이미지를 처리하지 못했습니다.");
     }
@@ -645,7 +645,7 @@ export default function BlogPage() {
     try {
       const dataUrl = await processImageFile(file);
       setEditForm((prev) => ({ ...prev, bannerUrl: dataUrl }));
-      toast.success("배너 사진이 선택되었습니다! 🖼️");
+      toast.success("배너 사진이 선택되었습니다.");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "이미지를 처리하지 못했습니다.");
     }
@@ -657,7 +657,7 @@ export default function BlogPage() {
     try {
       const dataUrl = await processImageFile(file);
       setEditForm((prev) => ({ ...prev, avatarUrl: dataUrl }));
-      toast.success("프로필 사진이 선택되었습니다! 🌸");
+      toast.success("프로필 사진이 선택되었습니다.");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "이미지를 처리하지 못했습니다.");
     }
@@ -806,7 +806,7 @@ export default function BlogPage() {
                 </p>
               ) : (
                 <p className="text-xs italic text-[#9e8fa6] py-1">
-                  소개글이 없습니다. 프로필 세팅을 눌러 나만의 소개글을 등록해보세요 🌸
+                  소개글이 없습니다. 프로필 세팅을 눌러 나만의 소개글을 등록해보세요.
                 </p>
               )}
 
@@ -904,7 +904,7 @@ export default function BlogPage() {
           <button
             onClick={() => {
               fetchPosts();
-              toast.success("최신 피드를 불러왔습니다! 🔄");
+              toast.success("최신 피드를 불러왔습니다.");
             }}
             disabled={loading}
             className="p-2.5 rounded-2xl bg-white/80 hover:bg-white border border-pink-200 text-pink-500 hover:text-pink-600 shadow-sm transition-all cursor-pointer flex-shrink-0 disabled:opacity-50"
@@ -1357,7 +1357,7 @@ export default function BlogPage() {
                   disabled={isProfileSaving}
                   className="insta-action-btn insta-btn-primary cursor-pointer"
                 >
-                  {isProfileSaving ? "저장 중..." : "세팅 저장하기 ✨"}
+                  {isProfileSaving ? "저장 중..." : "세팅 저장하기"}
                 </button>
               </div>
             </form>
@@ -1717,7 +1717,7 @@ export default function BlogPage() {
                   disabled={isSubmitting || !newCoverUrl}
                   className="insta-action-btn insta-btn-primary cursor-pointer"
                 >
-                  {isSubmitting ? "공유하는 중..." : "피드에 공유하기 ✨"}
+                  {isSubmitting ? "공유하는 중..." : "피드에 공유하기"}
                 </button>
               </div>
             </form>
@@ -1762,7 +1762,7 @@ export default function BlogPage() {
                         />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-400 to-purple-400 text-white flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white flex-shrink-0">
-                          🌸
+                          <User className="w-5 h-5" />
                         </div>
                       )}
                       <div>
@@ -1815,7 +1815,7 @@ export default function BlogPage() {
                         />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-400 to-purple-400 text-white flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white flex-shrink-0">
-                          👤
+                          <User className="w-5 h-5" />
                         </div>
                       )}
                       <div>

@@ -72,7 +72,7 @@ export default function UrlShortenerPage() {
         setCreatedResult(result);
         setOriginalUrl("");
         setCustomCode("");
-        toast.success(`단축 URL이 생성되었습니다! 🔗`);
+        toast.success("단축 URL이 생성되었습니다.");
         loadList();
       } else {
         toast.error("단축 URL을 생성하지 못했습니다. 다시 시도해주세요.");
@@ -88,7 +88,7 @@ export default function UrlShortenerPage() {
     const fullUrl = `${window.location.origin}/${code}`;
     navigator.clipboard.writeText(fullUrl);
     setCopiedCode(code);
-    toast.success("단축 링크가 클립보드에 복사되었습니다! ✨");
+    toast.success("단축 링크가 클립보드에 복사되었습니다.");
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
@@ -97,7 +97,7 @@ export default function UrlShortenerPage() {
     await deleteShortUrl(code);
     setHistory((prev) => prev.filter((i) => i.code !== code));
     if (createdResult?.code === code) setCreatedResult(null);
-    toast.success("단축 링크가 삭제되었습니다. 🗑️");
+    toast.success("단축 링크가 삭제되었습니다.");
   };
 
   return (
@@ -116,7 +116,7 @@ export default function UrlShortenerPage() {
             URL 단축기
           </h1>
           <p className="text-sm font-semibold text-[#7a6e8f] mt-2">
-            길고 복잡한 웹 링크를 <strong>https://koharu.live/&#123;랜덤코드&#125;</strong> 형태의 짧고 깔끔한 링크로 줄여보세요! 🌸
+            길고 복잡한 웹 링크를 <strong>https://koharu.live/&#123;랜덤코드&#125;</strong> 형태의 짧고 깔끔한 링크로 줄여보세요.
           </p>
         </div>
 
@@ -168,7 +168,7 @@ export default function UrlShortenerPage() {
                   "단축 링크 만드는 중..."
                 ) : (
                   <>
-                    <Plus className="w-4 h-4" /> 링크 단축하기 ✨
+                    <Plus className="w-4 h-4" /> 링크 단축하기
                   </>
                 )}
               </button>
@@ -240,7 +240,7 @@ export default function UrlShortenerPage() {
 
           {history.length === 0 ? (
             <div className="glass-card !p-8 text-center text-xs text-[#7a6e8f]">
-              아직 생성된 단축 링크가 없습니다. 위 입력창에서 첫 번째 링크를 만들어보세요! 🌸
+              아직 생성된 단축 링크가 없습니다. 위 입력창에서 첫 번째 링크를 만들어보세요.
             </div>
           ) : (
             <div className="space-y-3">
@@ -302,7 +302,7 @@ export default function UrlShortenerPage() {
 
         {/* Footer */}
         <footer className="text-center text-xs text-[#7a6e8f] py-6">
-          <p>Made with Code & Curiosity 🌸 ! Koharu · koharu.live</p>
+          <p>Made with Code & Curiosity · ! Koharu · koharu.live</p>
         </footer>
       </main>
     </div>

@@ -63,7 +63,7 @@ function HandleRoute({ params }: { params: { handle?: string } }) {
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
         <div className="w-10 h-10 border-4 border-pink-300 border-t-pink-600 rounded-full animate-spin mb-4" />
         <p className="text-sm font-bold text-[#c93b77]">
-          단축 링크로 연결하는 중입니다... 🚀
+          단축 링크로 연결하는 중입니다...
         </p>
       </div>
     );

@@ -61,7 +61,7 @@ export default function BoardPage() {
       });
 
       if (res.ok) {
-        toast.success("방명록에 응원 글이 등록되었습니다! 🌸");
+        toast.success("방명록에 응원 글이 등록되었습니다.");
         setContent("");
         setIsSecret(false);
         fetchMessages();
@@ -85,8 +85,8 @@ export default function BoardPage() {
             <span className="text-xs uppercase tracking-widest font-bold text-pink-600">
               Guestbook & Board
             </span>
-            <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1">
-              방명록 게시판 💬
+            <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1 inline-flex items-center justify-center gap-2">
+              <MessageSquare className="w-7 h-7 text-pink-600" /> 방명록 게시판
             </h1>
             <p className="text-sm text-[#7a6e8f] mt-2">
               코하루에게 따뜻한 응원의 한 마디와 소감을 자유롭게 남겨주세요.

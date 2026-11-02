@@ -1,4 +1,4 @@
-import { ArrowUpRight, Bot, Gamepad2, Users } from "lucide-react";
+import { ArrowUpRight, Bot, FolderGit2, Gamepad2, Users } from "lucide-react";
 import SiteNav from "@/components/SiteNav";
 
 interface Project {
@@ -96,8 +96,8 @@ export default function ProjectsPage() {
             <span className="text-xs uppercase tracking-widest font-bold text-pink-600">
               Featured Works
             </span>
-            <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1">
-              프로젝트 🎮
+            <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1 inline-flex items-center justify-center gap-2">
+              <FolderGit2 className="w-7 h-7 text-pink-600" /> 프로젝트
             </h1>
             <p className="text-sm text-[#7a6e8f] mt-2">
               코하루가 직접 제작하거나 제작 도움을 준 대표 프로젝트들입니다.
@@ -133,7 +133,7 @@ export default function ProjectsPage() {
                       </div>
                       {proj.featured && (
                         <div className="absolute top-3 right-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-sm">
-                          Featured ✨
+                          Featured
                         </div>
                       )}
                     </div>
@@ -144,7 +144,7 @@ export default function ProjectsPage() {
                       </div>
                       {proj.featured && (
                         <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-sm">
-                          Featured ✨
+                          Featured
                         </div>
                       )}
                     </div>
