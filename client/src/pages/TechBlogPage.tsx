@@ -145,7 +145,7 @@ function renderSimpleMarkdown(markdown: string) {
 }
 
 export default function TechBlogPage() {
-  const { user, loginWithDiscord, logout, isAdmin } = useAppAuth();
+  const { discordUser, loginWithDiscord, logoutDiscord, isAdmin } = useAppAuth();
   const [, blogDetailRoute] = useRoute<{ slug: string }>("/blog/:slug");
 
   const [posts, setPosts] = useState<Post[]>([]);
@@ -213,12 +213,12 @@ export default function TechBlogPage() {
 
   // Reactions (Like & Dislike)
   const handleReaction = async (post: Post, type: "like" | "dislike") => {
-    if (!user) {
-      toast.error("반응을 남기려면 로그인이 필요합니다. 디스코드 또는 구글로 로그인해주세요! 🔒");
+    if (!discordUser) {
+      toast.error("반응을 남기려면 Discord 로그인이 필요합니다.");
       return;
     }
 
-    const userIdentifier = user.openId || user.email || "guest";
+    const userIdentifier = discordUser.id || discordUser.email || "discord-guest";
     try {
       const result = await togglePostReaction(post.id, userIdentifier, type);
       setUserReactions((prev) => ({
@@ -247,7 +247,7 @@ export default function TechBlogPage() {
         );
       }
 
-      toast.success(type === "like" ? "좋아요를 눌렀습니다! 👍" : "싫어요를 표시했습니다. 👎");
+      toast.success(type === "like" ? "좋아요를 눌렀습니다." : "싫어요를 표시했습니다.");
     } catch {
       toast.error("반응 처리에 실패했습니다.");
     }
@@ -256,8 +256,8 @@ export default function TechBlogPage() {
   // Comments
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      toast.error("댓글을 작성하려면 먼저 로그인해주세요! 🔒");
+    if (!discordUser) {
+      toast.error("댓글을 작성하려면 먼저 Discord 로그인을 진행해주세요.");
       return;
     }
     if (!readingPost || !commentText.trim()) return;
@@ -265,16 +265,16 @@ export default function TechBlogPage() {
     try {
       const newComment = await addComment(
         readingPost.id,
-        user.name,
-        user.avatar || "/assets/koharu-profile.png",
+        discordUser.name,
+        discordUser.avatar || "/assets/koharu-profile.png",
         commentText.trim(),
-        user.openId
+        discordUser.id
       );
 
       if (newComment) {
         setComments((prev) => [newComment, ...prev]);
         setCommentText("");
-        toast.success("댓글이 등록되었습니다! 💬");
+        toast.success("댓글이 등록되었습니다.");
       }
     } catch {
       toast.error("댓글 작성에 실패했습니다.");
@@ -282,11 +282,11 @@ export default function TechBlogPage() {
   };
 
   const handleEditComment = async (commentId: number) => {
-    if (!user || !editingCommentContent.trim()) return;
+    if (!discordUser || !editingCommentContent.trim()) return;
 
     try {
       const updated = await updateComment(commentId, editingCommentContent.trim(), {
-        userOpenId: user.openId,
+        userOpenId: discordUser.id,
         isAdmin,
       });
 
@@ -296,7 +296,7 @@ export default function TechBlogPage() {
         );
         setEditingCommentId(null);
         setEditingCommentContent("");
-        toast.success("댓글이 수정되었습니다. ✏️");
+        toast.success("댓글이 수정되었습니다.");
       } else {
         toast.error("본인이 작성한 댓글만 수정할 수 있습니다.");
       }
@@ -306,12 +306,12 @@ export default function TechBlogPage() {
   };
 
   const handleDeleteComment = async (comment: Comment) => {
-    if (!user) return;
+    if (!discordUser) return;
     if (!window.confirm("이 댓글을 삭제하시겠습니까?")) return;
 
     try {
       const ok = await deleteComment(comment.id, {
-        userOpenId: user.openId,
+        userOpenId: discordUser.id,
         isAdmin,
       });
 
@@ -329,7 +329,7 @@ export default function TechBlogPage() {
   // Editor Actions (Admin only)
   const openEditorForNew = () => {
     if (!isAdmin) {
-      toast.error("블로그 글 작성은 관리자(코하루)만 가능합니다. 🚫");
+      toast.error("블로그 글 작성은 관리자 전용입니다.");
       return;
     }
     setEditingPostId(null);
@@ -379,12 +379,12 @@ export default function TechBlogPage() {
             coverUrl: editorCoverUrl.trim() || "/assets/koharu-profile.png",
             category: editorCategory,
             isAdmin: true,
-            userOpenId: user?.openId,
+            userOpenId: discordUser?.id,
           }),
         });
 
         if (res.ok) {
-          toast.success("블로그 글이 수정되었습니다! 🌸");
+          toast.success("블로그 글이 수정되었습니다.");
           setIsEditorOpen(false);
           loadBlogPosts();
         } else {
@@ -398,12 +398,12 @@ export default function TechBlogPage() {
           caption: editorContent.trim(),
           coverUrl: editorCoverUrl.trim() || "/assets/koharu-profile.png",
           category: editorCategory,
-          authorName: user?.name || "! Koharu",
-          authorAvatar: user?.avatar || "/assets/koharu-profile.png",
+          authorName: discordUser?.name || "! Koharu",
+          authorAvatar: discordUser?.avatar || "/assets/koharu-profile.png",
         });
 
         if (newPost) {
-          toast.success("새로운 블로그 글이 발행되었습니다! 🚀");
+          toast.success("새로운 블로그 글이 발행되었습니다.");
           setIsEditorOpen(false);
           loadBlogPosts();
         } else {
@@ -426,12 +426,12 @@ export default function TechBlogPage() {
 
     try {
       const ok = await deletePost(postId, {
-        userOpenId: user?.openId,
+        userOpenId: discordUser?.id,
         isAdmin: true,
       });
 
       if (ok) {
-        toast.success("게시글이 삭제되었습니다. 🗑️");
+        toast.success("게시글이 삭제되었습니다.");
         setReadingPost(null);
         setPosts((prev) => prev.filter((p) => p.id !== postId));
       } else {
@@ -462,35 +462,35 @@ export default function TechBlogPage() {
                 Koharu Tech & Devlog
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-[#38314a] tracking-tight">
-                코하루 개발 블로그 🌸
+                코하루 개발 블로그
               </h1>
               <p className="text-xs sm:text-sm text-[#7a6e8f] mt-1">
                 Unity 엔진, C#, 셰이더, 경량 스크립트 엔진과 인디 게임 개발 일지를 기록하는 전용 공간입니다.
               </p>
             </div>
 
-            {/* Auth Area */}
+            {/* Auth Area (Discord Admin Auth) */}
             <div className="flex flex-wrap items-center gap-2.5 self-stretch sm:self-auto justify-end">
-              {user ? (
+              {discordUser ? (
                 <div className="flex items-center gap-2 bg-white/90 px-3.5 py-1.5 rounded-2xl border border-purple-200 shadow-xs">
                   <img
-                    src={user.avatar || "/assets/koharu-profile.png"}
-                    alt={user.name}
+                    src={discordUser.avatar || "/assets/koharu-profile.png"}
+                    alt={discordUser.name}
                     className="w-7 h-7 rounded-full object-cover border border-purple-300"
                   />
                   <div className="text-left">
                     <div className="text-xs font-bold text-[#38314a] flex items-center gap-1">
-                      {user.name}
-                      {user.isAdmin && (
+                      {discordUser.name}
+                      {discordUser.isAdmin && (
                         <span className="text-[10px] bg-purple-600 text-white px-1.5 py-0.2 rounded-full font-extrabold">
                           Admin
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-gray-400 capitalize">{user.provider}</div>
+                    <div className="text-[10px] text-gray-400 capitalize">Discord</div>
                   </div>
                   <button
-                    onClick={logout}
+                    onClick={logoutDiscord}
                     className="ml-2 p-1 text-gray-400 hover:text-red-500 transition cursor-pointer"
                     title="로그아웃"
                   >
@@ -506,7 +506,7 @@ export default function TechBlogPage() {
                 </button>
               )}
 
-              {/* Admin New Post Button */}
+              {/* Admin New Post Button (Only when Discord Admin) */}
               {isAdmin && (
                 <button
                   onClick={openEditorForNew}
@@ -657,19 +657,19 @@ export default function TechBlogPage() {
                 <textarea
                   rows={3}
                   placeholder={
-                    user
-                      ? `${user.name}님으로 자유롭게 의견이나 질문을 남겨주세요 🌸`
-                      : "댓글을 작성하려면 먼저 상단에서 로그인해주세요..."
+                    discordUser
+                      ? `${discordUser.name}님으로 의견이나 질문을 남겨주세요.`
+                      : "댓글을 작성하려면 먼저 상단에서 Discord 로그인을 진행해주세요."
                   }
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
-                  disabled={!user}
+                  disabled={!discordUser}
                   className="w-full text-xs p-3 rounded-2xl border border-pink-200 focus:outline-hidden focus:border-purple-500 disabled:bg-gray-50 resize-none shadow-xs"
                 />
                 <div className="flex justify-end">
                   <button
                     type="submit"
-                    disabled={!user || !commentText.trim()}
+                    disabled={!discordUser || !commentText.trim()}
                     className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition disabled:opacity-50 cursor-pointer flex items-center gap-1.5 shadow-md shadow-purple-500/20"
                   >
                     <Send className="w-3.5 h-3.5" /> 댓글 등록
@@ -681,11 +681,11 @@ export default function TechBlogPage() {
               <div className="space-y-4">
                 {comments.length === 0 ? (
                   <p className="text-xs text-center py-6 text-gray-400">
-                    아직 등록된 댓글이 없습니다. 첫 댓글의 주인공이 되어보세요! ✨
+                    아직 등록된 댓글이 없습니다. 첫 댓글을 작성해보세요.
                   </p>
                 ) : (
                   comments.map((c) => {
-                    const isAuthor = user && user.openId && c.authorOpenId === user.openId;
+                    const isAuthor = discordUser && discordUser.id && c.authorOpenId === discordUser.id;
                     const canDelete = isAuthor || isAdmin;
 
                     return (

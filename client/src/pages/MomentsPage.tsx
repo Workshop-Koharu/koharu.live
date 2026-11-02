@@ -90,34 +90,8 @@ interface NotificationItem {
   read: boolean;
 }
 
-// ── Default Mock Stories & Friends ───────────────────────────────────────────
-const INITIAL_STORIES: StoryItem[] = [
-  {
-    id: "story-1",
-    authorName: "코하루 🌸",
-    authorAvatar: "/assets/koharu-profile.png",
-    mediaUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1080&q=80",
-    caption: "오늘 만든 셰이더 결과물 ✨ 너무 예쁘죠!",
-    createdAt: "방금 전",
-  },
-  {
-    id: "story-2",
-    authorName: "수아 💖",
-    authorAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80",
-    mediaUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1080&q=80",
-    caption: "바다 보러 왔어요 🌊 힐링 중",
-    createdAt: "2시간 전",
-  },
-  {
-    id: "story-3",
-    authorName: "코블 🐱",
-    authorAvatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=256&q=80",
-    mediaUrl: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=1080&q=80",
-    caption: "고양이랑 게임 개발 중 🐾",
-    createdAt: "5시간 전",
-  },
-];
-
+// ── Default Mock Stories & Friends (Empty by default: No Ghost Accounts!) ───────
+const INITIAL_STORIES: StoryItem[] = [];
 const INITIAL_DMS: DMThread[] = [
   {
     id: "dm-koharu",
@@ -126,31 +100,27 @@ const INITIAL_DMS: DMThread[] = [
     partnerHandle: "koharu.live",
     isOnline: true,
     messages: [
-      { id: "1", sender: "them", text: "안녕하세요! 코하루 모먼트에 오신 것을 환영해요 🌸", time: "오후 2:30" },
-      { id: "2", sender: "them", text: "포트폴리오나 게임 개발 관련해서 편하게 말씀해주세요!", time: "오후 2:31" },
-    ],
-  },
-  {
-    id: "dm-sua",
-    partnerName: "수아 (Sua)",
-    partnerAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80",
-    partnerHandle: "sx0n._.a",
-    isOnline: true,
-    messages: [
-      { id: "1", sender: "them", text: "안녕! 모먼트 피드 구경 잘하고 있어 ✨", time: "어제" },
-    ],
-  },
-  {
-    id: "dm-teamlight",
-    partnerName: "Team Light",
-    partnerAvatar: "https://www.google.com/s2/favicons?domain=teamlight.pe.kr&sz=128",
-    partnerHandle: "teamlight",
-    isOnline: false,
-    messages: [
-      { id: "1", sender: "them", text: "새 프로젝트 협업 논의 언제든 환영합니다!", time: "3일 전" },
+      { id: "1", sender: "them", text: "안녕하세요. 코하루 모먼트에 오신 것을 환영합니다.", time: "오후 2:30" },
+      { id: "2", sender: "them", text: "게임 개발 및 포트폴리오에 대해 궁금한 점을 메시지로 남겨주세요.", time: "오후 2:31" },
     ],
   },
 ];
+
+interface UserProfileConfig {
+  name: string;
+  bio: string;
+  avatarUrl: string;
+  githubUrl?: string;
+  websiteUrl?: string;
+}
+
+const DEFAULT_PROFILE_CONFIG: UserProfileConfig = {
+  name: "! Koharu · 코하루",
+  bio: "게임 프로그래머 · 인디 게임 및 커스텀 엔진 제작\nUnity / C# · HLSL Shader · TypeScript · Web\n플레이되는 아이디어를 코드로 실체화하는 중",
+  avatarUrl: "/assets/koharu-profile.png",
+  githubUrl: "https://github.com/Workshop-Koharu",
+  websiteUrl: "https://www.koharu.live",
+};
 
 export default function MomentsPage() {
   const { user, loginWithGoogle, renderGoogleButton, logout, isAdmin } = useAppAuth();
@@ -173,28 +143,9 @@ export default function MomentsPage() {
   const [activeThreadId, setActiveThreadId] = useState<string>("dm-koharu");
   const [dmInput, setDmInput] = useState("");
 
-  // Notification State
+  // Notification State (Empty by default: No Ghost Notifications)
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    {
-      id: "notif-1",
-      type: "like",
-      actorName: "코하루",
-      actorAvatar: "/assets/koharu-profile.png",
-      text: "회원님의 모먼트를 좋아합니다 ❤️",
-      time: "10분 전",
-      read: false,
-    },
-    {
-      id: "notif-2",
-      type: "follow",
-      actorName: "수아",
-      actorAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80",
-      text: "회원님을 팔로우하기 시작했습니다.",
-      time: "1시간 전",
-      read: false,
-    },
-  ]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   // Following & Follower State (Saved in LocalStorage)
   const [followingUsers, setFollowingUsers] = useState<Set<string>>(() => {
@@ -202,8 +153,23 @@ export default function MomentsPage() {
       const saved = localStorage.getItem("koharu_following_users");
       if (saved) return new Set(JSON.parse(saved));
     } catch {}
-    return new Set(["koharu.live", "sua"]);
+    return new Set<string>();
   });
+
+  // Profile Settings State (Restored Profile Settings Feature)
+  const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
+  const [profileConfig, setProfileConfig] = useState<UserProfileConfig>(() => {
+    try {
+      const saved = localStorage.getItem("koharu_profile_settings");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return DEFAULT_PROFILE_CONFIG;
+  });
+  const [editName, setEditName] = useState(profileConfig.name);
+  const [editBio, setEditBio] = useState(profileConfig.bio);
+  const [editAvatar, setEditAvatar] = useState(profileConfig.avatarUrl);
+  const [editGithub, setEditGithub] = useState(profileConfig.githubUrl || "");
+  const [editWebsite, setEditWebsite] = useState(profileConfig.websiteUrl || "");
 
   // Post & View State
   const [activeTab, setActiveTab] = useState<"grid" | "feed">("grid");
@@ -311,6 +277,22 @@ export default function MomentsPage() {
     setSelectedPost(null);
     setComments([]);
     setEditingCommentId(null);
+  };
+
+  // Save Profile Settings (Name, Bio, Avatar, Links)
+  const handleSaveProfileSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    const updated: UserProfileConfig = {
+      name: editName.trim() || user?.name || "! Koharu",
+      bio: editBio.trim(),
+      avatarUrl: editAvatar.trim() || user?.avatar || "/assets/koharu-profile.png",
+      githubUrl: editGithub.trim(),
+      websiteUrl: editWebsite.trim(),
+    };
+    setProfileConfig(updated);
+    localStorage.setItem("koharu_profile_settings", JSON.stringify(updated));
+    setIsProfileSettingsOpen(false);
+    toast.success("프로필 설정이 저장되었습니다.");
   };
 
   // Follow / Unfollow Toggle
@@ -596,41 +578,20 @@ export default function MomentsPage() {
               실제 인스타그램 피드, 스토리, 1:1 DM 및 친구 팔로우 기능을 이용하려면 <strong>Google 계정 로그인</strong>이 필수입니다.
             </p>
 
-            {/* Official Google Login Button Container */}
+            {/* Official Google Login Button Container (Single Clean Button) */}
             <div className="flex flex-col items-center justify-center gap-3">
               <div ref={googleBtnContainerRef} className="flex justify-center w-full min-h-[44px]" />
-
-              {/* Direct One-Click Google Sign In Trigger Fallback */}
-              <button
-                type="button"
-                onClick={loginWithGoogle}
-                className="w-full max-w-[280px] py-3 rounded-full bg-white hover:bg-gray-50 border border-gray-300 shadow-sm text-xs font-bold text-gray-700 flex items-center justify-center gap-2.5 transition cursor-pointer active:scale-98"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-                <span>Google 계정으로 계속하기</span>
-              </button>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-pink-100 flex items-center justify-center gap-6 text-[11px] text-gray-400">
-              <span className="flex items-center gap-1">🔒 SSL 보안 암호화</span>
-              <span className="flex items-center gap-1">✨ 안전한 OAuth 2.0</span>
+            <div className="mt-8 pt-6 border-t border-pink-100 flex items-center justify-center gap-6 text-[11px] text-gray-500">
+              <span className="flex items-center gap-1.5 font-medium">
+                <Lock className="w-3.5 h-3.5 text-pink-500" />
+                SSL 보안 암호화
+              </span>
+              <span className="flex items-center gap-1.5 font-medium">
+                <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                안전한 OAuth 2.0
+              </span>
             </div>
           </div>
         </main>
@@ -788,20 +749,20 @@ export default function MomentsPage() {
           ))}
         </section>
 
-        {/* ── User's OWN Real Profile Card (No More Koharu Hardcoded!) ─── */}
-        <section className="glass-card !p-6 sm:!p-8 mb-8 border border-pink-100 shadow-xl rounded-3xl relative overflow-hidden">
+        {/* ── User Profile Card (Real Authenticated User & Restored Settings) ─── */}
+        <section className="glass-card !p-6 sm:!p-8 mb-8 border border-pink-100 shadow-xl rounded-3xl relative overflow-hidden bg-white/90">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-            {/* User's Actual Avatar with Rainbow Ring */}
+            {/* User Avatar with Verification Badge */}
             <div className="relative flex-shrink-0">
-              <div className="w-22 h-22 sm:w-24 sm:h-24 rounded-full p-1 bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 shadow-lg shadow-pink-500/20">
+              <div className="w-22 h-22 sm:w-24 sm:h-24 rounded-full p-1 bg-gradient-to-tr from-pink-500 via-rose-500 to-purple-600 shadow-lg shadow-pink-500/20">
                 <img
-                  src={user.avatar || "/assets/koharu-profile.png"}
+                  src={profileConfig.avatarUrl || user.avatar || "/assets/koharu-profile.png"}
                   alt={user.name}
                   className="w-full h-full rounded-full object-cover border-2 border-white bg-white"
                 />
               </div>
-              <span className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-[9px] text-white font-bold">
-                ✓
+              <span className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-white shadow-xs">
+                <Check className="w-3 h-3 stroke-[3]" />
               </span>
             </div>
 
@@ -809,10 +770,10 @@ export default function MomentsPage() {
             <div className="flex-1 text-center sm:text-left space-y-3">
               <div className="flex flex-wrap items-center justify-center sm:justify-between gap-3">
                 <div>
-                  <h2 className="text-2xl font-black text-[#38314a] flex items-center gap-2 justify-center sm:justify-start">
-                    {user.name}
-                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold shadow-xs">
-                      Google 인증 유저
+                  <h2 className="text-xl sm:text-2xl font-black text-[#38314a] flex items-center gap-2 justify-center sm:justify-start">
+                    {profileConfig.name || user.name}
+                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white font-extrabold shadow-xs flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" /> Google 인증
                     </span>
                   </h2>
                   <p className="text-xs font-semibold text-pink-600 mt-0.5">
@@ -821,7 +782,29 @@ export default function MomentsPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <QRButton url={`${window.location.origin}/moments`} label={user.name} />
+                  {/* Share Profile QR Button - Strictly links to user profile, NOT /moments */}
+                  <QRButton
+                    url={`${window.location.origin}/@koharu.live`}
+                    label={`${profileConfig.name || user.name} 프로필`}
+                  />
+
+                  {/* Profile Settings Trigger Button */}
+                  <button
+                    onClick={() => {
+                      setEditName(profileConfig.name || user.name);
+                      setEditBio(profileConfig.bio);
+                      setEditAvatar(profileConfig.avatarUrl || user.avatar || "");
+                      setEditGithub(profileConfig.githubUrl || "");
+                      setEditWebsite(profileConfig.websiteUrl || "");
+                      setIsProfileSettingsOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-pink-200 text-[#38314a] text-xs font-bold hover:bg-pink-50 transition cursor-pointer shadow-xs"
+                    title="프로필 설정"
+                  >
+                    <Edit3 className="w-3.5 h-3.5 text-pink-500" />
+                    <span>프로필 설정</span>
+                  </button>
+
                   <button
                     onClick={() => setIsCreateOpen(true)}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white text-xs font-extrabold shadow-md shadow-pink-500/25 transition cursor-pointer"
@@ -830,6 +813,13 @@ export default function MomentsPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Bio description */}
+              {profileConfig.bio && (
+                <p className="text-xs text-[#5f5270] leading-relaxed whitespace-pre-line text-left">
+                  {profileConfig.bio}
+                </p>
+              )}
 
               {/* Stats Bar */}
               <div className="flex items-center justify-center sm:justify-start gap-8 pt-1 text-xs">
@@ -842,7 +832,7 @@ export default function MomentsPage() {
                   <span className="text-[#7a6e8f]">팔로잉</span>
                 </div>
                 <div>
-                  <span className="font-extrabold text-[#38314a] text-sm">12</span>{" "}
+                  <span className="font-extrabold text-[#38314a] text-sm">{followingUsers.size > 0 ? 1 : 0}</span>{" "}
                   <span className="text-[#7a6e8f]">팔로워</span>
                 </div>
               </div>
@@ -1596,6 +1586,104 @@ export default function MomentsPage() {
                     className="flex-1 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xs font-bold shadow-md"
                   >
                     스토리 등록
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ── Profile Settings Modal (Restored) ─────────────────────────── */}
+        {isProfileSettingsOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
+            onClick={() => setIsProfileSettingsOpen(false)}
+          >
+            <div
+              className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-pink-100 animate-in zoom-in-95"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-pink-100 mb-4">
+                <h3 className="text-base font-extrabold text-[#38314a] flex items-center gap-2">
+                  <Edit3 className="w-5 h-5 text-pink-500" /> 프로필 설정
+                </h3>
+                <button
+                  onClick={() => setIsProfileSettingsOpen(false)}
+                  className="text-gray-400 hover:text-gray-700 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveProfileSettings} className="space-y-3.5">
+                <div>
+                  <label className="block text-xs font-bold text-[#38314a] mb-1">닉네임 / 표시 이름</label>
+                  <input
+                    type="text"
+                    required
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#38314a] mb-1">소개글 (Bio)</label>
+                  <textarea
+                    rows={3}
+                    value={editBio}
+                    onChange={(e) => setEditBio(e.target.value)}
+                    placeholder="자신을 소개하는 문구를 작성해주세요..."
+                    className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500 resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#38314a] mb-1">아바타 이미지 URL</label>
+                  <input
+                    type="url"
+                    value={editAvatar}
+                    onChange={(e) => setEditAvatar(e.target.value)}
+                    placeholder="https://... 아바타 이미지 주소"
+                    className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#38314a] mb-1">GitHub 프로필 URL (선택)</label>
+                  <input
+                    type="url"
+                    value={editGithub}
+                    onChange={(e) => setEditGithub(e.target.value)}
+                    placeholder="https://github.com/..."
+                    className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#38314a] mb-1">웹사이트 URL (선택)</label>
+                  <input
+                    type="url"
+                    value={editWebsite}
+                    onChange={(e) => setEditWebsite(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
+                  />
+                </div>
+
+                <div className="pt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsProfileSettingsOpen(false)}
+                    className="flex-1 py-2.5 rounded-xl bg-gray-100 text-[#38314a] font-bold text-xs hover:bg-gray-200 cursor-pointer"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-xs shadow-md shadow-pink-500/25 hover:opacity-90 cursor-pointer"
+                  >
+                    저장하기
                   </button>
                 </div>
               </form>

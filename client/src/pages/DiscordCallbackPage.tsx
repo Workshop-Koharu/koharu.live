@@ -47,12 +47,12 @@ export default function DiscordCallbackPage() {
         }
 
         const user = data.user;
-        localStorage.setItem("koharu_app_user_v2", JSON.stringify(user));
+        localStorage.setItem("koharu_discord_user_v2", JSON.stringify(user));
         setAdminDetected(user.isAdmin);
         setStatus("success");
 
         if (user.isAdmin) {
-          toast.success(`🌸 환영합니다 코하루님! 블로그 관리자 권한으로 로그인되었습니다.`, { duration: 4000 });
+          toast.success(`환영합니다 코하루님! 블로그 관리자 권한으로 로그인되었습니다.`, { duration: 4000 });
         } else {
           toast.success(`${user.name}님 환영합니다! 디스코드 로그인이 완료되었습니다.`);
         }

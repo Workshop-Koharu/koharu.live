@@ -15,11 +15,13 @@ export interface AppUser {
 
 interface AuthContextType {
   user: AppUser | null;
+  discordUser: AppUser | null;
   loading: boolean;
   loginWithDiscord: () => void;
   loginWithGoogle: () => void;
   renderGoogleButton: (element: HTMLElement) => void;
   logout: () => void;
+  logoutDiscord: () => void;
   isAdmin: boolean;
   isLoggedIn: boolean;
 }
@@ -29,18 +31,20 @@ export const DISCORD_CLIENT_ID = "1523139211228741784";
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  discordUser: null,
   loading: true,
   loginWithDiscord: () => {},
   loginWithGoogle: () => {},
   renderGoogleButton: () => {},
   logout: () => {},
+  logoutDiscord: () => {},
   isAdmin: false,
   isLoggedIn: false,
 });
 
-const STORAGE_KEY = "koharu_app_user_v2";
+const STORAGE_KEY_USER = "koharu_app_user_v2";
+const STORAGE_KEY_DISCORD = "koharu_discord_user_v2";
 
-// Helper: Safely parse JWT from Google Credential response
 function parseJwt(token: string) {
   try {
     const base64Url = token.split(".")[1];
@@ -60,6 +64,7 @@ function parseJwt(token: string) {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
+  const [discordUser, setDiscordUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   const handleCredentialResponse = (response: any) => {
@@ -86,8 +91,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     setUser(newUser);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
-    toast.success(`Google 로그인 성공! 환영합니다, ${newUser.name}님 🌸`);
+    localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(newUser));
+    toast.success(`Google 로그인 완료: ${newUser.name}님`);
 
     // Sync to backend DB
     fetch("/api/auth/google", {
@@ -102,7 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }).catch(() => {});
   };
 
-  // Initialize Google Identity Services
+  // Initialize Google Identity Services SDK
   useEffect(() => {
     const initGoogleGSI = () => {
       if (typeof window !== "undefined" && (window as any).google?.accounts?.id) {
@@ -133,37 +138,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Load cached user session
+  // Load cached user sessions
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as AppUser;
-        // Verify admin rules if discord
-        if (parsed.provider === "discord") {
-          const isEmailMatch = (parsed.email || "").toLowerCase() === "codingexpertleon@gmail.com";
-          const uname = (parsed.username || "").toLowerCase();
-          const pname = (parsed.name || "").toLowerCase();
-          const isUserMatch =
-            uname === "sua_is.babo" ||
-            pname === "sua_is.babo" ||
-            uname === "koharu_81s" ||
-            pname === "koharu_81s";
-          const isIdMatch = String(parsed.id) === "1339604814631534667";
-          parsed.isAdmin = isEmailMatch && isUserMatch && isIdMatch;
-          parsed.role = parsed.isAdmin ? "admin" : "user";
-        }
-        setUser(parsed);
+      // 1. Google User for Moments
+      const storedUser = localStorage.getItem(STORAGE_KEY_USER);
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+
+      // 2. Discord User for Blog Admin
+      const storedDiscord = localStorage.getItem(STORAGE_KEY_DISCORD);
+      if (storedDiscord) {
+        const parsed = JSON.parse(storedDiscord) as AppUser;
+        const isEmailMatch = (parsed.email || "").toLowerCase() === "codingexpertleon@gmail.com";
+        const uname = (parsed.username || "").toLowerCase();
+        const pname = (parsed.name || "").toLowerCase();
+        const isUserMatch =
+          uname === "sua_is.babo" ||
+          pname === "sua_is.babo" ||
+          uname === "koharu_81s" ||
+          pname === "koharu_81s";
+        const isIdMatch = String(parsed.id) === "1339604814631534667";
+        parsed.isAdmin = isEmailMatch && isUserMatch && isIdMatch;
+        parsed.role = parsed.isAdmin ? "admin" : "user";
+        setDiscordUser(parsed);
       }
     } catch (e) {
-      console.warn("Failed to parse stored user", e);
+      console.warn("Failed to parse stored sessions", e);
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // Discord Login
   const loginWithDiscord = () => {
-    // If not localhost, force www.koharu.live
     let redirectUri = `${window.location.origin}/auth/discord/callback`;
     if (!window.location.hostname.includes("localhost") && !window.location.hostname.includes("127.0.0.1")) {
       redirectUri = "https://www.koharu.live/auth/discord/callback";
@@ -177,14 +186,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.location.href = discordAuthUrl;
   };
 
+  // Google Login Prompt
   const loginWithGoogle = () => {
     if (typeof window !== "undefined" && (window as any).google?.accounts?.id) {
       try {
-        (window as any).google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            console.log("One-tap dismissed or skipped, opening credential popup if available");
-          }
-        });
+        (window as any).google.accounts.id.prompt();
       } catch (err) {
         console.error("Google prompt error:", err);
       }
@@ -193,11 +199,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Render Google Official Button (Single clean button)
   const renderGoogleButton = (element: HTMLElement) => {
     if (typeof window !== "undefined" && (window as any).google?.accounts?.id && element) {
       try {
+        element.innerHTML = "";
         (window as any).google.accounts.id.renderButton(element, {
-          theme: "filled_blue",
+          theme: "outline",
           size: "large",
           text: "continue_with",
           shape: "pill",
@@ -212,20 +220,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem(STORAGE_KEY);
-    toast.success("로그아웃 되었습니다.");
+    localStorage.removeItem(STORAGE_KEY_USER);
+    toast.success("Google 로그아웃 되었습니다.");
   };
+
+  const logoutDiscord = () => {
+    setDiscordUser(null);
+    localStorage.removeItem(STORAGE_KEY_DISCORD);
+    toast.success("Discord 로그아웃 되었습니다.");
+  };
+
+  // Admin status is strictly determined by Discord Admin identity!
+  const isDiscordAdmin = Boolean(discordUser?.isAdmin);
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        discordUser,
         loading,
         loginWithDiscord,
         loginWithGoogle,
         renderGoogleButton,
         logout,
-        isAdmin: Boolean(user?.isAdmin),
+        logoutDiscord,
+        isAdmin: isDiscordAdmin,
         isLoggedIn: Boolean(user),
       }}
     >
