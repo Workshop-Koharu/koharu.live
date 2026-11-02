@@ -6,8 +6,8 @@ const PARTNERS = [
     name: "수아",
     tag: "Special Partner 🌸",
     desc: "수아!!!!!",
-    avatar: "https://www.google.com/s2/favicons?domain=se01hxa.xyz&sz=128",
-    link: "https://se01hxa.xyz/",
+    avatar: "https://intro-us.xyz/portal-assets/intro-us-logo.svg",
+    link: "https://intro-us.xyz/",
     badge: "Partner 💖",
   },
   {

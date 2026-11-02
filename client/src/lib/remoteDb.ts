@@ -438,8 +438,28 @@ export async function createShortUrl(
 
 export async function incrementShortUrlClicks(code: string): Promise<void> {
   const cleanCode = code.trim().toLowerCase();
+
+  // 1. Update localStorage click count immediately
   try {
-    await fetch(`/api/short-urls/${encodeURIComponent(cleanCode)}/click`, { method: "POST" });
+    const list = getLocalShortUrls();
+    const target = list.find((i) => i.code.toLowerCase() === cleanCode);
+    if (target) {
+      target.clicks = (Number(target.clicks) || 0) + 1;
+      saveLocalShortUrls(list);
+    }
+  } catch {}
+
+  // 2. Dispatch custom event for real-time reactive UI update
+  try {
+    window.dispatchEvent(new CustomEvent("short_url_clicked", { detail: { code: cleanCode } }));
+  } catch {}
+
+  // 3. Post to backend with keepalive
+  try {
+    await fetch(`/api/short-urls/${encodeURIComponent(cleanCode)}/click`, {
+      method: "POST",
+      keepalive: true,
+    });
   } catch {}
 }
 

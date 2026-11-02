@@ -16,6 +16,7 @@ import {
   createShortUrl,
   deleteShortUrl,
   fetchAllShortUrls,
+  incrementShortUrlClicks,
   ShortUrlItem,
 } from "@/lib/remoteDb";
 
@@ -27,15 +28,34 @@ export default function UrlShortenerPage() {
   const [createdResult, setCreatedResult] = useState<ShortUrlItem | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadList();
-  }, []);
-
   const loadList = async () => {
     try {
       const items = await fetchAllShortUrls();
       setHistory(items);
     } catch {}
+  };
+
+  useEffect(() => {
+    loadList();
+    const handleRefresh = () => loadList();
+    window.addEventListener("focus", handleRefresh);
+    window.addEventListener("short_url_clicked", handleRefresh);
+    return () => {
+      window.removeEventListener("focus", handleRefresh);
+      window.removeEventListener("short_url_clicked", handleRefresh);
+    };
+  }, []);
+
+  const handleLinkClick = (code: string) => {
+    incrementShortUrlClicks(code);
+    setHistory((prev) =>
+      prev.map((i) => (i.code.toLowerCase() === code.toLowerCase() ? { ...i, clicks: (Number(i.clicks) || 0) + 1 } : i))
+    );
+    if (createdResult?.code.toLowerCase() === code.toLowerCase()) {
+      setCreatedResult((prev) =>
+        prev ? { ...prev, clicks: (Number(prev.clicks) || 0) + 1 } : null
+      );
+    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -166,6 +186,7 @@ export default function UrlShortenerPage() {
                       href={`/${createdResult.code}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() => handleLinkClick(createdResult.code)}
                       className="font-mono font-extrabold text-[#c93b77] text-base hover:underline flex items-center gap-1 truncate"
                     >
                       https://koharu.live/{createdResult.code}
@@ -234,6 +255,7 @@ export default function UrlShortenerPage() {
                         href={`/${item.code}`}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={() => handleLinkClick(item.code)}
                         className="font-mono font-bold text-[#c93b77] text-sm hover:underline flex items-center gap-1 truncate"
                       >
                         https://koharu.live/{item.code}

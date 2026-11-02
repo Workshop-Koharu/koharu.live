@@ -38,11 +38,13 @@ function HandleRoute({ params }: { params: { handle?: string } }) {
     }
 
     // Check if clean matches a short URL
-    fetchShortUrl(clean).then((target) => {
+    fetchShortUrl(clean).then(async (target) => {
       if (!active) return;
       if (target) {
         setIsRedirecting(true);
-        incrementShortUrlClicks(clean);
+        try {
+          await incrementShortUrlClicks(clean);
+        } catch {}
         window.location.replace(target);
       } else {
         setChecking(false);
