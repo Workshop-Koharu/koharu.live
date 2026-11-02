@@ -38,6 +38,8 @@ import {
   Post,
 } from "@/lib/remoteDb";
 
+import { compressImageFile } from "@/lib/imageCompressor";
+
 interface ProfileCustomConfig {
   name: string;
   handle: string;
@@ -52,18 +54,19 @@ interface ProfileCustomConfig {
   discordId?: string;
 }
 
+// Clean default profile config: Zero hardcoded fake data or template values
 const DEFAULT_PROFILE_CONFIG: ProfileCustomConfig = {
-  name: "! Koharu · 코하루",
-  handle: "koharu_81s",
-  bio: "플레이되는 아이디어를 코드로 실체화하는 중. 게임 엔진 개발 & 셰이더 프로그래밍",
-  statusQuote: "코드와 감성이 만나는 지점을 탐구합니다.",
-  avatarUrl: "/assets/koharu-profile.png",
+  name: "",
+  handle: "",
+  bio: "",
+  statusQuote: "",
+  avatarUrl: "",
   bannerUrl: "",
   themeColor: "#ec4899", // Pink
-  techTags: ["Unreal Engine 5", "Unity", "C++", "C#", "HLSL Shader", "TypeScript"],
-  githubUrl: "https://github.com/Koharu81",
-  websiteUrl: "https://www.koharu.live",
-  discordId: "1339604814631534667",
+  techTags: [],
+  githubUrl: "",
+  websiteUrl: "",
+  discordId: "",
 };
 
 const THEME_COLORS = [
@@ -81,13 +84,18 @@ export default function ProfilePage() {
   const [, paramsU] = useRoute("/u/:handle");
   const [, paramsUser] = useRoute("/user/:handle");
 
-  const rawHandle = paramsProfile?.handle || paramsU?.handle || paramsUser?.handle || "koharu_81s";
+  const { user, updateUserProfile } = useAppAuth();
+  const rawHandle =
+    paramsProfile?.handle ||
+    paramsU?.handle ||
+    paramsUser?.handle ||
+    (user?.email ? user.email.split("@")[0] : "");
   const cleanHandle = rawHandle.replace(/^@/, "").toLowerCase();
 
-  const { user, updateUserProfile } = useAppAuth();
   const [profile, setProfile] = useState<ProfileCustomConfig>(() => {
     try {
-      const saved = localStorage.getItem(`koharu_profile_v3_${cleanHandle}`);
+      const storageKey = cleanHandle ? `koharu_profile_v3_${cleanHandle}` : "koharu_profile_settings";
+      const saved = localStorage.getItem(storageKey);
       if (saved) return JSON.parse(saved);
 
       const generalSaved = localStorage.getItem("koharu_profile_settings");
@@ -95,15 +103,21 @@ export default function ProfilePage() {
         const parsed = JSON.parse(generalSaved);
         return {
           ...DEFAULT_PROFILE_CONFIG,
-          name: parsed.name || DEFAULT_PROFILE_CONFIG.name,
-          bio: parsed.bio || DEFAULT_PROFILE_CONFIG.bio,
-          avatarUrl: parsed.avatarUrl || DEFAULT_PROFILE_CONFIG.avatarUrl,
-          githubUrl: parsed.githubUrl || DEFAULT_PROFILE_CONFIG.githubUrl,
-          websiteUrl: parsed.websiteUrl || DEFAULT_PROFILE_CONFIG.websiteUrl,
+          name: parsed.name || user?.name || "",
+          bio: parsed.bio || "",
+          avatarUrl: parsed.avatarUrl || user?.avatar || "",
+          githubUrl: parsed.githubUrl || "",
+          websiteUrl: parsed.websiteUrl || "",
+          handle: parsed.handle || (user?.email ? user.email.split("@")[0] : ""),
         };
       }
     } catch {}
-    return DEFAULT_PROFILE_CONFIG;
+    return {
+      ...DEFAULT_PROFILE_CONFIG,
+      name: user?.name || "",
+      avatarUrl: user?.avatar || "",
+      handle: user?.email ? user.email.split("@")[0] : "",
+    };
   });
 
   const [posts, setPosts] = useState<Post[]>([]);
@@ -179,30 +193,34 @@ export default function ProfilePage() {
     } catch {}
   };
 
-  // Avatar file upload handler
-  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Avatar file upload handler with auto compression
+  const handleAvatarSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      if (evt.target?.result) {
-        setEditAvatar(evt.target.result as string);
+    try {
+      const compressed = await compressImageFile(file, 400, 0.85);
+      if (compressed) {
+        setEditAvatar(compressed);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+    }
+    e.target.value = "";
   };
 
-  // Banner file upload handler
-  const handleBannerSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Banner file upload handler with auto compression
+  const handleBannerSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      if (evt.target?.result) {
-        setEditBanner(evt.target.result as string);
+    try {
+      const compressed = await compressImageFile(file, 1200, 0.82);
+      if (compressed) {
+        setEditBanner(compressed);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+    }
+    e.target.value = "";
   };
 
   // Save Customization
@@ -674,33 +692,39 @@ export default function ProfilePage() {
             onClick={() => setIsCustomizeOpen(false)}
           >
             <div
-              className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-pink-100 max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-[28px] max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-pink-100 max-h-[88vh] overflow-y-auto animate-in zoom-in-95 duration-150"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between pb-3.5 border-b border-pink-100 mb-4">
-                <h3 className="text-base font-extrabold text-[#38314a] flex items-center gap-2">
-                  <Palette className="w-5 h-5 text-pink-500" /> 프로필 커스터마이징
-                </h3>
+              <div className="flex items-center justify-between pb-3.5 border-b border-pink-100/70 mb-5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-pink-100 text-pink-600 flex items-center justify-center">
+                    <Palette className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-extrabold text-[#38314a]">프로필 커스터마이징</h3>
+                    <p className="text-[11px] text-[#7a6e8f]">내 프로필 화면에 표시될 정보를 자유롭게 설정하세요.</p>
+                  </div>
+                </div>
                 <button
                   onClick={() => setIsCustomizeOpen(false)}
-                  className="p-1 rounded-lg text-gray-400 hover:text-gray-700 cursor-pointer"
+                  className="p-1.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition cursor-pointer"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
               <form onSubmit={handleSaveCustomization} className="space-y-4">
                 {/* 1. Theme Color Selector */}
-                <div>
-                  <label className="block text-xs font-bold text-[#38314a] mb-1.5">테마 포인트 색상</label>
-                  <div className="flex items-center gap-2">
+                <div className="p-3 rounded-2xl bg-pink-50/50 border border-pink-100/60">
+                  <label className="block text-xs font-bold text-[#38314a] mb-2">테마 포인트 색상</label>
+                  <div className="flex items-center gap-2.5">
                     {THEME_COLORS.map((tc) => (
                       <button
                         key={tc.color}
                         type="button"
                         onClick={() => setEditThemeColor(tc.color)}
-                        className={`w-7 h-7 rounded-full transition-transform cursor-pointer ${
-                          editThemeColor === tc.color ? "scale-125 ring-2 ring-offset-2 ring-pink-500" : ""
+                        className={`w-7 h-7 rounded-full transition-transform cursor-pointer shadow-xs ${
+                          editThemeColor === tc.color ? "scale-125 ring-2 ring-offset-2 ring-pink-500" : "hover:scale-110"
                         }`}
                         style={{ backgroundColor: tc.color }}
                         title={tc.name}
@@ -709,174 +733,181 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* 2. Banner Upload from File Manager */}
-                <div>
-                  <label className="block text-xs font-bold text-[#38314a] mb-1">
-                    배너 커버 사진 (파일 관리자에서 선택)
-                  </label>
-                  <input
-                    type="file"
-                    ref={bannerInputRef}
-                    accept="image/*"
-                    onChange={handleBannerSelect}
-                    className="hidden"
-                  />
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => bannerInputRef.current?.click()}
-                      className="px-3.5 py-2 rounded-xl bg-pink-50 hover:bg-pink-100 border border-pink-200 text-xs font-bold text-pink-700 transition cursor-pointer flex items-center gap-1.5"
-                    >
-                      <ImageIcon className="w-3.5 h-3.5" /> 파일 관리자에서 선택
-                    </button>
+                {/* 2. Banner & Avatar Upload via File Manager */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Banner Upload */}
+                  <div className="p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                    <label className="block text-xs font-bold text-[#38314a] mb-1.5">
+                      배너 커버 사진
+                    </label>
+                    <input
+                      type="file"
+                      ref={bannerInputRef}
+                      accept="image/*"
+                      onChange={handleBannerSelect}
+                      className="hidden"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => bannerInputRef.current?.click()}
+                        className="px-3 py-1.5 rounded-xl bg-white hover:bg-pink-50 border border-pink-200 text-xs font-bold text-pink-700 transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5 text-pink-500" /> 파일 선택
+                      </button>
+                      {editBanner && (
+                        <button
+                          type="button"
+                          onClick={() => setEditBanner("")}
+                          className="text-xs text-red-500 hover:underline cursor-pointer"
+                        >
+                          초기화
+                        </button>
+                      )}
+                    </div>
                     {editBanner && (
-                      <button
-                        type="button"
-                        onClick={() => setEditBanner("")}
-                        className="text-xs text-red-500 hover:underline cursor-pointer"
-                      >
-                        배너 초기화
-                      </button>
+                      <div className="mt-2 h-14 w-full rounded-xl overflow-hidden border border-pink-200 shadow-xs">
+                        <img src={editBanner} alt="Banner Preview" className="w-full h-full object-cover" />
+                      </div>
                     )}
                   </div>
-                  {editBanner && (
-                    <div className="mt-2 h-20 w-full rounded-xl overflow-hidden border border-pink-200">
-                      <img src={editBanner} alt="Banner Preview" className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                </div>
 
-                {/* 3. Avatar Upload from File Manager */}
-                <div>
-                  <label className="block text-xs font-bold text-[#38314a] mb-1">
-                    프로필 아바타 (파일 관리자에서 선택)
-                  </label>
-                  <input
-                    type="file"
-                    ref={avatarInputRef}
-                    accept="image/*"
-                    onChange={handleAvatarSelect}
-                    className="hidden"
-                  />
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => avatarInputRef.current?.click()}
-                      className="px-3.5 py-2 rounded-xl bg-pink-50 hover:bg-pink-100 border border-pink-200 text-xs font-bold text-pink-700 transition cursor-pointer flex items-center gap-1.5"
-                    >
-                      <User className="w-3.5 h-3.5" /> 파일 관리자에서 선택
-                    </button>
+                  {/* Avatar Upload */}
+                  <div className="p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                    <label className="block text-xs font-bold text-[#38314a] mb-1.5">
+                      프로필 아바타
+                    </label>
+                    <input
+                      type="file"
+                      ref={avatarInputRef}
+                      accept="image/*"
+                      onChange={handleAvatarSelect}
+                      className="hidden"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => avatarInputRef.current?.click()}
+                        className="px-3 py-1.5 rounded-xl bg-white hover:bg-pink-50 border border-pink-200 text-xs font-bold text-pink-700 transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+                      >
+                        <User className="w-3.5 h-3.5 text-pink-500" /> 파일 선택
+                      </button>
+                      {editAvatar && (
+                        <button
+                          type="button"
+                          onClick={() => setEditAvatar("")}
+                          className="text-xs text-red-500 hover:underline cursor-pointer"
+                        >
+                          초기화
+                        </button>
+                      )}
+                    </div>
                     {editAvatar && (
-                      <button
-                        type="button"
-                        onClick={() => setEditAvatar(DEFAULT_PROFILE_CONFIG.avatarUrl)}
-                        className="text-xs text-red-500 hover:underline cursor-pointer"
-                      >
-                        기본값으로 변경
-                      </button>
+                      <div className="mt-2 w-12 h-12 rounded-full overflow-hidden border-2 border-pink-200 shadow-xs">
+                        <img src={editAvatar} alt="Avatar Preview" className="w-full h-full object-cover" />
+                      </div>
                     )}
                   </div>
-                  {editAvatar && (
-                    <div className="mt-2 w-16 h-16 rounded-full overflow-hidden border border-pink-200">
-                      <img src={editAvatar} alt="Avatar Preview" className="w-full h-full object-cover" />
-                    </div>
-                  )}
                 </div>
 
-                {/* 4. Display Name & Handle */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* 3. Display Name & Handle */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-[#38314a] mb-1">표시 이름</label>
                     <input
                       type="text"
-                      required
+                      placeholder="이름 (예: 코하루)"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden"
+                      className="w-full text-xs p-2.5 rounded-xl border border-gray-200 focus:outline-hidden focus:border-pink-500 focus:ring-2 focus:ring-pink-100 bg-white"
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-[#38314a] mb-1">고유 핸들 (@)</label>
                     <input
                       type="text"
-                      required
+                      placeholder="핸들 아이디 (예: my_handle)"
                       value={editHandle}
                       onChange={(e) => setEditHandle(e.target.value)}
-                      className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden"
+                      className="w-full text-xs p-2.5 rounded-xl border border-gray-200 focus:outline-hidden focus:border-pink-500 focus:ring-2 focus:ring-pink-100 bg-white"
                     />
                   </div>
                 </div>
 
-                {/* 5. Status Quote */}
+                {/* 4. Status Quote */}
                 <div>
                   <label className="block text-xs font-bold text-[#38314a] mb-1">한 줄 상태 메시지</label>
                   <input
                     type="text"
-                    placeholder="예: 코드와 감성이 만나는 지점을 탐구합니다."
+                    placeholder="프로필에 노출될 한 줄 메시지를 입력하세요 (선택)"
                     value={editStatusQuote}
                     onChange={(e) => setEditStatusQuote(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden"
+                    className="w-full text-xs p-2.5 rounded-xl border border-gray-200 focus:outline-hidden focus:border-pink-500 focus:ring-2 focus:ring-pink-100 bg-white"
                   />
                 </div>
 
-                {/* 6. Bio */}
+                {/* 5. Bio */}
                 <div>
                   <label className="block text-xs font-bold text-[#38314a] mb-1">소개글 (Bio)</label>
                   <textarea
-                    rows={3}
+                    rows={2}
+                    placeholder="본인을 소개하는 글을 자유롭게 작성해보세요 (선택)"
                     value={editBio}
                     onChange={(e) => setEditBio(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden resize-none"
+                    className="w-full text-xs p-2.5 rounded-xl border border-gray-200 focus:outline-hidden focus:border-pink-500 focus:ring-2 focus:ring-pink-100 bg-white resize-none"
                   />
                 </div>
 
-                {/* 7. Tech Stack Tags */}
+                {/* 6. Tech Stack Tags */}
                 <div>
                   <label className="block text-xs font-bold text-[#38314a] mb-1">
-                    기술 태그 (쉼표로 구분, 예: 언리얼5, Unity, C++, HLSL)
+                    기술 태그 (쉼표로 구분)
                   </label>
                   <input
                     type="text"
+                    placeholder="예: 언리얼5, Unity, C++, HLSL (선택)"
                     value={editTagsInput}
                     onChange={(e) => setEditTagsInput(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden"
+                    className="w-full text-xs p-2.5 rounded-xl border border-gray-200 focus:outline-hidden focus:border-pink-500 focus:ring-2 focus:ring-pink-100 bg-white"
                   />
                 </div>
 
-                {/* 8. Links */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* 7. Links */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-[#38314a] mb-1">GitHub 링크</label>
+                    <label className="block text-xs font-bold text-[#38314a] mb-1">GitHub 링크 (선택)</label>
                     <input
                       type="url"
+                      placeholder="https://github.com/아이디"
                       value={editGithub}
                       onChange={(e) => setEditGithub(e.target.value)}
-                      className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden"
+                      className="w-full text-xs p-2.5 rounded-xl border border-gray-200 focus:outline-hidden focus:border-pink-500 focus:ring-2 focus:ring-pink-100 bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-[#38314a] mb-1">웹사이트 링크</label>
+                    <label className="block text-xs font-bold text-[#38314a] mb-1">웹사이트 링크 (선택)</label>
                     <input
                       type="url"
+                      placeholder="https://내사이트.com"
                       value={editWebsite}
                       onChange={(e) => setEditWebsite(e.target.value)}
-                      className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden"
+                      className="w-full text-xs p-2.5 rounded-xl border border-gray-200 focus:outline-hidden focus:border-pink-500 focus:ring-2 focus:ring-pink-100 bg-white"
                     />
                   </div>
                 </div>
 
                 {/* Modal Actions */}
-                <div className="flex items-center justify-end gap-2 pt-3 border-t border-pink-100">
+                <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-pink-100/70">
                   <button
                     type="button"
                     onClick={() => setIsCustomizeOpen(false)}
-                    className="px-4 py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-bold hover:bg-gray-200 cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 text-xs font-bold hover:bg-gray-100 transition cursor-pointer"
                   >
                     취소
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xs font-extrabold shadow-md shadow-pink-500/25 hover:opacity-95 cursor-pointer"
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xs font-extrabold shadow-md shadow-pink-500/25 hover:opacity-95 transition cursor-pointer"
                   >
                     저장 완료
                   </button>

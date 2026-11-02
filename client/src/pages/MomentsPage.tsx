@@ -45,6 +45,7 @@ import {
 import { toast } from "sonner";
 import SiteNav from "@/components/SiteNav";
 import { QRButton } from "@/components/QRCodeModal";
+import { compressImageFile } from "@/lib/imageCompressor";
 import { useAppAuth, GOOGLE_CLIENT_ID } from "@/contexts/AuthContext";
 import {
   fetchAllPosts,
@@ -318,6 +319,8 @@ export default function MomentsPage() {
   const [createCoverUrl, setCreateCoverUrl] = useState("");
   const [createImages, setCreateImages] = useState<string[]>([]);
   const [createCategory, setCreateCategory] = useState("일상");
+  const [selectedTags, setSelectedTags] = useState<string[]>(["일상"]);
+  const [customTagInput, setCustomTagInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const storyFileInputRef = useRef<HTMLInputElement>(null);
@@ -326,8 +329,8 @@ export default function MomentsPage() {
   // Active carousel indices for multiple images
   const [postImageIndices, setPostImageIndices] = useState<Record<number, number>>({});
 
-  // Handle multi-image file selection (Max 15 images)
-  const handleImageFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle multi-image file selection (Max 15 images with auto compression)
+  const handleImageFilesSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -342,20 +345,21 @@ export default function MomentsPage() {
       toast.info(`최대 15장 제한으로 인해 ${filesToRead.length}장만 추가되었습니다.`);
     }
 
-    filesToRead.forEach((file) => {
+    for (const file of filesToRead) {
       if (!file.type.startsWith("image/")) {
         toast.error(`${file.name}은(는) 이미지 파일이 아닙니다.`);
-        return;
+        continue;
       }
-      const reader = new FileReader();
-      reader.onload = (loadEvent) => {
-        const result = loadEvent.target?.result as string;
-        if (result) {
-          setCreateImages((prev) => (prev.length < 15 ? [...prev, result] : prev));
+      try {
+        const compressed = await compressImageFile(file, 1280, 0.82);
+        if (compressed) {
+          setCreateImages((prev) => (prev.length < 15 ? [...prev, compressed] : prev));
         }
-      };
-      reader.readAsDataURL(file);
-    });
+      } catch (err) {
+        console.error("Compression error:", err);
+      }
+    }
+    e.target.value = "";
   };
 
   const removeSelectedImage = (index: number) => {
@@ -658,6 +662,7 @@ export default function MomentsPage() {
     }
 
     const finalCover = createImages.join("|||");
+    const tagsToSave = selectedTags.length > 0 ? selectedTags.join(", ") : (customTagInput.trim() || "일상");
 
     setIsSubmitting(true);
     try {
@@ -666,7 +671,7 @@ export default function MomentsPage() {
         title: createCaption.slice(0, 30) || `${profileConfig.name || user?.name || "사용자"}님의 모먼트`,
         caption: createCaption.trim(),
         coverUrl: finalCover,
-        category: createCategory,
+        category: tagsToSave,
         authorName: profileConfig.name || user?.name || "사용자",
         authorAvatar: profileConfig.avatarUrl || user?.avatar || "/assets/koharu-profile.png",
         authorOpenId: user?.openId || (user?.id ? `google:${user.id}` : "google-authenticated-user"),
@@ -679,8 +684,10 @@ export default function MomentsPage() {
         setCreateCaption("");
         setCreateCoverUrl("");
         setCreateImages([]);
+        setSelectedTags(["일상"]);
+        setCustomTagInput("");
+        // Keep the newly created post permanently in state without wiping it
         setPosts((prev) => [newPost, ...prev.filter((p) => p.id !== newPost.id)]);
-        loadPosts();
       } else {
         toast.error("게시물 업로드에 실패했습니다.");
       }
@@ -691,38 +698,43 @@ export default function MomentsPage() {
     }
   };
 
-  // Story files selector (Supports multiple image files)
-  const handleStoryFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Story files selector (Supports multiple image files with auto compression)
+  const handleStoryFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        if (evt.target?.result) {
-          const res = evt.target.result as string;
-          setNewStoryMediaUrls((prev) => [...prev, res]);
-          setNewStoryMediaUrl(res);
+
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith("image/")) continue;
+      try {
+        const compressed = await compressImageFile(file, 1080, 0.82);
+        if (compressed) {
+          setNewStoryMediaUrls((prev) => [...prev, compressed]);
+          setNewStoryMediaUrl(compressed);
         }
-      };
-      reader.readAsDataURL(file);
-    });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    e.target.value = "";
   };
 
   const removeStorySelectedImage = (index: number) => {
     setNewStoryMediaUrls((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-  // Avatar file selector in Profile Settings
-  const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Avatar file selector in Profile Settings with auto compression
+  const handleAvatarFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      if (evt.target?.result) {
-        setEditAvatar(evt.target.result as string);
+    try {
+      const compressed = await compressImageFile(file, 400, 0.85);
+      if (compressed) {
+        setEditAvatar(compressed);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+    }
+    e.target.value = "";
   };
 
   // Create Story (Supports multiple images divided across time)
@@ -897,10 +909,26 @@ export default function MomentsPage() {
   const activeThread = dmThreads.find((t) => t.id === activeThreadId) || dmThreads[0];
   const unreadNotifCount = notifications.filter((n) => !n.read).length;
 
-  // Filter tags
-  const tags = Array.from(new Set(posts.map((p) => p.category))).filter(Boolean);
+  // Filter tags (supports custom multi-tags)
+  const tags = Array.from(
+    new Set(
+      posts.flatMap((p) =>
+        (p.category || "")
+          .split(/[,\s#]+/)
+          .map((t) => t.trim().replace(/^#/, ""))
+          .filter(Boolean)
+      )
+    )
+  );
+
   const filteredPosts =
-    activeTag === "all" ? posts : posts.filter((p) => p.category === activeTag);
+    activeTag === "all"
+      ? posts
+      : posts.filter((p) => {
+          const cat = p.category || "";
+          const splitTags = cat.split(/[,\s#]+/).map((t) => t.trim().replace(/^#/, ""));
+          return cat === activeTag || splitTags.includes(activeTag);
+        });
 
   // ─────────────────────────────────────────────────────────────────────────
   // SCENARIO 1: NOT LOGGED IN -> Pure Fullscreen Google Login Screen (NO FAKE PROFILE)
@@ -2014,19 +2042,89 @@ export default function MomentsPage() {
 
                 </div>
 
+                {/* Custom Hashtags */}
                 <div>
-                  <label className="block text-xs font-bold text-[#38314a] mb-1">카테고리 / 태그</label>
-                  <select
-                    value={createCategory}
-                    onChange={(e) => setCreateCategory(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden"
-                  >
-                    <option value="일상">#일상</option>
-                    <option value="개발일지">#개발일지</option>
-                    <option value="작업물">#작업물</option>
-                    <option value="생각">#생각</option>
-                    <option value="게임">#게임</option>
-                  </select>
+                  <label className="block text-xs font-bold text-[#38314a] mb-1.5 flex items-center justify-between">
+                    <span>해시태그 설정</span>
+                    <span className="text-[11px] font-normal text-[#7a6e8f]">직접 입력하거나 추천 태그를 선택하세요</span>
+                  </label>
+
+                  {/* Selected Tag Badges */}
+                  <div className="flex flex-wrap gap-1.5 mb-2 min-h-[26px]">
+                    {selectedTags.map((t) => (
+                      <span
+                        key={t}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-pink-500 text-white text-xs font-bold shadow-xs animate-in fade-in"
+                      >
+                        #{t}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTags((prev) => prev.filter((item) => item !== t))}
+                          className="hover:opacity-80 cursor-pointer"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Custom Input */}
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <input
+                      type="text"
+                      placeholder="원하는 해시태그 직접 입력 (예: 언리얼5, 일상, 코하루)"
+                      value={customTagInput}
+                      onChange={(e) => setCustomTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === ",") {
+                          e.preventDefault();
+                          const val = customTagInput.trim().replace(/^#/, "");
+                          if (val && !selectedTags.includes(val)) {
+                            setSelectedTags((prev) => [...prev, val]);
+                            setCustomTagInput("");
+                          }
+                        }
+                      }}
+                      className="flex-1 text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500 bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = customTagInput.trim().replace(/^#/, "");
+                        if (val && !selectedTags.includes(val)) {
+                          setSelectedTags((prev) => [...prev, val]);
+                          setCustomTagInput("");
+                        }
+                      }}
+                      className="px-3.5 py-2.5 rounded-xl bg-pink-100 hover:bg-pink-200 text-pink-700 text-xs font-bold transition cursor-pointer"
+                    >
+                      태그 추가
+                    </button>
+                  </div>
+
+                  {/* Recommended Quick Chips */}
+                  <div className="flex flex-wrap gap-1">
+                    {["일상", "개발일지", "작업물", "게임", "언리얼5", "Unity", "3D"].map((chip) => (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => {
+                          if (selectedTags.includes(chip)) {
+                            setSelectedTags((prev) => prev.filter((t) => t !== chip));
+                          } else {
+                            setSelectedTags((prev) => [...prev, chip]);
+                          }
+                        }}
+                        className={`text-[11px] px-2.5 py-0.5 rounded-md border transition cursor-pointer ${
+                          selectedTags.includes(chip)
+                            ? "bg-pink-100 text-pink-700 border-pink-300 font-bold"
+                            : "bg-white text-gray-500 border-gray-200 hover:border-pink-300"
+                        }`}
+                      >
+                        #{chip}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div>
