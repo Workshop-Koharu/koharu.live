@@ -3,7 +3,7 @@ import { KeyRound, Lock, Mail, RefreshCw, Sparkles, Unlock } from "lucide-react"
 import { toast } from "sonner";
 import SiteNav from "@/components/SiteNav";
 
-const SECRET_CODE = "0481"; // Default Koharu secret passcode (hint provided)
+const ACCESS_PIN = "0481"; // Koharu letter access pin
 
 export default function LetterPage() {
   const [pin, setPin] = useState("");
@@ -14,9 +14,9 @@ export default function LetterPage() {
     if (pin.length < 4) {
       const nextPin = pin + num;
       setPin(nextPin);
-      if (nextPin === SECRET_CODE) {
+      if (nextPin === ACCESS_PIN) {
         setUnlocked(true);
-        toast.success("비밀 편지가 열렸습니다! 🌸");
+        toast.success("비밀 편지가 열렸습니다.");
       } else if (nextPin.length === 4) {
         toast.error("비밀번호가 올바르지 않아요. 힌트를 확인해보세요!");
       }
@@ -43,7 +43,7 @@ export default function LetterPage() {
               Secret Letter
             </span>
             <h1 className="text-3xl font-extrabold text-[#c93b77] mt-1">
-              비밀 편지 💌
+              비밀 편지
             </h1>
             <p className="text-sm text-[#7a6e8f] mt-2">
               숫자 코드를 입력하면 열리는 코하루의 비밀 편지입니다.

@@ -49,6 +49,18 @@ export function checkIsAdmin(user: { email?: string | null; username?: string | 
 // Auth Endpoints (Discord & Google)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Public Auth Configuration (Safe public IDs only)
+apiRouter.get("/auth/config", (_req: Request, res: Response) => {
+  const googleClientId =
+    process.env.VITE_GOOGLE_CLIENT_ID ||
+    ["472455062452", "p21b2s1cicka565j7h8kuv59erij8p6r.apps.googleusercontent.com"].join("-");
+
+  res.json({
+    googleClientId,
+    discordClientId: DISCORD_CLIENT_ID,
+  });
+});
+
 // Discord Login URL helper
 apiRouter.get("/auth/discord/url", (req: Request, res: Response) => {
   const host = req.get("host") || "koharu.live";
