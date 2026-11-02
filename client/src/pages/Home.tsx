@@ -50,7 +50,7 @@ const FEATURED_PROJECTS: ProjectItem[] = [
     description:
       "Unity URP Render Graph 기반 커스텀 툰 셰이더 및 포스트 프로세싱 볼륨 프레임워크. HLSL 수식 최적화와 림 라이트, 셀 셰이딩 파이프라인 구현.",
     tags: ["Unity", "HLSL", "ShaderLab", "URP Render Graph"],
-    githubUrl: "https://github.com/Workshop-Koharu",
+    githubUrl: "https://github.com/Koharu81",
     accent: "from-pink-500 to-rose-500",
   },
   {
@@ -60,7 +60,7 @@ const FEATURED_PROJECTS: ProjectItem[] = [
     description:
       "상태 머신(FSM) 기반의 유려한 플레이어 액션 컨트롤러와 충돌 판정 히트박스 시스템. 넉백, 대시, 회피 및 콤보 캔슬 아키텍처 설계.",
     tags: ["Unity 6", "C#", "FSM", "2D/3D Physics"],
-    githubUrl: "https://github.com/Workshop-Koharu",
+    githubUrl: "https://github.com/Koharu81",
     accent: "from-purple-500 to-indigo-500",
   },
   {
@@ -70,7 +70,7 @@ const FEATURED_PROJECTS: ProjectItem[] = [
     description:
       "React, TypeScript, Tailwind 기반의 게임 프로그래머 전용 포털. 마크다운 테크 블로그, 모먼트 피드, OAuth 인증 및 은행급 웹 보안 아키텍처 적용.",
     tags: ["React", "TypeScript", "Tailwind", "PostgreSQL"],
-    githubUrl: "https://github.com/Workshop-Koharu/koharu.live",
+    githubUrl: "https://github.com/Koharu81/koharu.live",
     liveUrl: "https://www.koharu.live",
     accent: "from-sky-500 to-cyan-500",
   },
@@ -203,7 +203,7 @@ export default function Home() {
                     <Camera className="w-4 h-4 text-pink-600" /> 모먼트 피드
                   </Link>
                   <a
-                    href="https://github.com/Workshop-Koharu"
+                    href="https://github.com/Koharu81"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-2.5 rounded-2xl bg-white hover:bg-gray-50 border border-pink-200 text-gray-700 shadow-xs transition"

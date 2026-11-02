@@ -81,8 +81,8 @@ export default function SiteNav({ active }: SiteNavProps) {
             </div>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="main-nav hidden lg:flex" aria-label="주요 메뉴">
+          {/* Desktop Navigation (Protected from horizontal overflow on smaller screens) */}
+          <nav className="main-nav hidden xl:flex overflow-x-auto scrollbar-none" aria-label="주요 메뉴">
             {navLinks.map((item) => {
               const Icon = item.icon;
               const isActive =
@@ -131,7 +131,7 @@ export default function SiteNav({ active }: SiteNavProps) {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-xl text-[#38314a] hover:bg-pink-100/60 transition cursor-pointer"
+              className="xl:hidden p-2 rounded-xl text-[#38314a] hover:bg-pink-100/60 transition cursor-pointer"
               aria-label="모바일 메뉴 열기"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -141,7 +141,7 @@ export default function SiteNav({ active }: SiteNavProps) {
 
         {/* Mobile Dropdown Menu Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden px-4 pt-2 pb-4 bg-white/95 backdrop-blur-xl border-b border-pink-200/80 shadow-xl animate-in slide-in-from-top-4 duration-200">
+          <div className="xl:hidden px-4 pt-2 pb-4 bg-white/95 backdrop-blur-xl border-b border-pink-200/80 shadow-xl animate-in slide-in-from-top-4 duration-200">
             <nav className="grid grid-cols-3 gap-2">
               {navLinks.map((item) => {
                 const Icon = item.icon;
@@ -185,7 +185,7 @@ export default function SiteNav({ active }: SiteNavProps) {
       </div>
 
       {/* Mobile Floating Bottom Bar for quick navigation on phone */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-t border-pink-100 px-4 py-2 flex items-center justify-around shadow-lg">
+      <div className="xl:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-pink-200/80 px-4 py-2 flex items-center justify-around shadow-lg">
         <Link
           href="/profile"
           className={`flex flex-col items-center gap-0.5 text-[11px] font-bold ${

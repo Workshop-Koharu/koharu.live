@@ -1,8 +1,9 @@
 /**
  * QRCodeModal — Generates a beautifully styled QR code for a URL or profile.
- * High-performance, anti-jitter, scroll-locked, and fully isolated.
+ * High-performance, anti-jitter, scroll-locked, rendered via React Portal directly into document.body.
  */
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Copy, Download, QrCode, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -13,7 +14,7 @@ async function generateQR(text: string, canvas: HTMLCanvasElement) {
       width: 220,
       margin: 1.5,
       color: {
-        dark: "#3b1f6a",
+        dark: "#2d1b4e",
         light: "#ffffff",
       },
     });
@@ -29,47 +30,28 @@ interface QRCodeModalProps {
 }
 
 export function QRCodeModal({ url, label, onClose }: QRCodeModalProps) {
-  const overlayRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isReady, setIsReady] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // 1. Anti-jitter Scroll Lock with scrollbar width compensation
   useEffect(() => {
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    setMounted(true);
+    // Prevent background scroll smoothly
     const originalOverflow = document.body.style.overflow;
-    const originalPaddingRight = document.body.style.paddingRight;
-
     document.body.style.overflow = "hidden";
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
-
-    // 2. Capture and prevent default wheel events directly to prevent background jitter
-    const overlay = overlayRef.current;
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-    };
-
-    if (overlay) {
-      overlay.addEventListener("wheel", handleWheel, { passive: false });
-    }
 
     return () => {
       document.body.style.overflow = originalOverflow;
-      document.body.style.paddingRight = originalPaddingRight;
-      if (overlay) {
-        overlay.removeEventListener("wheel", handleWheel);
-      }
     };
   }, []);
 
   useEffect(() => {
+    if (!mounted) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     generateQR(url, canvas).then(() => setIsReady(true));
-  }, [url]);
+  }, [url, mounted]);
 
   const handleDownload = () => {
     const canvas = canvasRef.current;
@@ -78,44 +60,42 @@ export function QRCodeModal({ url, label, onClose }: QRCodeModalProps) {
     a.href = canvas.toDataURL("image/png");
     a.download = "koharu-qr.png";
     a.click();
-    toast.success("QR 코드 이미지를 저장했습니다! 📷");
+    toast.success("QR 코드 이미지를 저장했습니다.");
   };
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(url);
-      toast.success("링크가 복사되었습니다! 🔗");
+      toast.success("링크가 복사되었습니다.");
     } catch {
       toast.error("복사에 실패했습니다.");
     }
   };
 
-  return (
+  if (!mounted) return null;
+
+  // Render via React Portal to document.body to prevent parent transform/filter from breaking fixed positioning
+  return createPortal(
     <div
-      ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 select-none"
+      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 select-none overscroll-none"
       onClick={onClose}
-      style={{
-        overscrollBehavior: "none",
-        touchAction: "none",
-      }}
     >
       <div
-        className="bg-white rounded-3xl shadow-2xl max-w-xs w-full overflow-hidden border border-pink-100 animate-in fade-in zoom-in-95 duration-200"
+        className="bg-white rounded-[32px] shadow-2xl max-w-sm w-full overflow-hidden border border-pink-200/80 animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "linear-gradient(145deg, #ffffff 0%, #fdf2f8 100%)",
+          background: "linear-gradient(145deg, #ffffff 0%, #faf5ff 100%)",
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 pb-2">
+        <div className="flex items-center justify-between p-5 pb-2 border-b border-pink-100/60">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-pink-500 to-purple-600 flex items-center justify-center shadow-md shadow-pink-500/20">
-              <QrCode className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-pink-500 to-purple-600 flex items-center justify-center shadow-md shadow-pink-500/20 text-white">
+              <QrCode className="w-5 h-5" />
             </div>
             <div>
-              <div className="font-extrabold text-sm text-[#38314a]">QR 코드</div>
-              <div className="text-[11px] text-[#7a6e8f] font-mono truncate max-w-[150px]">{label || url}</div>
+              <div className="font-extrabold text-sm text-[#38314a]">프로필 공유 QR</div>
+              <div className="text-[11px] text-[#7a6e8f] font-mono truncate max-w-[180px]">{label || url}</div>
             </div>
           </div>
           <button
@@ -127,9 +107,9 @@ export function QRCodeModal({ url, label, onClose }: QRCodeModalProps) {
         </div>
 
         {/* QR Canvas */}
-        <div className="flex flex-col items-center px-5 py-4">
+        <div className="flex flex-col items-center px-6 py-5">
           <div
-            className="relative rounded-2xl overflow-hidden shadow-md border-4 border-white bg-white p-2 flex items-center justify-center min-h-[220px] min-w-[220px]"
+            className="relative rounded-2xl overflow-hidden shadow-lg border-4 border-white bg-white p-2.5 flex items-center justify-center min-h-[230px] min-w-[230px]"
           >
             <canvas
               ref={canvasRef}
@@ -144,22 +124,22 @@ export function QRCodeModal({ url, label, onClose }: QRCodeModalProps) {
             />
             {!isReady && (
               <div className="absolute inset-0 flex items-center justify-center bg-white/90">
-                <div className="text-pink-500 text-xs font-bold animate-pulse">QR 코드 생성 중... 🌸</div>
+                <div className="text-pink-500 text-xs font-bold animate-pulse">QR 코드 생성 중...</div>
               </div>
             )}
           </div>
 
           {/* URL preview */}
-          <div className="mt-3.5 w-full px-3 py-2 bg-white/80 rounded-xl text-[11px] text-[#7a6e8f] text-center font-mono break-all border border-pink-100 shadow-inner">
+          <div className="mt-4 w-full px-3 py-2 bg-white/90 rounded-xl text-[11px] text-[#7a6e8f] text-center font-mono break-all border border-pink-100 shadow-xs">
             {url}
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 p-5 pt-1">
+        <div className="flex gap-2 p-5 pt-1 border-t border-pink-100/60">
           <button
             onClick={handleCopy}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-white hover:bg-pink-50 border border-pink-200 text-xs font-bold text-[#38314a] transition-colors cursor-pointer shadow-sm"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-white hover:bg-pink-50 border border-pink-200 text-xs font-bold text-[#38314a] transition-colors cursor-pointer shadow-xs"
           >
             <Copy className="w-3.5 h-3.5 text-pink-500" />
             링크 복사
@@ -174,7 +154,8 @@ export function QRCodeModal({ url, label, onClose }: QRCodeModalProps) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

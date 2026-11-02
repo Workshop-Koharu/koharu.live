@@ -40,8 +40,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
-  } else if (!origin) {
-    // Direct requests (like browser navigations or server-to-server)
+  } else {
     res.setHeader("Access-Control-Allow-Origin", "https://www.koharu.live");
   }
 
@@ -69,7 +68,7 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 2. Dynamic Discord Component v2 JSON Payload Generator
+// 2. Discord Component v2 Data Model (Zero AI Fluff, Clean Professional Tone)
 // ─────────────────────────────────────────────────────────────────────────────
 interface DiscordComponentData {
   title: string;
@@ -84,12 +83,12 @@ function getDiscordComponentDataForPath(pathStr: string): DiscordComponentData {
 
   if (p.startsWith("/blog")) {
     return {
-      title: "코하루 개발 블로그",
-      description: "Unity C#, HLSL 셰이더 및 커스텀 렌더링 파이프라인 개발 일지. 아키텍처 분석과 게임 클라이언트 기술 아티클을 확인하세요.",
+      title: "코하루 기술 블로그",
+      description: "게임 클라이언트 및 개발 기술 아티클 공간입니다.",
       accentColor: 0x5865f2, // Discord Blurple
       thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
       buttons: [
-        { label: "블로그 글 목록", url: "https://www.koharu.live/blog" },
+        { label: "블로그 바로가기", url: "https://www.koharu.live/blog" },
         { label: "메인 포트폴리오", url: "https://www.koharu.live/" },
       ],
     };
@@ -97,9 +96,9 @@ function getDiscordComponentDataForPath(pathStr: string): DiscordComponentData {
 
   if (p.startsWith("/moments") || p.startsWith("/instagram") || p.startsWith("/post")) {
     return {
-      title: "코하루 모먼트 피드",
-      description: "실시간 개발 현황과 일상 모먼트를 기록하는 소셜 갤러리 피드입니다. 개발자 스토리와 사진을 확인해보세요.",
-      accentColor: 0x38bdf8, // Sky Blue
+      title: "코하루 모먼트",
+      description: "사진과 일상 소식을 기록하는 모먼트 피드입니다.",
+      accentColor: 0x38bdf8,
       thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
       buttons: [
         { label: "모먼트 피드 열기", url: "https://www.koharu.live/moments" },
@@ -110,25 +109,38 @@ function getDiscordComponentDataForPath(pathStr: string): DiscordComponentData {
 
   if (p.startsWith("/projects") || p.startsWith("/project")) {
     return {
-      title: "코하루 프로젝트 쇼케이스",
-      description: "Unity 6 셰이더 프레임워크, FSM 플레이어 컨트롤러 및 웹 플랫폼 등 주요 엔지니어링 프로젝트 아카이브입니다.",
-      accentColor: 0x2563eb, // Rich Blue
+      title: "코하루 프로젝트 갤러리",
+      description: "게임 개발 및 소프트웨어 프로젝트 아카이브입니다.",
+      accentColor: 0x2563eb,
       thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
       buttons: [
-        { label: "프로젝트 갤러리", url: "https://www.koharu.live/projects" },
-        { label: "GitHub 저장소", url: "https://github.com/Workshop-Koharu" },
+        { label: "프로젝트 목록", url: "https://www.koharu.live/projects" },
+        { label: "GitHub 저장소", url: "https://github.com/Koharu81" },
       ],
     };
   }
 
   if (p.startsWith("/history")) {
     return {
-      title: "코하루 개발 히스토리 & 타임라인",
-      description: "2024년부터 이어져 온 게임 프로그래밍 발자취와 핵심 프로젝트 마일스톤을 타임라인으로 확인하세요.",
-      accentColor: 0x6366f1, // Indigo
+      title: "개발 히스토리 & 마일스톤",
+      description: "코하루의 개발 발자취와 주요 마일스톤 기록입니다.",
+      accentColor: 0x6366f1,
       thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
       buttons: [
-        { label: "히스토리 타임라인", url: "https://www.koharu.live/history" },
+        { label: "히스토리 보기", url: "https://www.koharu.live/history" },
+        { label: "메인 포트폴리오", url: "https://www.koharu.live/" },
+      ],
+    };
+  }
+
+  if (p.startsWith("/letter")) {
+    return {
+      title: "코하루의 편지",
+      description: "코하루가 전하는 메시지 공간입니다.",
+      accentColor: 0xec4899,
+      thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
+      buttons: [
+        { label: "편지함 열기", url: "https://www.koharu.live/letter" },
         { label: "메인 포트폴리오", url: "https://www.koharu.live/" },
       ],
     };
@@ -136,21 +148,34 @@ function getDiscordComponentDataForPath(pathStr: string): DiscordComponentData {
 
   if (p.startsWith("/partners") || p.startsWith("/partner")) {
     return {
-      title: "코하루 협업 파트너스",
-      description: "수아, Team Light 등 소중한 인연 및 인디 게임 개발 협력 파트너를 소개합니다.",
+      title: "협업 파트너스",
+      description: "소중한 협력 파트너들을 소개합니다.",
       accentColor: 0x3b82f6,
       thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
       buttons: [
-        { label: "파트너 목록 보기", url: "https://www.koharu.live/partners" },
-        { label: "이메일 협업 문의", url: "mailto:admin@koharu.live" },
+        { label: "파트너 목록", url: "https://www.koharu.live/partners" },
+        { label: "디스코드 프로필", url: "https://discord.com/users/1339604814631534667" },
+      ],
+    };
+  }
+
+  if (p.startsWith("/person") || p.startsWith("/people")) {
+    return {
+      title: "지인 목록",
+      description: "함께하는 소중한 인연들의 공간입니다.",
+      accentColor: 0x06b6d4,
+      thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
+      buttons: [
+        { label: "지인 목록 보기", url: "https://www.koharu.live/person" },
+        { label: "메인 포트폴리오", url: "https://www.koharu.live/" },
       ],
     };
   }
 
   if (p.startsWith("/shorten") || p.startsWith("/s")) {
     return {
-      title: "koharu.live URL 단축기",
-      description: "복잡한 웹 주소를 안전하고 간결한 koharu.live 단축 링크로 생성하여 공유하세요.",
+      title: "URL 단축 서비스",
+      description: "웹 주소를 간결하게 줄여주는 단축기입니다.",
       accentColor: 0x2563eb,
       thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
       buttons: [
@@ -162,19 +187,49 @@ function getDiscordComponentDataForPath(pathStr: string): DiscordComponentData {
 
   // Default Home
   return {
-    title: "! Koharu 게임 클라이언트 & 렌더링 엔지니어",
-    description: "Unity URP Render Graph 기반 커스텀 셰이더 및 C# 게임플레이 아키텍처 포트폴리오. 대표 프로젝트 쇼케이스와 기술 블로그를 둘러보세요.",
-    accentColor: 0x2563eb, // 1번 사진 NextUps 스타일 파란색
+    title: "! Koharu — Portfolio",
+    description: "게임 개발자 코하루의 개인 포트폴리오입니다.",
+    accentColor: 0x2563eb,
     thumbnailUrl: "https://www.koharu.live/assets/koharu-profile.png",
     buttons: [
       { label: "포트폴리오 열기", url: "https://www.koharu.live/" },
-      { label: "기술 블로그 보기", url: "https://www.koharu.live/blog" },
+      { label: "GitHub 둘러보기", url: "https://github.com/Koharu81" },
     ],
   };
 }
 
+// Helper to construct exact Discord Component v2 JSON format
+function buildDiscordComponentV2Payload(data: DiscordComponentData) {
+  return {
+    component: {
+      type: 17, // Container
+      accent_color: data.accentColor,
+      components: [
+        {
+          type: 10, // Text Display (Header & Body)
+          content: `### ${data.title}\n${data.description}`,
+        },
+        {
+          type: 14, // Separator / Divider Component
+          divider: true,
+          spacing: 1,
+        },
+        {
+          type: 1, // Action Row with Link Buttons
+          components: data.buttons.map((btn) => ({
+            type: 2, // Button
+            style: 5, // Link Button (↗)
+            label: btn.label,
+            url: btn.url,
+          })),
+        },
+      ],
+    },
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// 3. Discord Component v2 JSON Endpoint (application/vnd.discord.component-embed+json)
+// 3. Discord Component v2 JSON Endpoints
 // ─────────────────────────────────────────────────────────────────────────────
 app.get(["/api/discord/embed.json", "/.well-known/discord-component-embed.json"], (req: Request, res: Response) => {
   const reqUrl = (req.query.url as string) || (req.query.path as string) || "/";
@@ -186,42 +241,11 @@ app.get(["/api/discord/embed.json", "/.well-known/discord-component-embed.json"]
   }
 
   const data = getDiscordComponentDataForPath(pathname);
-
-  // Exact Discord Component v2 Structure matching Image 1
-  const componentPayload = {
-    type: 17, // Container
-    accent_color: data.accentColor,
-    components: [
-      {
-        type: 9, // Section
-        components: [
-          {
-            type: 10, // Text Display
-            content: `### ${data.title}\n${data.description}`,
-          },
-        ],
-        accessory: {
-          type: 11, // Media / Thumbnail
-          media: {
-            url: data.thumbnailUrl,
-          },
-        },
-      },
-      {
-        type: 1, // Action Row
-        components: data.buttons.map((btn) => ({
-          type: 2, // Button
-          style: 5, // Link Button (↗)
-          label: btn.label,
-          url: btn.url,
-        })),
-      },
-    ],
-  };
+  const payload = buildDiscordComponentV2Payload(data);
 
   res.setHeader("Content-Type", "application/vnd.discord.component-embed+json; charset=utf-8");
   res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=86400");
-  res.json(componentPayload);
+  res.json(payload);
 });
 
 // Standard oEmbed fallback
@@ -240,9 +264,9 @@ app.get("/api/oembed", (req: Request, res: Response) => {
     version: "1.0",
     type: "link",
     title: data.title,
-    author_name: "! Koharu · 코하루",
+    author_name: "! Koharu",
     author_url: "https://www.koharu.live",
-    provider_name: "koharu.live · Engineering Portfolio",
+    provider_name: "koharu.live",
     provider_url: "https://www.koharu.live",
     description: data.description,
     thumbnail_url: data.thumbnailUrl,
@@ -267,38 +291,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   const embedJsonUrl = `https://www.koharu.live/api/discord/embed.json?path=${encodeURIComponent(req.path)}`;
   const oembedUrl = `https://www.koharu.live/api/oembed?url=${encodeURIComponent(fullUrl)}`;
 
-  // Embedded JSON payload string
-  const componentJsonString = JSON.stringify({
-    type: 17,
-    accent_color: data.accentColor,
-    components: [
-      {
-        type: 9,
-        components: [
-          {
-            type: 10,
-            content: `### ${data.title}\n${data.description}`,
-          },
-        ],
-        accessory: {
-          type: 11,
-          media: {
-            url: data.thumbnailUrl,
-          },
-        },
-      },
-      {
-        type: 1,
-        components: data.buttons.map((btn) => ({
-          type: 2,
-          style: 5,
-          label: btn.label,
-          url: btn.url,
-        })),
-      },
-    ],
-  });
-
+  const v2Payload = buildDiscordComponentV2Payload(data);
   const hexColor = `#${data.accentColor.toString(16).padStart(6, "0")}`;
 
   const html = `<!DOCTYPE html>
@@ -309,10 +302,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   <meta name="description" content="${data.description}">
   <meta name="theme-color" content="${hexColor}">
 
-  <!-- Discord Component v2 Official Embed Declarations -->
+  <!-- Discord Component v2 Official Embed -->
   <link rel="discord:component-embed" type="application/vnd.discord.component-embed+json" href="${embedJsonUrl}">
   <script id="discord:component-embed" type="application/json">
-${componentJsonString}
+${JSON.stringify(v2Payload)}
   </script>
 
   <!-- OpenGraph Metadata -->
@@ -335,7 +328,7 @@ ${componentJsonString}
 <body>
   <h1>${data.title}</h1>
   <p>${data.description}</p>
-  <p><a href="${fullUrl}">포트폴리오 페이지로 이동</a></p>
+  <p><a href="${fullUrl}">페이지로 이동</a></p>
 </body>
 </html>`;
 
@@ -345,7 +338,7 @@ ${componentJsonString}
 
 // Root API health check
 app.get(["/api", "/api/"], (_req: Request, res: Response) => {
-  res.json({ status: "ok", name: "koharu-api", version: "2.2.0" });
+  res.json({ status: "ok", name: "koharu-api", version: "2.3.0" });
 });
 
 // Mount router on both "/api" and "/"

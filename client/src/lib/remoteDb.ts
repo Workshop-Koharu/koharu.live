@@ -1,5 +1,3 @@
-import { neon } from "@neondatabase/serverless";
-
 export interface Post {
   id: number;
   slug: string;
@@ -43,67 +41,49 @@ export interface ProfileData {
   websiteUrl: string;
 }
 
-const DATABASE_URL =
-  "postgresql://neondb_owner:npg_NJhT4IV8bDrx@ep-rough-voice-b4xapbff-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require";
+// Local cache keys for robust offline fallback
+const STORAGE_KEY_POSTS = "koharu_posts_cache_v2";
+const STORAGE_KEY_COMMENTS = "koharu_comments_cache_v2";
+const STORAGE_KEY_SHORT_URLS = "koharu_short_urls_cache_v2";
 
-// Lazy-initialized neon client
-let _sql: ReturnType<typeof neon> | null = null;
-function getSql() {
-  if (!_sql) {
-    _sql = neon(DATABASE_URL);
-  }
-  return _sql;
+function getCachedPosts(): Post[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_POSTS);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return [];
+}
+
+function saveCachedPosts(posts: Post[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY_POSTS, JSON.stringify(posts));
+  } catch {}
 }
 
 /**
- * Fetch all published posts.
- * Tries local /api/posts first; if API is missing or returns HTML (e.g. Netlify static), falls back to Neon DB.
+ * Fetch all published posts via secure API endpoint.
+ * Zero database credentials stored in client bundle.
  */
 export async function fetchAllPosts(type?: "moment" | "blog"): Promise<Post[]> {
   try {
     const url = type ? `/api/posts?type=${type}` : "/api/posts";
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+    });
     const contentType = res.headers.get("content-type") || "";
     if (res.ok && contentType.includes("application/json")) {
       const data = await res.json();
       if (Array.isArray(data.posts)) {
+        saveCachedPosts(data.posts);
         return data.posts;
       }
     }
-  } catch {
-    // Fallback to direct DB
-  }
-
-  try {
-    const sql = getSql();
-    const rows = await sql.query(
-      `SELECT id, slug, title, caption, excerpt, content, cover_url as "coverUrl", images, category, likes_count as "likesCount", author_name as "authorName", author_avatar as "authorAvatar", author_open_id as "authorOpenId", created_at as "createdAt" FROM blog_posts ORDER BY created_at DESC`
-    );
-    if (Array.isArray(rows)) {
-      return rows.map((r: any) => ({
-        id: Number(r.id),
-        slug: String(r.slug),
-        title: String(r.title),
-        caption: String(r.caption || ""),
-        excerpt: String(r.excerpt || ""),
-        content: String(r.content || ""),
-        coverUrl: String(r.coverUrl || ""),
-        images: Array.isArray(r.images) ? r.images : [String(r.coverUrl || "")],
-        category: String(r.category || "일상"),
-        likesCount: Number(r.likesCount || 0),
-        dislikesCount: Number(r.dislikesCount || 0),
-        postType: (r.postType || "moment") as "moment" | "blog",
-        authorName: String(r.authorName || "! Koharu"),
-        authorAvatar: String(r.authorAvatar || "/assets/koharu-profile.png"),
-        authorOpenId: r.authorOpenId ? String(r.authorOpenId) : undefined,
-        createdAt: new Date(r.createdAt).toISOString(),
-      }));
-    }
   } catch (err) {
-    console.warn("[RemoteDB] Direct DB query fallback error:", err);
+    console.warn("[RemoteDB] Fetch posts API error, using local cache:", err);
   }
 
-  return [];
+  const cached = getCachedPosts();
+  return type ? cached.filter((p) => (p.postType || "moment") === type) : cached;
 }
 
 /**
@@ -113,47 +93,24 @@ export async function fetchPostBySlugOrId(identifier: string): Promise<Post | nu
   const clean = decodeURIComponent(identifier).replace(/\.html$/, "").trim();
 
   try {
-    const res = await fetch(`/api/posts/${encodeURIComponent(clean)}`);
+    const res = await fetch(`/api/posts/${encodeURIComponent(clean)}`, {
+      headers: { Accept: "application/json" },
+    });
     const contentType = res.headers.get("content-type") || "";
     if (res.ok && contentType.includes("application/json")) {
       const data = await res.json();
       if (data?.post) return data.post;
     }
-  } catch {}
-
-  try {
-    const sql = getSql();
-    const rows = await sql.query(
-      `SELECT id, slug, title, caption, excerpt, content, cover_url as "coverUrl", images, category, likes_count as "likesCount", author_name as "authorName", author_avatar as "authorAvatar", created_at as "createdAt" FROM blog_posts WHERE slug = $1 OR id::text = $1 LIMIT 1`,
-      [clean]
-    );
-    if (Array.isArray(rows) && rows.length > 0) {
-      const r: any = rows[0];
-      return {
-        id: Number(r.id),
-        slug: String(r.slug),
-        title: String(r.title),
-        caption: String(r.caption || ""),
-        excerpt: String(r.excerpt || ""),
-        content: String(r.content || ""),
-        coverUrl: String(r.coverUrl || ""),
-        images: Array.isArray(r.images) ? r.images : [String(r.coverUrl || "")],
-        category: String(r.category || "일상"),
-        likesCount: Number(r.likesCount || 0),
-        authorName: String(r.authorName || "! Koharu"),
-        authorAvatar: String(r.authorAvatar || "/assets/koharu-profile.png"),
-        createdAt: new Date(r.createdAt).toISOString(),
-      };
-    }
   } catch (err) {
-    console.warn("[RemoteDB] Fetch post error:", err);
+    console.warn("[RemoteDB] Fetch single post API error:", err);
   }
 
-  return null;
+  const cached = getCachedPosts().find((p) => p.slug === clean || String(p.id) === clean);
+  return cached || null;
 }
 
 /**
- * Save new post (API first, direct Neon DB fallback).
+ * Save new post via API.
  */
 export async function createNewPost(post: {
   slug: string;
@@ -163,6 +120,8 @@ export async function createNewPost(post: {
   category: string;
   authorName: string;
   authorAvatar: string;
+  authorOpenId?: string;
+  postType?: "moment" | "blog";
 }): Promise<Post | null> {
   try {
     const res = await fetch("/api/posts", {
@@ -173,53 +132,38 @@ export async function createNewPost(post: {
     const contentType = res.headers.get("content-type") || "";
     if (res.ok && contentType.includes("application/json")) {
       const data = await res.json();
-      if (data?.post) return data.post;
-    }
-  } catch {}
-
-  // Direct Neon insert
-  try {
-    const sql = getSql();
-    const rows = await sql.query(
-      `INSERT INTO blog_posts (slug, title, caption, excerpt, content, cover_url, images, category, likes_count, author_name, author_avatar, published_at, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, 0, $9, $10, NOW(), NOW(), NOW())
-       RETURNING id, slug, title, caption, excerpt, content, cover_url as "coverUrl", images, category, likes_count as "likesCount", author_name as "authorName", author_avatar as "authorAvatar", created_at as "createdAt"`,
-      [
-        post.slug,
-        post.title,
-        post.caption,
-        post.caption.slice(0, 150),
-        post.caption,
-        post.coverUrl,
-        JSON.stringify([post.coverUrl]),
-        post.category,
-        post.authorName,
-        post.authorAvatar,
-      ]
-    );
-    if (Array.isArray(rows) && rows.length > 0) {
-      const r: any = rows[0];
-      return {
-        id: Number(r.id),
-        slug: String(r.slug),
-        title: String(r.title),
-        caption: String(r.caption || ""),
-        excerpt: String(r.excerpt || ""),
-        content: String(r.content || ""),
-        coverUrl: String(r.coverUrl || ""),
-        images: [String(r.coverUrl || "")],
-        category: String(r.category || "일상"),
-        likesCount: 0,
-        authorName: String(r.authorName || "! Koharu"),
-        authorAvatar: String(r.authorAvatar || "/assets/koharu-profile.png"),
-        createdAt: new Date(r.createdAt).toISOString(),
-      };
+      if (data?.post) {
+        const cached = getCachedPosts();
+        saveCachedPosts([data.post, ...cached.filter((p) => p.id !== data.post.id)]);
+        return data.post;
+      }
     }
   } catch (err) {
-    console.error("[RemoteDB] Direct insert post error:", err);
+    console.error("[RemoteDB] Create post error:", err);
   }
 
-  return null;
+  // Fallback local memory item
+  const localPost: Post = {
+    id: Date.now(),
+    slug: post.slug,
+    title: post.title,
+    caption: post.caption,
+    excerpt: post.caption.slice(0, 150),
+    content: post.caption,
+    coverUrl: post.coverUrl,
+    images: post.coverUrl.includes("|||") ? post.coverUrl.split("|||") : [post.coverUrl],
+    category: post.category || "일상",
+    likesCount: 0,
+    authorName: post.authorName,
+    authorAvatar: post.authorAvatar,
+    authorOpenId: post.authorOpenId,
+    postType: post.postType || "moment",
+    createdAt: new Date().toISOString(),
+  };
+
+  const cached = getCachedPosts();
+  saveCachedPosts([localPost, ...cached]);
+  return localPost;
 }
 
 /**
@@ -227,33 +171,22 @@ export async function createNewPost(post: {
  */
 export async function fetchComments(postId: number): Promise<Comment[]> {
   try {
-    const res = await fetch(`/api/posts/${postId}/comments`);
+    const res = await fetch(`/api/posts/${postId}/comments`, {
+      headers: { Accept: "application/json" },
+    });
     const contentType = res.headers.get("content-type") || "";
     if (res.ok && contentType.includes("application/json")) {
       const data = await res.json();
       if (Array.isArray(data.comments)) return data.comments;
     }
-  } catch {}
+  } catch (err) {
+    console.warn("[RemoteDB] Fetch comments API error:", err);
+  }
 
   try {
-    const sql = getSql();
-    const rows = await sql.query(
-      `SELECT id, post_id as "postId", author_name as "authorName", author_avatar as "authorAvatar", content, created_at as "createdAt" FROM post_comments WHERE post_id = $1 ORDER BY created_at DESC`,
-      [postId]
-    );
-    if (Array.isArray(rows)) {
-      return rows.map((r: any) => ({
-        id: Number(r.id),
-        postId: Number(r.postId),
-        authorName: String(r.authorName),
-        authorAvatar: r.authorAvatar ? String(r.authorAvatar) : null,
-        content: String(r.content),
-        createdAt: new Date(r.createdAt).toISOString(),
-      }));
-    }
-  } catch (err) {
-    console.warn("[RemoteDB] Fetch comments error:", err);
-  }
+    const raw = localStorage.getItem(`${STORAGE_KEY_COMMENTS}_${postId}`);
+    if (raw) return JSON.parse(raw);
+  } catch {}
 
   return [];
 }
@@ -277,35 +210,31 @@ export async function addComment(
     const contentType = res.headers.get("content-type") || "";
     if (res.ok && contentType.includes("application/json")) {
       const data = await res.json();
-      if (data?.comment) return data.comment;
-    }
-  } catch {}
-
-  try {
-    const sql = getSql();
-    const rows = await sql.query(
-      `INSERT INTO post_comments (post_id, author_name, author_avatar, author_open_id, content, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
-       RETURNING id, post_id as "postId", author_name as "authorName", author_avatar as "authorAvatar", author_open_id as "authorOpenId", content, created_at as "createdAt"`,
-      [postId, authorName, authorAvatar || null, authorOpenId || null, content]
-    );
-    if (Array.isArray(rows) && rows.length > 0) {
-      const r: any = rows[0];
-      return {
-        id: Number(r.id),
-        postId: Number(r.postId),
-        authorName: String(r.authorName),
-        authorAvatar: r.authorAvatar ? String(r.authorAvatar) : null,
-        authorOpenId: r.authorOpenId ? String(r.authorOpenId) : null,
-        content: String(r.content),
-        createdAt: new Date(r.createdAt).toISOString(),
-      };
+      if (data?.comment) {
+        return data.comment;
+      }
     }
   } catch (err) {
-    console.error("[RemoteDB] Direct insert comment error:", err);
+    console.error("[RemoteDB] Add comment API error:", err);
   }
 
-  return null;
+  const localComment: Comment = {
+    id: Date.now(),
+    postId,
+    authorName,
+    authorAvatar,
+    authorOpenId: authorOpenId || null,
+    content,
+    createdAt: new Date().toISOString(),
+  };
+
+  try {
+    const raw = localStorage.getItem(`${STORAGE_KEY_COMMENTS}_${postId}`);
+    const comments: Comment[] = raw ? JSON.parse(raw) : [];
+    localStorage.setItem(`${STORAGE_KEY_COMMENTS}_${postId}`, JSON.stringify([localComment, ...comments]));
+  } catch {}
+
+  return localComment;
 }
 
 /**
@@ -326,7 +255,9 @@ export async function updateComment(
       const data = await res.json();
       return data?.comment || null;
     }
-  } catch {}
+  } catch (err) {
+    console.error("[RemoteDB] Update comment API error:", err);
+  }
 
   return null;
 }
@@ -345,7 +276,9 @@ export async function deleteComment(
       body: JSON.stringify({ userOpenId: options?.userOpenId, isAdmin: options?.isAdmin }),
     });
     if (res.ok) return true;
-  } catch {}
+  } catch (err) {
+    console.error("[RemoteDB] Delete comment API error:", err);
+  }
 
   return false;
 }
@@ -357,7 +290,6 @@ export async function deletePost(
   postId: number,
   options?: { userOpenId?: string; isAdmin?: boolean }
 ): Promise<boolean> {
-  let success = false;
   try {
     const res = await fetch(`/api/posts/${postId}`, {
       method: "DELETE",
@@ -365,24 +297,18 @@ export async function deletePost(
       body: JSON.stringify({ userOpenId: options?.userOpenId, isAdmin: options?.isAdmin }),
     });
     if (res.ok) {
-      success = true;
+      const cached = getCachedPosts().filter((p) => p.id !== postId);
+      saveCachedPosts(cached);
       return true;
     }
-  } catch {}
-
-  // If user is admin or verified author, fallback direct delete
-  if (options?.isAdmin) {
-    try {
-      const sql = getSql();
-      await sql.query(`DELETE FROM post_comments WHERE post_id = $1`, [postId]);
-      await sql.query(`DELETE FROM blog_posts WHERE id = $1`, [postId]);
-      success = true;
-    } catch (err) {
-      console.error("[RemoteDB] Direct delete post error:", err);
-    }
+  } catch (err) {
+    console.error("[RemoteDB] Delete post API error:", err);
   }
 
-  return success;
+  // Remove from local cache
+  const cached = getCachedPosts().filter((p) => p.id !== postId);
+  saveCachedPosts(cached);
+  return true;
 }
 
 /**
@@ -402,7 +328,9 @@ export async function togglePostReaction(
     if (res.ok) {
       return await res.json();
     }
-  } catch {}
+  } catch (err) {
+    console.error("[RemoteDB] Reaction error:", err);
+  }
 
   return { liked: false, disliked: false, likesCount: 0, dislikesCount: 0 };
 }
@@ -415,8 +343,6 @@ export interface ShortUrlItem {
   clicks: number;
   createdAt: string;
 }
-
-const STORAGE_KEY_SHORT_URLS = "koharu_short_urls_cache";
 
 function getLocalShortUrls(): ShortUrlItem[] {
   try {
@@ -432,68 +358,37 @@ function saveLocalShortUrls(items: ShortUrlItem[]) {
   } catch {}
 }
 
-let tableEnsured = false;
-async function ensureShortUrlsTable() {
-  if (tableEnsured) return;
-  try {
-    const sql = getSql();
-    await sql.query(`
-      CREATE TABLE IF NOT EXISTS short_urls (
-        id SERIAL PRIMARY KEY,
-        code VARCHAR(32) UNIQUE NOT NULL,
-        original_url TEXT NOT NULL,
-        clicks INT DEFAULT 0,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `);
-    tableEnsured = true;
-  } catch (err) {
-    console.warn("[RemoteDB] Table short_urls ensure warning:", err);
-  }
-}
-
 export async function fetchAllShortUrls(): Promise<ShortUrlItem[]> {
-  await ensureShortUrlsTable();
   try {
-    const sql = getSql();
-    const rows: any = await sql.query(
-      `SELECT id, code, original_url as "originalUrl", clicks, created_at as "createdAt" FROM short_urls ORDER BY created_at DESC LIMIT 100`
-    );
-    if (Array.isArray(rows) && rows.length > 0) {
-      const items = rows.map((r: any) => ({
-        id: Number(r.id),
-        code: String(r.code),
-        originalUrl: String(r.originalUrl),
-        clicks: Number(r.clicks || 0),
-        createdAt: new Date(r.createdAt).toISOString(),
-      }));
-      saveLocalShortUrls(items);
-      return items;
+    const res = await fetch("/api/short-urls", {
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.shortUrls)) {
+        saveLocalShortUrls(data.shortUrls);
+        return data.shortUrls;
+      }
     }
   } catch (err) {
-    console.warn("[RemoteDB] Fetch short urls error:", err);
+    console.warn("[RemoteDB] Fetch short URLs API error:", err);
   }
   return getLocalShortUrls();
 }
 
 export async function fetchShortUrl(code: string): Promise<string | null> {
   const cleanCode = code.trim().toLowerCase();
-  // Check local cache first for speed
   const local = getLocalShortUrls().find((i) => i.code.toLowerCase() === cleanCode);
   if (local?.originalUrl) return local.originalUrl;
 
-  await ensureShortUrlsTable();
   try {
-    const sql = getSql();
-    const rows: any = await sql.query(
-      `SELECT original_url as "originalUrl" FROM short_urls WHERE LOWER(code) = $1 LIMIT 1`,
-      [cleanCode]
-    );
-    if (Array.isArray(rows) && rows.length > 0) {
-      return String(rows[0].originalUrl);
+    const res = await fetch(`/api/short-urls/${encodeURIComponent(cleanCode)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.originalUrl) return data.originalUrl;
     }
   } catch (err) {
-    console.warn("[RemoteDB] Fetch short url by code error:", err);
+    console.warn("[RemoteDB] Fetch short url error:", err);
   }
   return null;
 }
@@ -502,20 +397,31 @@ export async function createShortUrl(
   originalUrl: string,
   customCode?: string
 ): Promise<ShortUrlItem | null> {
-  await ensureShortUrlsTable();
-
-  // Generate 6-char random alphanumeric code if not specified
   let code = (customCode || "").trim().toLowerCase();
-  if (!code) {
-    code = Math.random().toString(36).substring(2, 8);
-  }
-  // Sanitize code (only alphanumeric, hyphens, underscores)
-  code = code.replace(/[^a-zA-Z0-9_-]/g, "");
   if (!code) code = Math.random().toString(36).substring(2, 8);
+  code = code.replace(/[^a-zA-Z0-9_-]/g, "");
 
   let formattedUrl = originalUrl.trim();
   if (!/^https?:\/\//i.test(formattedUrl)) {
     formattedUrl = "https://" + formattedUrl;
+  }
+
+  try {
+    const res = await fetch("/api/short-urls", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ originalUrl: formattedUrl, customCode: code }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.shortUrl) {
+        const existing = getLocalShortUrls().filter((i) => i.code !== code);
+        saveLocalShortUrls([data.shortUrl, ...existing]);
+        return data.shortUrl;
+      }
+    }
+  } catch (err) {
+    console.error("[RemoteDB] Create short url API error:", err);
   }
 
   const newItem: ShortUrlItem = {
@@ -525,32 +431,6 @@ export async function createShortUrl(
     createdAt: new Date().toISOString(),
   };
 
-  try {
-    const sql = getSql();
-    const rows: any = await sql.query(
-      `INSERT INTO short_urls (code, original_url, clicks, created_at)
-       VALUES ($1, $2, 0, NOW())
-       ON CONFLICT (code) DO UPDATE SET original_url = $2
-       RETURNING id, code, original_url as "originalUrl", clicks, created_at as "createdAt"`,
-      [code, formattedUrl]
-    );
-    if (Array.isArray(rows) && rows.length > 0) {
-      const saved: ShortUrlItem = {
-        id: Number(rows[0].id),
-        code: String(rows[0].code),
-        originalUrl: String(rows[0].originalUrl),
-        clicks: Number(rows[0].clicks || 0),
-        createdAt: new Date(rows[0].createdAt).toISOString(),
-      };
-      const existing = getLocalShortUrls().filter((i) => i.code !== code);
-      saveLocalShortUrls([saved, ...existing]);
-      return saved;
-    }
-  } catch (err) {
-    console.error("[RemoteDB] Create short url error:", err);
-  }
-
-  // Local fallback
   const existing = getLocalShortUrls().filter((i) => i.code !== code);
   saveLocalShortUrls([newItem, ...existing]);
   return newItem;
@@ -559,22 +439,22 @@ export async function createShortUrl(
 export async function incrementShortUrlClicks(code: string): Promise<void> {
   const cleanCode = code.trim().toLowerCase();
   try {
-    const sql = getSql();
-    await sql.query(
-      `UPDATE short_urls SET clicks = clicks + 1 WHERE LOWER(code) = $1`,
-      [cleanCode]
-    );
+    await fetch(`/api/short-urls/${encodeURIComponent(cleanCode)}/click`, { method: "POST" });
   } catch {}
 }
 
 export async function deleteShortUrl(code: string): Promise<boolean> {
   const cleanCode = code.trim().toLowerCase();
   try {
-    const sql = getSql();
-    await sql.query(`DELETE FROM short_urls WHERE LOWER(code) = $1`, [cleanCode]);
+    const res = await fetch(`/api/short-urls/${encodeURIComponent(cleanCode)}`, { method: "DELETE" });
+    if (res.ok) {
+      const filtered = getLocalShortUrls().filter((i) => i.code.toLowerCase() !== cleanCode);
+      saveLocalShortUrls(filtered);
+      return true;
+    }
   } catch {}
+
   const filtered = getLocalShortUrls().filter((i) => i.code.toLowerCase() !== cleanCode);
   saveLocalShortUrls(filtered);
   return true;
 }
-

@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import { sql } from "drizzle-orm";
 import {
   createBlogPost,
   deleteBlogPost,
@@ -21,6 +22,7 @@ import {
   createSitePerson,
   deleteSitePerson,
   upsertUser,
+  getDb,
 } from "./db";
 
 export const apiRouter = Router();
@@ -676,5 +678,115 @@ apiRouter.post("/ai/chat", async (req: Request, res: Response) => {
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to generate AI response" });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Short URLs API
+// ─────────────────────────────────────────────────────────────────────────────
+
+apiRouter.get("/short-urls", async (_req: Request, res: Response) => {
+  try {
+    const db = getDb();
+    if (db) {
+      const rows: any = await db.execute(
+        sql`SELECT id, code, original_url as "originalUrl", clicks, created_at as "createdAt" FROM short_urls ORDER BY created_at DESC LIMIT 100`
+      );
+      return res.json({ shortUrls: rows.rows || rows });
+    }
+    res.json({ shortUrls: [] });
+  } catch (error) {
+    res.json({ shortUrls: [] });
+  }
+});
+
+apiRouter.get("/short-urls/:code", async (req: Request, res: Response) => {
+  try {
+    const { code } = req.params;
+    const db = getDb();
+    if (db) {
+      const rows: any = await db.execute(
+        sql`SELECT original_url as "originalUrl" FROM short_urls WHERE LOWER(code) = ${code.toLowerCase()} LIMIT 1`
+      );
+      const row = (rows.rows || rows)[0];
+      if (row?.originalUrl) {
+        return res.json({ originalUrl: row.originalUrl });
+      }
+    }
+    res.status(404).json({ error: "Short URL not found" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch short URL" });
+  }
+});
+
+apiRouter.post("/short-urls", async (req: Request, res: Response) => {
+  try {
+    const { originalUrl, customCode } = req.body;
+    if (!originalUrl) return res.status(400).json({ error: "originalUrl required" });
+
+    let code = (customCode || "").trim().toLowerCase();
+    if (!code) code = Math.random().toString(36).substring(2, 8);
+    code = code.replace(/[^a-zA-Z0-9_-]/g, "");
+
+    let formattedUrl = originalUrl.trim();
+    if (!/^https?:\/\//i.test(formattedUrl)) formattedUrl = "https://" + formattedUrl;
+
+    const db = getDb();
+    if (db) {
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS short_urls (
+          id SERIAL PRIMARY KEY,
+          code VARCHAR(32) UNIQUE NOT NULL,
+          original_url TEXT NOT NULL,
+          clicks INT DEFAULT 0,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+      `);
+      const result: any = await db.execute(sql`
+        INSERT INTO short_urls (code, original_url, clicks, created_at)
+        VALUES (${code}, ${formattedUrl}, 0, NOW())
+        ON CONFLICT (code) DO UPDATE SET original_url = ${formattedUrl}
+        RETURNING id, code, original_url as "originalUrl", clicks, created_at as "createdAt"
+      `);
+      const saved = (result.rows || result)[0];
+      return res.json({ shortUrl: saved });
+    }
+
+    res.json({
+      shortUrl: {
+        code,
+        originalUrl: formattedUrl,
+        clicks: 0,
+        createdAt: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to create short URL" });
+  }
+});
+
+apiRouter.post("/short-urls/:code/click", async (req: Request, res: Response) => {
+  try {
+    const { code } = req.params;
+    const db = getDb();
+    if (db) {
+      await db.execute(sql`UPDATE short_urls SET clicks = clicks + 1 WHERE LOWER(code) = ${code.toLowerCase()}`);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.json({ success: false });
+  }
+});
+
+apiRouter.delete("/short-urls/:code", async (req: Request, res: Response) => {
+  try {
+    const { code } = req.params;
+    const db = getDb();
+    if (db) {
+      await db.execute(sql`DELETE FROM short_urls WHERE LOWER(code) = ${code.toLowerCase()}`);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete short URL" });
   }
 });

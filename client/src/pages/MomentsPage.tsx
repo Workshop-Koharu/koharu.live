@@ -95,21 +95,12 @@ interface NotificationItem {
   read: boolean;
 }
 
+const DEFAULT_AVATAR =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23f1f5f9'/><circle cx='50' cy='40' r='18' fill='%23cbd5e1'/><path d='M22 85 C22 66 35 58 50 58 C65 58 78 66 78 85 Z' fill='%23cbd5e1'/></svg>";
+
 // ── Default Mock Stories & Friends (Empty by default: No Ghost Accounts!) ───────
 const INITIAL_STORIES: StoryItem[] = [];
-const INITIAL_DMS: DMThread[] = [
-  {
-    id: "dm-koharu",
-    partnerName: "! Koharu · 코하루",
-    partnerAvatar: "/assets/koharu-profile.png",
-    partnerHandle: "koharu.live",
-    isOnline: true,
-    messages: [
-      { id: "1", sender: "them", text: "안녕하세요. 코하루 모먼트에 오신 것을 환영합니다.", time: "오후 2:30" },
-      { id: "2", sender: "them", text: "게임 개발 및 포트폴리오에 대해 궁금한 점을 메시지로 남겨주세요.", time: "오후 2:31" },
-    ],
-  },
-];
+const INITIAL_DMS: DMThread[] = [];
 
 interface UserProfileConfig {
   name: string;
@@ -128,6 +119,92 @@ const DEFAULT_PROFILE_CONFIG: UserProfileConfig = {
   websiteUrl: "",
 };
 
+// Multi-image Carousel component for Feed posts
+function FeedPostCarousel({
+  coverUrl,
+  title,
+  onImageClick,
+}: {
+  coverUrl: string;
+  title: string;
+  onImageClick?: () => void;
+}) {
+  const images = (coverUrl || "").split("|||").filter(Boolean);
+  const [idx, setIdx] = useState(0);
+
+  if (images.length === 0) return null;
+  if (images.length === 1) {
+    return (
+      <div
+        className="relative aspect-square sm:aspect-[4/3] bg-black/5 overflow-hidden cursor-pointer"
+        onClick={onImageClick}
+      >
+        <img
+          src={images[0]}
+          alt={title}
+          className="w-full h-full object-cover hover:scale-102 transition duration-300"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative aspect-square sm:aspect-[4/3] bg-black/5 overflow-hidden group select-none">
+      <img
+        src={images[idx]}
+        alt={`${title} - ${idx + 1}`}
+        className="w-full h-full object-cover cursor-pointer hover:scale-101 transition duration-300"
+        onClick={onImageClick}
+      />
+
+      {/* Counter Badge */}
+      <div className="absolute top-3 right-3 bg-black/65 backdrop-blur-md text-white text-[11px] font-extrabold px-2.5 py-0.5 rounded-full shadow pointer-events-none">
+        {idx + 1} / {images.length}
+      </div>
+
+      {/* Prev button */}
+      {idx > 0 && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIdx((prev) => Math.max(0, prev - 1));
+          }}
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/75 text-white flex items-center justify-center backdrop-blur-xs transition shadow-lg cursor-pointer"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+      )}
+
+      {/* Next button */}
+      {idx < images.length - 1 && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIdx((prev) => Math.min(images.length - 1, prev + 1));
+          }}
+          className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/75 text-white flex items-center justify-center backdrop-blur-xs transition shadow-lg cursor-pointer"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      )}
+
+      {/* Dots Indicator */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 pointer-events-none">
+        {images.map((_, i) => (
+          <span
+            key={i}
+            className={`h-1.5 rounded-full transition-all duration-300 ${
+              i === idx ? "w-5 bg-white shadow-md" : "w-1.5 bg-white/60"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function MomentsPage() {
   const { user, loginWithGoogle, renderGoogleButton, logout, isAdmin } = useAppAuth();
   const [, postRoute] = useRoute<{ slug: string }>("/moments/:slug");
@@ -137,6 +214,7 @@ export default function MomentsPage() {
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPostImageIndex, setSelectedPostImageIndex] = useState(0);
 
   // Instagram Core Features
   const [stories, setStories] = useState<StoryItem[]>(INITIAL_STORIES);
@@ -207,6 +285,8 @@ export default function MomentsPage() {
   const [activeTab, setActiveTab] = useState<"grid" | "feed">("grid");
   const [activeTag, setActiveTag] = useState<string>("all");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const modalImages = (selectedPost?.coverUrl || "").split("|||").filter(Boolean);
+  const currentModalImg = modalImages[selectedPostImageIndex] || modalImages[0] || selectedPost?.coverUrl || "";
 
   // Comments for selected post
   const [comments, setComments] = useState<Comment[]>([]);
@@ -215,12 +295,55 @@ export default function MomentsPage() {
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingCommentText, setEditingCommentText] = useState("");
 
-  // Create post modal state
+  // Create post modal state (Up to 15 images from File Manager)
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createCaption, setCreateCaption] = useState("");
   const [createCoverUrl, setCreateCoverUrl] = useState("");
+  const [createImages, setCreateImages] = useState<string[]>([]);
   const [createCategory, setCreateCategory] = useState("일상");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const storyFileInputRef = useRef<HTMLInputElement>(null);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Active carousel indices for multiple images
+  const [postImageIndices, setPostImageIndices] = useState<Record<number, number>>({});
+
+  // Handle multi-image file selection (Max 15 images)
+  const handleImageFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const remainingSlots = 15 - createImages.length;
+    if (remainingSlots <= 0) {
+      toast.error("이미지는 최대 15장까지만 등록할 수 있습니다.");
+      return;
+    }
+
+    const filesToRead = Array.from(files).slice(0, remainingSlots);
+    if (files.length > remainingSlots) {
+      toast.info(`최대 15장 제한으로 인해 ${filesToRead.length}장만 추가되었습니다.`);
+    }
+
+    filesToRead.forEach((file) => {
+      if (!file.type.startsWith("image/")) {
+        toast.error(`${file.name}은(는) 이미지 파일이 아닙니다.`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (loadEvent) => {
+        const result = loadEvent.target?.result as string;
+        if (result) {
+          setCreateImages((prev) => (prev.length < 15 ? [...prev, result] : prev));
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeSelectedImage = (index: number) => {
+    setCreateImages((prev) => prev.filter((_, idx) => idx !== index));
+  };
 
   // New Story Upload Modal
   const [isCreateStoryOpen, setIsCreateStoryOpen] = useState(false);
@@ -294,6 +417,7 @@ export default function MomentsPage() {
 
   const openPostModal = async (post: Post) => {
     setSelectedPost(post);
+    setSelectedPostImageIndex(0);
     setLoadingComments(true);
     try {
       const list = await fetchComments(post.id);
@@ -454,23 +578,32 @@ export default function MomentsPage() {
       return;
     }
 
+    const finalCover =
+      createImages.length > 0 ? createImages.join("|||") : createCoverUrl.trim();
+
+    if (!finalCover) {
+      toast.error("최소 1장의 사진을 파일 관리자에서 선택하거나 입력해주세요.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const newPost = await createNewPost({
         slug: `moment-${Date.now()}`,
-        title: createCaption.slice(0, 30) || `${user?.name}님의 모먼트`,
+        title: createCaption.slice(0, 30) || `${profileConfig.name || user?.name || "사용자"}님의 모먼트`,
         caption: createCaption.trim(),
-        coverUrl: createCoverUrl.trim() || "/assets/koharu-profile.png",
+        coverUrl: finalCover,
         category: createCategory,
-        authorName: user?.name || "Google User",
-        authorAvatar: user?.avatar || "/assets/koharu-profile.png",
+        authorName: profileConfig.name || user?.name || "사용자",
+        authorAvatar: profileConfig.avatarUrl || user?.avatar || "",
       });
 
       if (newPost) {
-        toast.success("새로운 모먼트가 게시되었습니다! ✨");
+        toast.success("새로운 모먼트가 게시되었습니다.");
         setIsCreateOpen(false);
         setCreateCaption("");
         setCreateCoverUrl("");
+        setCreateImages([]);
         loadPosts();
       } else {
         toast.error("게시물 업로드에 실패했습니다.");
@@ -482,18 +615,44 @@ export default function MomentsPage() {
     }
   };
 
+  // Story file selector
+  const handleStoryFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      if (evt.target?.result) {
+        setNewStoryMediaUrl(evt.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Avatar file selector in Profile Settings
+  const handleAvatarFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      if (evt.target?.result) {
+        setEditAvatar(evt.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Create Story
   const handleCreateStory = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStoryMediaUrl.trim()) {
-      toast.error("스토리 이미지 URL을 입력해주세요!");
+      toast.error("스토리 사진을 선택해주세요!");
       return;
     }
 
     const newStory: StoryItem = {
       id: `story-${Date.now()}`,
-      authorName: user?.name || "나",
-      authorAvatar: user?.avatar || "/assets/koharu-profile.png",
+      authorName: profileConfig.name || user?.name || "나",
+      authorAvatar: profileConfig.avatarUrl || user?.avatar || "",
       mediaUrl: newStoryMediaUrl.trim(),
       caption: newStoryCaption.trim(),
       createdAt: "방금 전",
@@ -503,7 +662,7 @@ export default function MomentsPage() {
     setIsCreateStoryOpen(false);
     setNewStoryMediaUrl("");
     setNewStoryCaption("");
-    toast.success("내 스토리가 등록되었습니다! 24시간 동안 표시됩니다 🌸");
+    toast.success("내 스토리가 등록되었습니다.");
   };
 
   // Delete Post (Strict Permission: Author or Admin only)
@@ -993,31 +1152,45 @@ export default function MomentsPage() {
         ) : activeTab === "grid" ? (
           /* Grid View */
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5">
-            {filteredPosts.map((post) => (
-              <div
-                key={post.id}
-                onClick={() => openPostModal(post)}
-                className="group relative aspect-square rounded-2xl sm:rounded-3xl overflow-hidden bg-pink-50 cursor-pointer border border-pink-100 shadow-sm hover:shadow-xl transition-all duration-300"
-              >
-                <img
-                  src={post.coverUrl}
-                  alt={post.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 text-white">
-                  <p className="text-xs font-bold line-clamp-2 mb-2">{post.caption || post.title}</p>
-                  <div className="flex items-center justify-between text-xs font-semibold">
-                    <span className="flex items-center gap-1">
-                      <Heart className="w-3.5 h-3.5 fill-red-400 text-red-400" /> {post.likesCount || 0}
-                    </span>
-                    <span className="text-[10px] bg-white/20 backdrop-blur-xs px-2 py-0.5 rounded-full">
-                      #{post.category}
-                    </span>
+            {filteredPosts.map((post) => {
+              const images = (post.coverUrl || "").split("|||").filter(Boolean);
+              const thumbnail = images[0] || post.coverUrl;
+
+              return (
+                <div
+                  key={post.id}
+                  onClick={() => openPostModal(post)}
+                  className="group relative aspect-square rounded-2xl sm:rounded-3xl overflow-hidden bg-pink-50 cursor-pointer border border-pink-100 shadow-sm hover:shadow-xl transition-all duration-300"
+                >
+                  <img
+                    src={thumbnail}
+                    alt={post.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
+
+                  {/* Multi-image indicator badge */}
+                  {images.length > 1 && (
+                    <div className="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md pointer-events-none">
+                      <Layers className="w-3 h-3" />
+                      <span>{images.length}</span>
+                    </div>
+                  )}
+
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 text-white">
+                    <p className="text-xs font-bold line-clamp-2 mb-2">{post.caption || post.title}</p>
+                    <div className="flex items-center justify-between text-xs font-semibold">
+                      <span className="flex items-center gap-1">
+                        <Heart className="w-3.5 h-3.5 fill-red-400 text-red-400" /> {post.likesCount || 0}
+                      </span>
+                      <span className="text-[10px] bg-white/20 backdrop-blur-xs px-2 py-0.5 rounded-full">
+                        #{post.category}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           /* Feed View */
@@ -1031,7 +1204,7 @@ export default function MomentsPage() {
                 <div className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <img
-                      src={post.authorAvatar || "/assets/koharu-profile.png"}
+                      src={post.authorAvatar || DEFAULT_AVATAR}
                       alt={post.authorName}
                       className="w-9 h-9 rounded-full object-cover border border-pink-200"
                     />
@@ -1060,17 +1233,12 @@ export default function MomentsPage() {
                   <QRButton url={`${window.location.origin}/moments?post=${post.slug}`} label={post.title} />
                 </div>
 
-                {/* Photo */}
-                <div
-                  className="relative aspect-square sm:aspect-[4/3] bg-black/5 overflow-hidden cursor-pointer"
-                  onClick={() => openPostModal(post)}
-                >
-                  <img
-                    src={post.coverUrl}
-                    alt={post.title}
-                    className="w-full h-full object-cover hover:scale-102 transition duration-300"
-                  />
-                </div>
+                {/* Photo Carousel (Multi-image support up to 15) */}
+                <FeedPostCarousel
+                  coverUrl={post.coverUrl}
+                  title={post.title}
+                  onImageClick={() => openPostModal(post)}
+                />
 
                 {/* Actions & Caption */}
                 <div className="p-4 space-y-2">
@@ -1202,95 +1370,111 @@ export default function MomentsPage() {
                   <Send className="w-4 h-4 text-purple-600" />
                 </div>
                 <div className="flex-1 overflow-y-auto divide-y divide-pink-50">
-                  {dmThreads.map((thread) => (
-                    <div
-                      key={thread.id}
-                      onClick={() => setActiveThreadId(thread.id)}
-                      className={`p-3 flex items-center gap-2.5 cursor-pointer transition ${
-                        activeThreadId === thread.id ? "bg-white shadow-xs font-bold" : "hover:bg-pink-100/40"
-                      }`}
-                    >
-                      <div className="relative">
-                        <img
-                          src={thread.partnerAvatar}
-                          alt={thread.partnerName}
-                          className="w-10 h-10 rounded-full object-cover border border-pink-200"
-                        />
-                        {thread.isOnline && (
-                          <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs text-[#38314a] truncate">{thread.partnerName}</div>
-                        <div className="text-[10px] text-gray-400 truncate">
-                          {thread.messages[thread.messages.length - 1]?.text || "대화를 시작하세요"}
+                  {dmThreads.length === 0 ? (
+                    <p className="text-xs text-center py-10 text-gray-400">대화 목록 없음</p>
+                  ) : (
+                    dmThreads.map((thread) => (
+                      <div
+                        key={thread.id}
+                        onClick={() => setActiveThreadId(thread.id)}
+                        className={`p-3 flex items-center gap-2.5 cursor-pointer transition ${
+                          activeThreadId === thread.id ? "bg-white shadow-xs font-bold" : "hover:bg-pink-100/40"
+                        }`}
+                      >
+                        <div className="relative">
+                          <img
+                            src={thread.partnerAvatar || DEFAULT_AVATAR}
+                            alt={thread.partnerName}
+                            className="w-10 h-10 rounded-full object-cover border border-pink-200"
+                          />
+                          {thread.isOnline && (
+                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs text-[#38314a] truncate">{thread.partnerName}</div>
+                          <div className="text-[10px] text-gray-400 truncate">
+                            {thread.messages[thread.messages.length - 1]?.text || "대화를 시작하세요"}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
               {/* Right Side: Chat Window */}
-              <div className="flex-1 flex flex-col bg-white">
-                {/* Chat Header */}
-                <div className="p-4 border-b border-pink-100 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <img
-                      src={activeThread.partnerAvatar}
-                      alt={activeThread.partnerName}
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                    <div>
-                      <div className="font-extrabold text-xs text-[#38314a]">{activeThread.partnerName}</div>
-                      <div className="text-[10px] text-emerald-600">
-                        {activeThread.isOnline ? "온라인 상태" : "오프라인"}
+              {activeThread ? (
+                <div className="flex-1 flex flex-col bg-white">
+                  {/* Chat Header */}
+                  <div className="p-4 border-b border-pink-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <img
+                        src={activeThread.partnerAvatar || DEFAULT_AVATAR}
+                        alt={activeThread.partnerName}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                      <div>
+                        <div className="font-extrabold text-xs text-[#38314a]">{activeThread.partnerName}</div>
+                        <div className="text-[10px] text-emerald-600">
+                          {activeThread.isOnline ? "온라인 상태" : "오프라인"}
+                        </div>
                       </div>
                     </div>
+                    <button onClick={() => setIsDMOpen(false)} className="text-gray-400 hover:text-gray-700">
+                      <X className="w-5 h-5" />
+                    </button>
                   </div>
-                  <button onClick={() => setIsDMOpen(false)} className="text-gray-400 hover:text-gray-700">
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
 
-                {/* Message Log */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                  {activeThread.messages.map((m) => (
-                    <div
-                      key={m.id}
-                      className={`flex flex-col ${m.sender === "me" ? "items-end" : "items-start"}`}
-                    >
+                  {/* Message Log */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    {activeThread.messages.map((m) => (
                       <div
-                        className={`max-w-[75%] px-3.5 py-2 rounded-2xl text-xs leading-relaxed ${
-                          m.sender === "me"
-                            ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-br-none"
-                            : "bg-gray-100 text-[#38314a] rounded-bl-none"
-                        }`}
+                        key={m.id}
+                        className={`flex flex-col ${m.sender === "me" ? "items-end" : "items-start"}`}
                       >
-                        {m.text}
+                        <div
+                          className={`max-w-[75%] px-3.5 py-2 rounded-2xl text-xs leading-relaxed ${
+                            m.sender === "me"
+                              ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-br-none"
+                              : "bg-gray-100 text-[#38314a] rounded-bl-none"
+                          }`}
+                        >
+                          {m.text}
+                        </div>
+                        <span className="text-[9px] text-gray-400 mt-0.5 px-1">{m.time}</span>
                       </div>
-                      <span className="text-[9px] text-gray-400 mt-0.5 px-1">{m.time}</span>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
 
-                {/* Chat Input */}
-                <form onSubmit={handleSendDM} className="p-3 border-t border-pink-100 flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="메시지 입력..."
-                    value={dmInput}
-                    onChange={(e) => setDmInput(e.target.value)}
-                    className="flex-1 text-xs px-3 py-2 rounded-xl border border-pink-200 focus:outline-hidden"
-                  />
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-xl bg-purple-600 text-white text-xs font-bold hover:bg-purple-700"
-                  >
-                    전송
-                  </button>
-                </form>
-              </div>
+                  {/* Chat Input */}
+                  <form onSubmit={handleSendDM} className="p-3 border-t border-pink-100 flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="메시지 입력..."
+                      value={dmInput}
+                      onChange={(e) => setDmInput(e.target.value)}
+                      className="flex-1 text-xs px-3 py-2 rounded-xl border border-pink-200 focus:outline-hidden"
+                    />
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-xl bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 cursor-pointer"
+                    >
+                      전송
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-white">
+                  <div className="w-14 h-14 rounded-2xl bg-pink-50 text-pink-500 flex items-center justify-center mb-3">
+                    <Send className="w-7 h-7" />
+                  </div>
+                  <h4 className="font-extrabold text-sm text-[#38314a] mb-1">대화 중인 친구가 없습니다</h4>
+                  <p className="text-xs text-gray-400 max-w-xs">
+                    모먼트에서 친구를 팔로우하고 새로운 메시지를 나눠보세요.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1301,34 +1485,73 @@ export default function MomentsPage() {
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-2 sm:p-4 animate-in fade-in duration-200"
             onClick={closePostModal}
           >
-            <div
-              className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col md:flex-row border border-pink-100"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Left: Big Image */}
-              <div className="md:w-1/2 bg-black flex items-center justify-center relative min-h-[280px]">
-                <img
-                  src={selectedPost.coverUrl}
-                  alt={selectedPost.title}
-                  className="max-h-[60vh] md:max-h-[85vh] w-full object-contain"
-                />
-              </div>
+              <div
+                className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col md:flex-row border border-pink-100"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Left: Big Image / Carousel */}
+                <div className="md:w-1/2 bg-black flex items-center justify-center relative min-h-[280px] select-none group">
+                  <img
+                    src={currentModalImg}
+                    alt={selectedPost.title}
+                    className="max-h-[60vh] md:max-h-[85vh] w-full object-contain"
+                  />
 
-              {/* Right: Info, Comments, Actions */}
-              <div className="md:w-1/2 flex flex-col h-full max-h-[60vh] md:max-h-[85vh] bg-white">
-                {/* Header */}
-                <div className="p-4 border-b border-pink-100 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={selectedPost.authorAvatar || "/assets/koharu-profile.png"}
-                      alt={selectedPost.authorName}
-                      className="w-9 h-9 rounded-full object-cover border border-pink-200"
-                    />
-                    <div>
-                      <div className="font-extrabold text-sm text-[#38314a]">{selectedPost.authorName}</div>
-                      <div className="text-[10px] text-gray-400">#{selectedPost.category}</div>
+                  {modalImages.length > 1 && (
+                    <>
+                      <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+                        {selectedPostImageIndex + 1} / {modalImages.length}
+                      </div>
+
+                      {selectedPostImageIndex > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPostImageIndex((i) => Math.max(0, i - 1))}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-xs cursor-pointer shadow-lg"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+                      )}
+
+                      {selectedPostImageIndex < modalImages.length - 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPostImageIndex((i) => Math.min(modalImages.length - 1, i + 1))}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-xs cursor-pointer shadow-lg"
+                        >
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                      )}
+
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+                        {modalImages.map((_, i) => (
+                          <span
+                            key={i}
+                            className={`h-1.5 rounded-full transition-all duration-300 ${
+                              i === selectedPostImageIndex ? "w-5 bg-white shadow-md" : "w-1.5 bg-white/50"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Right: Info, Comments, Actions */}
+                <div className="md:w-1/2 flex flex-col h-full max-h-[60vh] md:max-h-[85vh] bg-white">
+                  {/* Header */}
+                  <div className="p-4 border-b border-pink-100 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={selectedPost.authorAvatar || DEFAULT_AVATAR}
+                        alt={selectedPost.authorName}
+                        className="w-9 h-9 rounded-full object-cover border border-pink-200"
+                      />
+                      <div>
+                        <div className="font-extrabold text-sm text-[#38314a]">{selectedPost.authorName}</div>
+                        <div className="text-[10px] text-gray-400">#{selectedPost.category}</div>
+                      </div>
                     </div>
-                  </div>
 
                   <div className="flex items-center gap-1">
                     {/* STRICT DELETE PERMISSION: Owner or Admin only */}
@@ -1384,7 +1607,7 @@ export default function MomentsPage() {
                           <div key={c.id} className="flex items-start justify-between gap-2 text-xs group">
                             <div className="flex items-start gap-2.5 flex-1 min-w-0">
                               <img
-                                src={c.authorAvatar || "/assets/koharu-profile.png"}
+                                src={c.authorAvatar || DEFAULT_AVATAR}
                                 alt={c.authorName}
                                 className="w-6 h-6 rounded-full object-cover flex-shrink-0"
                               />
@@ -1512,44 +1735,106 @@ export default function MomentsPage() {
           </div>
         )}
 
-        {/* ── Create New Moment Modal ───────────────────────────────────── */}
+        {/* ── Create New Moment Modal (Up to 15 images from File Manager) ── */}
         {isCreateOpen && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
             onClick={() => setIsCreateOpen(false)}
           >
             <div
-              className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-pink-100"
+              className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-pink-100 max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between pb-3 border-b border-pink-100 mb-4">
-                <h3 className="text-lg font-extrabold text-[#38314a] flex items-center gap-2">
+              <div className="flex items-center justify-between pb-3.5 border-b border-pink-100 mb-4">
+                <h3 className="text-base sm:text-lg font-extrabold text-[#38314a] flex items-center gap-2">
                   <PlusCircle className="w-5 h-5 text-pink-500" /> 새 모먼트 만들기
                 </h3>
                 <button
                   onClick={() => setIsCreateOpen(false)}
-                  className="p-1 rounded-lg text-gray-400 hover:text-gray-700"
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-700 cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               <form onSubmit={handleCreatePost} className="space-y-4">
+                {/* File Upload Selector (Max 15 Images) */}
                 <div>
-                  <label className="block text-xs font-bold text-[#38314a] mb-1">
-                    사진 이미지 URL (필수)
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-[#38314a]">
+                      사진 업로드 (파일 관리자에서 선택)
+                    </label>
+                    <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-pink-100 text-pink-600">
+                      {createImages.length} / 15장
+                    </span>
+                  </div>
+
                   <input
-                    type="url"
-                    placeholder="https://images.unsplash.com/... 또는 이미지 링크"
-                    value={createCoverUrl}
-                    onChange={(e) => setCreateCoverUrl(e.target.value)}
-                    required
-                    className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageFilesSelect}
+                    className="hidden"
                   />
-                  {createCoverUrl && (
-                    <div className="mt-2 aspect-video rounded-xl overflow-hidden bg-gray-50 border border-pink-100">
-                      <img src={createCoverUrl} alt="Preview" className="w-full h-full object-cover" />
+
+                  {/* Dropzone / Upload Trigger Button */}
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-pink-300 hover:border-pink-500 hover:bg-pink-50/50 rounded-2xl p-4 sm:p-5 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2 bg-pink-50/20"
+                  >
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-purple-600 flex items-center justify-center text-white shadow-xs">
+                      <ImageIcon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-[#38314a]">
+                        클릭하여 파일 관리자에서 사진 선택
+                      </p>
+                      <p className="text-[11px] text-[#7a6e8f] mt-0.5">
+                        JPEG, PNG, GIF, WEBP 등 최대 15장까지 다중 선택 가능
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Selected Images Thumbnail Grid */}
+                  {createImages.length > 0 && (
+                    <div className="mt-3 grid grid-cols-3 sm:grid-cols-5 gap-2 max-h-48 overflow-y-auto p-1">
+                      {createImages.map((imgData, index) => (
+                        <div
+                          key={index}
+                          className="relative aspect-square rounded-xl overflow-hidden border border-pink-200 group bg-gray-50 shadow-xs"
+                        >
+                          <img
+                            src={imgData}
+                            alt={`Upload ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeSelectedImage(index)}
+                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 hover:bg-red-600 text-white flex items-center justify-center transition cursor-pointer"
+                            title="사진 제거"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                          <span className="absolute bottom-1 left-1 px-1.5 py-0.2 rounded-md bg-black/60 text-white text-[9px] font-bold">
+                            {index + 1}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Alternative URL Input Fallback */}
+                  {createImages.length === 0 && (
+                    <div className="mt-2.5">
+                      <input
+                        type="url"
+                        placeholder="또는 이미지 URL 직접 입력 (https://...)"
+                        value={createCoverUrl}
+                        onChange={(e) => setCreateCoverUrl(e.target.value)}
+                        className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
+                      />
                     </div>
                   )}
                 </div>
@@ -1574,8 +1859,8 @@ export default function MomentsPage() {
                     캡션 / 설명글
                   </label>
                   <textarea
-                    rows={4}
-                    placeholder="오늘 있었던 일이나 소식을 남겨보세요 🌸"
+                    rows={3}
+                    placeholder="사진과 함께 전할 소식을 남겨보세요..."
                     value={createCaption}
                     onChange={(e) => setCreateCaption(e.target.value)}
                     className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500 resize-none"
@@ -1586,14 +1871,14 @@ export default function MomentsPage() {
                   <button
                     type="button"
                     onClick={() => setIsCreateOpen(false)}
-                    className="flex-1 py-2.5 rounded-xl bg-gray-100 text-[#38314a] font-bold text-xs hover:bg-gray-200"
+                    className="flex-1 py-2.5 rounded-xl bg-gray-100 text-[#38314a] font-bold text-xs hover:bg-gray-200 cursor-pointer"
                   >
                     취소
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-xs shadow-md shadow-pink-500/25 hover:opacity-90 disabled:opacity-50"
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-xs shadow-md shadow-pink-500/25 hover:opacity-95 disabled:opacity-50 cursor-pointer"
                   >
                     {isSubmitting ? "게시 중..." : "모먼트 등록"}
                   </button>
@@ -1603,7 +1888,7 @@ export default function MomentsPage() {
           </div>
         )}
 
-        {/* ── Add Story Modal ───────────────────────────────────────────── */}
+        {/* ── Add Story Modal with File Manager Support ──────────────────── */}
         {isCreateStoryOpen && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
@@ -1615,46 +1900,63 @@ export default function MomentsPage() {
             >
               <div className="flex items-center justify-between pb-3 border-b border-pink-100 mb-4">
                 <h3 className="text-base font-extrabold text-[#38314a] flex items-center gap-2">
-                  <Camera className="w-5 h-5 text-pink-500" /> 24시간 스토리 올리기
+                  <Camera className="w-5 h-5 text-pink-500" /> 스토리 올리기
                 </h3>
-                <button onClick={() => setIsCreateStoryOpen(false)} className="text-gray-400 hover:text-gray-700">
+                <button
+                  onClick={() => setIsCreateStoryOpen(false)}
+                  className="text-gray-400 hover:text-gray-700 cursor-pointer"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleCreateStory} className="space-y-3">
+              <form onSubmit={handleCreateStory} className="space-y-3.5">
                 <div>
-                  <label className="block text-xs font-bold text-[#38314a] mb-1">스토리 이미지 URL</label>
+                  <label className="block text-xs font-bold text-[#38314a] mb-1">스토리 사진 선택</label>
                   <input
-                    type="url"
-                    required
-                    placeholder="https://... 이미지 링크"
-                    value={newStoryMediaUrl}
-                    onChange={(e) => setNewStoryMediaUrl(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden"
+                    type="file"
+                    ref={storyFileInputRef}
+                    accept="image/*"
+                    onChange={handleStoryFileSelect}
+                    className="hidden"
                   />
+                  <div
+                    onClick={() => storyFileInputRef.current?.click()}
+                    className="border border-dashed border-pink-300 hover:border-pink-500 rounded-xl p-3 text-center cursor-pointer transition flex items-center justify-center gap-2 bg-pink-50/30"
+                  >
+                    <ImageIcon className="w-4 h-4 text-pink-500" />
+                    <span className="text-xs font-bold text-[#38314a]">파일 관리자에서 사진 선택</span>
+                  </div>
+
+                  {newStoryMediaUrl && (
+                    <div className="mt-2.5 aspect-square rounded-xl overflow-hidden bg-gray-50 border border-pink-100">
+                      <img src={newStoryMediaUrl} alt="Story Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
                 </div>
+
                 <div>
                   <label className="block text-xs font-bold text-[#38314a] mb-1">스토리 문구 (선택)</label>
                   <input
                     type="text"
-                    placeholder="사진에 남길 짧은 한마디..."
+                    placeholder="사진에 남길 한마디..."
                     value={newStoryCaption}
                     onChange={(e) => setNewStoryCaption(e.target.value)}
                     className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden"
                   />
                 </div>
+
                 <div className="pt-2 flex gap-2">
                   <button
                     type="button"
                     onClick={() => setIsCreateStoryOpen(false)}
-                    className="flex-1 py-2 rounded-xl bg-gray-100 text-xs font-bold"
+                    className="flex-1 py-2 rounded-xl bg-gray-100 text-xs font-bold cursor-pointer"
                   >
                     취소
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xs font-bold shadow-md"
+                    className="flex-1 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xs font-bold shadow-md cursor-pointer"
                   >
                     스토리 등록
                   </button>
@@ -1751,12 +2053,37 @@ export default function MomentsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#38314a] mb-1">프로필 아바타 이미지 URL (선택)</label>
+                    <label className="block text-xs font-bold text-[#38314a] mb-1">프로필 아바타 사진 (선택)</label>
+                    <input
+                      type="file"
+                      ref={avatarFileInputRef}
+                      accept="image/*"
+                      onChange={handleAvatarFileSelect}
+                      className="hidden"
+                    />
+                    <div className="flex items-center gap-2 mb-2">
+                      <button
+                        type="button"
+                        onClick={() => avatarFileInputRef.current?.click()}
+                        className="px-3 py-1.5 rounded-xl bg-pink-50 hover:bg-pink-100 border border-pink-200 text-xs font-bold text-pink-700 transition cursor-pointer flex items-center gap-1.5"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5" /> 파일 관리자에서 사진 선택
+                      </button>
+                      {editAvatar && (
+                        <button
+                          type="button"
+                          onClick={() => setEditAvatar("")}
+                          className="text-[11px] text-gray-400 hover:text-red-500 underline"
+                        >
+                          사진 초기화
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="url"
                       value={editAvatar}
                       onChange={(e) => setEditAvatar(e.target.value)}
-                      placeholder="https://... 이미지 링크 (비워둘 시 Google 기본 프로필 사용)"
+                      placeholder="또는 이미지 URL 직접 입력 (비워둘 시 기본 프로필)"
                       className="w-full text-xs p-2.5 rounded-xl border border-pink-200 focus:outline-hidden focus:border-pink-500"
                     />
                   </div>
